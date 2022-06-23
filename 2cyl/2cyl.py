@@ -101,6 +101,28 @@ class scattering(cyl):
 
     def get_scattering_block(self, num):
         return self.scat_blk_mat
+    
+    def make_d_coeffs_1cyl(self, label):
+        return None
+
+    def set_d_coeffs(self, label):
+
+
+    def make_rhs_vector(self, d_ms, bc):
+        idxd = np.arange(-M_matrix, M_matrix+1)[::-1]
+        jvect = 1j*np.zeros(2*(2*M_matrix + 1))
+        if bc == 'd':
+            jvect[:2*M_matrix+1] = jv(idxd[:], k*a1)
+            jvect[2*M_matrix+1:] = jv(idxd[:], k*a2)
+        elif bc == 'n':
+            jvect[:2*M_matrix+1] = jvp(idxd[:], k*a1)
+            jvect[2*M_matrix+1:] = jvp(idxd[:], k*a2)
+        elif bc == 'i':
+            jvect[:2*M_matrix+1] = k*jvp(idxd[:], k*a1) + lam*jv(idxd[:], k*a1)
+            jvect[2*M_matrix+1:] = k*jvp(idxd[:], k*a2) + lam*jv(idxd[:], k*a2)
+        else:
+            print('invalid bc')
+        return np.multiply(jvect, d_ms)
 
 
 
