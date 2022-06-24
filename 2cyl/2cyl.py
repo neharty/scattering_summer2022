@@ -3,7 +3,6 @@ import numpy.random as rd
 from scipy.special import jv, jvp, h1vp
 from scipy.special import hankel1 as h1v
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
 np.set_printoptions(linewidth=np.inf, precision=3)
 
@@ -25,124 +24,14 @@ b = 3
 O1 = np.array([0, b/2]) #1st cylinder location
 O2 = np.array([0, -b/2]) #2nd cylinder location
 
-
-class cyl:
-    def __init__(self, label, bc, pos=None, radius=None):
-        self.label = label
-        self.pos = pos
-        self.radius = radius
-        self.bc = bc
-
-class scattering(cyl):
-    def __init__(self, cyl_num, bcs):
-        self.cyls = [cyl(i, bcs[i]) for i in range(cyl_num)]
-        self.cyl_num = cyl_num
-        self.bcs = bcs
-        self.labels = range(cyl_num) #0-indexed cylinder labels
-
-    #block matrix functions
-    block_size = 2*M_sum+1
-    idxd = np.arange(-M_sum, M_sum+1)[::-1]
-    scat_blk_mat = None
-
-    def make_direct_scattering_block(self, cyl):
-        Hblk = 1j*np.zeros((block_size, block_size))
-        bc = cyl.bc
-        radius = cyl.radius
-        for i in range(block_size):
-            if bc == 'd':
-                Hblk[i,i] = h1v(idxd[i], k*radius)
-            elif bc == 'n':
-                Hblk[i,i] = h1vp(m, k*radius)
-            elif bc == 'i':
-                Hblk[i,i] = k*h1vp(m, k*radius) + lam*h1v(m, k*radius) 
-            else:
-                print('invalid bc')
-        return Hblk
-    
-    def make_mul_scattering_block(self, cyl_i, cyl_sc):
-        
-        # makes 1 block, 
-        # cyl_i = incident cylinder, 
-        # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
-
-        JSblk = 1j*np.zeros((block_size, block_size))
-        bc = cyl_i.bc
-        radius = cyl_i.radius
-        b = cyl_sc.pos - cyl_i.pos
-
-        for i in range(block_size):
-            for j in range(block_size):
-                m, n = idxd[i], idxd[j]
-                    if bc == 'd':
-                        JSblk[i,j] = jv(m, k*radius)*S(n, m, b)
-                    elif bc == 'n':
-                        JSblk[i,j] = jvp(m, k*radius)*S(n, m, b)
-                    elif bc == 'i':
-                        JSblk[i,j] = k*jvp(m, k*radius)*S(n, m, b) + lam*jv(m, k*radius)*S(n, m, b)
-                    else:
-                        print('invalid bc')
-                        break
-
-        return JSblk
-    
-    def set_scattering_blocks(self):
-        
-        scat_mat = np.array([[None for i in self.labels] for j in self.labels])
-
-        for i in self.labels:
-            for j in self.labels:
-                if i == j:
-                    scat_mat[i,j] = self.make_direct_scattering_block(self.cyls(i))
-                else:
-                    scat_mat[i,j] = self.make_mul_scattering_block(self.cyls(i), self.cyls(j))
-        
-        self.scat_blk_mat = np.block(scat_mat)
-
-    def get_scattering_block(self, num):
-        return self.scat_blk_mat
-    
-    def make_d_coeffs_1cyl(self, label):
-        return None
-
-    def set_d_coeffs(self, label):
-
-
-    def make_rhs_vector(self, d_ms, bc):
-        idxd = np.arange(-M_matrix, M_matrix+1)[::-1]
-        jvect = 1j*np.zeros(2*(2*M_matrix + 1))
-        if bc == 'd':
-            jvect[:2*M_matrix+1] = jv(idxd[:], k*a1)
-            jvect[2*M_matrix+1:] = jv(idxd[:], k*a2)
-        elif bc == 'n':
-            jvect[:2*M_matrix+1] = jvp(idxd[:], k*a1)
-            jvect[2*M_matrix+1:] = jvp(idxd[:], k*a2)
-        elif bc == 'i':
-            jvect[:2*M_matrix+1] = k*jvp(idxd[:], k*a1) + lam*jv(idxd[:], k*a1)
-            jvect[2*M_matrix+1:] = k*jvp(idxd[:], k*a2) + lam*jv(idxd[:], k*a2)
-        else:
-            print('invalid bc')
-        return np.multiply(jvect, d_ms)
-
-
-
-'''
-a1 = rd.uniform(0.05, 1.5) #radius of each cylinder
-a2 = rd.uniform(0.05, 1.5)
-O1 = np.array([rd.uniform(-2, 2), rd.uniform(-2, 2)])
-O2 = np.array([rd.uniform(-2, 2), rd.uniform(-2, 2)])
-while np.sqrt((O2[0] - O1[0])**2 + (O2[1] - O2[1])**2) < a1+a2:
-    O2 = np.array([rd.uniform(0, 2), rd.uniform(0, 2)])
-
-cyl1 = cyl(1, O1, a1)
-cyl2 = cyl(2, O2, a2)
-'''
-
 alpha = np.pi
 N_points = 200
 lam = 1+1j
 
-#title = 'c = ' + str(c) + ', omega = ' + str(omega) + ', a = ' + str(a) + ', b = ' + str(b)
+M_sum = 10
+block_size=2*M_sum+1
+idxd = np.arange(-M_sum, M_sum+1)[::-1]
+
 def cart_to_polar(v):
     return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
 
@@ -167,154 +56,181 @@ def Shat(m, n, v):
     # v is in cartesian coords
     return phihat(m-n, v)
 
-def coeff_matrix(M_matrix, bc):
-    #gives the coefficients in block matrix form
-    block_size = 2*M_matrix + 1
-    idxa = np.arange(-M_matrix, M_matrix+1)
-    idxd = idxa[::-1]
-    Ha1 = 1j*np.zeros((block_size, block_size))
-    Ha2 = 1j*np.zeros((block_size, block_size))
-    JSa1 = 1j*np.zeros((block_size, block_size))
-    JSa2 = 1j*np.zeros((block_size, block_size))
-    
-    b21 = O2-O1
-    b12 = O1-O2
+class cyl:
+    def __init__(self, label, bc, pos=None, radius=None):
+        self.label = label
+        self.pos = pos
+        self.radius = radius
+        self.bc = bc
 
-    for i in range(block_size):
-        for j in range(block_size):
-            m, n = idxd[i], idxd[j]
+class scattering(cyl):
+    def __init__(self, cyls):
+        self.cyls = cyls
+        self.cyl_num = len(cyls)
+        #self.bcs = bcs
+        self.labels = range(self.cyl_num) #0-indexed cylinder labels
+
+    #block matrix functions
+    block_size = 2*M_sum+1
+    idxd = np.arange(-M_sum, M_sum+1)[::-1]
+    scat_blk_mat = None
+
+    def make_direct_scattering_block(self, cyl):
+        Hblk = 1j*np.zeros((block_size, block_size))
+        bc = cyl.bc
+        radius = cyl.radius
+        for i in range(block_size):
             if bc == 'd':
-                if i == j:
-                    Ha1[i,j] = h1v(m, k*a1)
-                    Ha2[i,j] = h1v(m, k*a2)
-                    JSa1[i,j] = jv(m, k*a1)*S(n, m, b12)
-                    JSa2[i,j] = jv(m, k*a2)*S(n, m, b21)
-                else:
-                    JSa1[i,j] = jv(m, k*a1)*S(n, m, b12)
-                    JSa2[i,j] = jv(m, k*a2)*S(n, m, b21)
+                Hblk[i,i] = h1v(idxd[i], k*radius)
             elif bc == 'n':
-                if i == j:
-                    Ha1[i,j] = h1vp(m, k*a1)
-                    Ha2[i,j] = h1vp(m, k*a2)
-                    JSa1[i,j] = jvp(m, k*a1)*S(n, m, b12)
-                    JSa2[i,j] = jvp(m, k*a2)*S(n, m, b21)
-                else:
-                    JSa1[i,j] = jvp(m, k*a1)*S(n, m, b12)
-                    JSa2[i,j] = jvp(m, k*a2)*S(n, m, b21)
+                Hblk[i,i] = h1vp(idxd[i], k*radius)
             elif bc == 'i':
-                if i == j:
-                    Ha1[i,j] = k*h1vp(m, k*a1) + lam*h1v(m, k*a1)
-                    Ha2[i,j] = k*h1vp(m, k*a2) + lam*h1v(m, k*a2)
-                    JSa1[i,j] = k*jvp(m, k*a1)*S(n, m, b12) + lam*jv(m, k*a1)*S(n, m, b12)
-                    JSa2[i,j] = k*jvp(m, k*a2)*S(n, m, b21) + lam*jv(m, k*a2)*S(n, m, b21)
-                else:
-                    JSa1[i,j] = k*jvp(m, k*a1)*S(n, m, b12) + lam*jv(m, k*a1)*S(n, m, b12)
-                    JSa2[i,j] = k*jvp(m, k*a2)*S(n, m, b21) + lam*jv(m, k*a1)*S(n, m, b12)
+                Hblk[i,i] = k*h1vp(idxd[i], k*radius) + lam*h1v(idxd[i], k*radius) 
             else:
-                print('invalid bc') 
-    A = np.block([[Ha1, JSa1], [JSa2, Ha2]])
-    return A
-
-def rhs_vector(M_matrix, d_ms, bc):
-    idxd = np.arange(-M_matrix, M_matrix+1)[::-1]
-    jvect = 1j*np.zeros(2*(2*M_matrix + 1))
-    if bc == 'd':
-        jvect[:2*M_matrix+1] = jv(idxd[:], k*a1)
-        jvect[2*M_matrix+1:] = jv(idxd[:], k*a2)
-    elif bc == 'n':
-        jvect[:2*M_matrix+1] = jvp(idxd[:], k*a1)
-        jvect[2*M_matrix+1:] = jvp(idxd[:], k*a2)
-    elif bc == 'i':
-        jvect[:2*M_matrix+1] = k*jvp(idxd[:], k*a1) + lam*jv(idxd[:], k*a1)
-        jvect[2*M_matrix+1:] = k*jvp(idxd[:], k*a2) + lam*jv(idxd[:], k*a2)
-    else:
-        print('invalid bc')
-    return np.multiply(jvect, d_ms)
-
-def sum_coeffs(M_matrix, d_ms, bc):
-    cs = np.linalg.solve(coeff_matrix(M_matrix, bc), -rhs_vector(M_matrix, d_ms, bc))
-    idxd = np.arange(-M_matrix, M_matrix+1)[::-1]
-    for i in range(len(idxd)):
-        ssum = 0
-        for j in range(len(idxd)):
-            ssum += S(idxd[j], idxd[i], O1 - O2)*cs[j+2*M_matrix+1]
+                print('invalid bc')
+        return Hblk
     
-    return cs
+    def make_mul_scattering_block(self, cyl_i, cyl_sc):
+        
+        # makes 1 block, 
+        # cyl_i = incident cylinder, 
+        # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
 
-def M_sum(r, k, a, eps, bc):
-    kr = k*r
+        JSblk = 1j*np.zeros((block_size, block_size))
+        bc = cyl_i.bc
+        radius = cyl_i.radius
+        b = cyl_i.pos - cyl_sc.pos
+
+        for i in range(block_size):
+            for j in range(block_size):
+                m, n = idxd[i], idxd[j]
+                if bc == 'd':
+                    JSblk[i,j] = jv(m, k*radius)*S(n, m, b)
+                elif bc == 'n':
+                    JSblk[i,j] = jvp(m, k*radius)*S(n, m, b)
+                elif bc == 'i':
+                    JSblk[i,j] = k*jvp(m, k*radius)*S(n, m, b) + lam*jv(m, k*radius)*S(n, m, b)
+                else:
+                    print('invalid bc')
+                    break
+
+        return JSblk
     
-    def gamma(n):
-        if bc == 'n':
-            return -jvp(n, k*a)/h1vp(n, k*a)
-        elif bc == 'd':
-            return -jv(n, k*a)/h1v(n, k*a)
+    def make_scattering_blocks(self):
+        scat_mat = [[None for i in self.labels] for j in self.labels]
+        for i in self.labels:
+            for j in self.labels:
+                if i == j:
+                    scat_mat[i][j] = self.make_direct_scattering_block(self.cyls[i])
+                else:
+                    scat_mat[i][j] = self.make_mul_scattering_block(self.cyls[i], self.cyls[j])
+        print(np.block(scat_mat))
+        return np.block(scat_mat)
+ 
+    def make_d_coeffs_1cyl(self, label):
+        d_ms = 1j*np.zeros(2*M_sum+1)  
+        N_sum = 3*M_sum # should be chosen based on prepresecribed tolerance
+        didx = np.arange(-N_sum, N_sum + 1)[::-1]
+        origin = self.cyls[label].pos
+        for i in range(2*M_sum+1):
+            m = idxd[i]
+            tmpsum1 = 0
+            tmpsum2 = 0
+            for j in range(2*N_sum+1):
+                n = didx[j]
+                tmpsum1 += (1j**n)*np.exp(-1j*n*alpha)*Shat(n, m, origin)
+            d_ms[i] = tmpsum1
+        print(d_ms)
+        return d_ms
+        
+    def make_d_coeffs(self):
+        return np.array([self.make_d_coeffs_1cyl(i) for i in self.labels]).flatten()
+
+    def make_rhs_vector_1cyl(self, label):
+        idxd = np.arange(-M_sum, M_sum+1)[::-1]
+        jvect = 1j*np.zeros(2*M_sum + 1)
+        bc = self.cyls[label].bc
+        radius  = self.cyls[label].radius
+        if bc == 'd':
+            jvect = jv(idxd, k*radius)
+        elif bc == 'n':
+            jvect = jvp(idxd, k*radius)
+        elif bc == 'i':
+            jvect = k*jvp(idxd[:], k*radius) + lam*jv(idxd, k*radius)
         else:
-            #impedance bc
-            return -(k*jvp(n, k*a) + lam*jv(n, k*a))/(k*h1vp(n, k*a) + lam*h1v(n, k*a))
+            print('invalid bc')
+        #print(jvect)
+        return np.multiply(jvect, self.make_d_coeffs_1cyl(label))
 
-    def tail(n, z):
-        #uses large-n approximation
-        return np.abs(2*gamma(n)*np.sqrt(2/(np.pi*n))*(np.exp(1)*z/(2*n))**(-n))
+    def make_rhs_vector(self):
+        return -np.array([self.make_rhs_vector_1cyl(i) for i in self.labels]).flatten()
 
-    M = 5
-    while tail(M, kr) > eps:
-        M = M + 1
-        if M > 200:
-            print("M is too large")
-            break 
-    return M
 
-def u(x, y, bc):
-    
-    M_sum = 30
+    def scattering_coeffs(self):
+        #print(self.make_scattering_blocks(), '\n')
+        #print(self.make_rhs_vector())
+        return np.linalg.solve(self.make_scattering_blocks(), self.make_rhs_vector()).reshape((len(self.labels), 2*M_sum+1))
 
-    r, theta = cart_to_polar([x,y])
-    b, beta = cart_to_polar(O1-O2)
-    
-    r1vect = np.array([x-O1[0], y-O1[1]])
-    r2vect = np.array([x-O2[0], y-O2[1]])
+    def make_u_sc(self, x, y):
+        r, theta = cart_to_polar([x, y])
+        idxd = np.arange(-M_sum, M_sum + 1)[::-1]
+        cs = self.scattering_coeffs()
+        u_sc = 1j*np.zeros(r.shape)
+        for j in self.labels:
+            R = np.array([x - self.cyls[j].pos[0], y - self.cyls[j].pos[1]])
+            for i in range(len(idxd)):
+                u_sc += cs[j, i]*phi(idxd[i], R)
 
-    mask1 = (np.sqrt((x - O1[0])**2 + (y - O1[1])**2) > a1) | (a2 == np.sqrt((x - O1[0])**2 + (y - O1[1])**2))
-    mask2 = (np.sqrt((x - O2[0])**2 + (y - O2[1])**2) > a2) | (a1 == np.sqrt((x - O2[0])**2 + (y - O2[1])**2))
-    mask = mask1 & mask2 # outside of the 2 circles
+        return u_sc
 
-    idxa = np.arange(-M_sum, M_sum+1)
-    idxd = idxa[::-1]
-    
-    #construct the d^j_m coefficients
-    d_ms = 1j*np.zeros(2*(2*M_sum+1))
-    N_sum = 3*M_sum
-    didx = np.arange(-N_sum, N_sum + 1)[::-1]
-    for i in range(2*M_sum+1):
-        m = idxd[i]
-        tmpsum1 = 0
-        tmpsum2 = 0
-        for j in range(2*N_sum+1):
-            n = didx[j]
-            tmpsum1 += (1j**n)*np.exp(-1j*n*alpha)*Shat(n, m, O1)
-            tmpsum2 += (1j**n)*np.exp(-1j*n*alpha)*Shat(n, m, O2)
-        d_ms[i] = tmpsum1      
-        d_ms[i+2*M_sum+1] = tmpsum2
-    
-    u_sc = 1j*np.zeros(r.shape)
-    u_inc = np.exp(1j*k*r*np.cos(theta - alpha))
-    
-    # coeffs for u_sc
-    cs = sum_coeffs(M_sum, d_ms, bc)
-    c1 = cs[:2*M_sum+1]
-    c2 = cs[2*M_sum+1:]
-    #u_sc = np.sum(np.multiply(c1, phi(idxd, r1vect))) + np.sum(np.multiply(c2, phi(idxd, r2vect)))
+    def make_u(self, x, y):
+        Oi = self.cyls[0].pos
+        radius = self.cyls[0].radius
+        mask = (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
+        for i in self.labels[1:]:
+            Oi = self.cyls[i].pos
+            radius = self.cyls[i].radius
+            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
+        
+        r, theta = cart_to_polar([x,y])
+        u_inc = np.exp(1j*k*r*np.cos(theta - alpha))
 
-    u_inc_d = 1j*np.zeros(r.shape)
-    for i in range(2*M_sum + 1):
-        u_sc += c1[i]*phi(idxd[i], r1vect) + c2[i]*phi(idxd[i], r2vect)
-        u_inc_d += d_ms[i]*phihat(idxd[i], r1vect) 
-    
-    print(np.amax(np.abs(u_inc - u_inc_d)))
+        return (u_inc+self.make_u_sc(x,y))*mask
 
-    return (u_inc+u_sc)*mask
+sc = scattering([cyl(0, 'd', pos = O1, radius = a1), cyl(0, 'd', pos = O2, radius = a2)])
 
+print('O1:', sc.cyls[0].pos, ' radius1:', sc.cyls[0].radius)
+print('O2:', sc.cyls[1].pos, ' radius2:', sc.cyls[1].radius)
+
+#plotting stuff
+x = np.linspace(xl, xr, num = N_points)
+y = np.linspace(yl, yr, num = N_points)
+X, Y = np.meshgrid(x,y)
+
+fig, ax = plt.subplots()
+
+Z = np.abs(sc.make_u(X, Y))
+im = ax.imshow(Z, extent=[xl, xr, yl, yr], origin = 'lower', cmap='viridis')
+ax.set_title('abs(u), dirichlet')
+fig.colorbar(im, ax=ax)
+
+plt.tight_layout()
+plt.show()
+#plt.savefig('2cyl_general_test_3bcs.png')
+
+'''
+a1 = rd.uniform(0.05, 1.5) #radius of each cylinder
+a2 = rd.uniform(0.05, 1.5)
+O1 = np.array([rd.uniform(-2, 2), rd.uniform(-2, 2)])
+O2 = np.array([rd.uniform(-2, 2), rd.uniform(-2, 2)])
+while np.sqrt((O2[0] - O1[0])**2 + (O2[1] - O2[1])**2) < a1+a2:
+    O2 = np.array([rd.uniform(0, 2), rd.uniform(0, 2)])
+
+cyl1 = cyl(1, O1, a1)
+cyl2 = cyl(2, O2, a2)
+'''
+
+'''
 print('O1:', O1, ' radius1:', a1)
 print('O2:', O2, ' radius2:', a2)
 
@@ -351,7 +267,7 @@ fig.colorbar(im, ax=ax[2])
 plt.tight_layout()
 plt.show()
 #plt.savefig('2cyl_general_test_3bcs.png')
-
+'''
 '''
 fig, ax = plt.subplots(2, 3)
 
