@@ -17,13 +17,6 @@ xr = 3
 yl = -3
 yr = 3
 
-
-a1 = 0.5
-a2 = 0.5
-b = 3
-O1 = np.array([0, b/2]) #1st cylinder location
-O2 = np.array([0, -b/2]) #2nd cylinder location
-
 alpha = np.pi
 N_points = 200
 lam = 1+1j
@@ -197,7 +190,14 @@ class scattering(cyl):
 
         return (u_inc+self.make_u_sc(x,y))*mask
 
-sc = scattering([cyl(0, 'd', pos = O1, radius = a1), cyl(0, 'd', pos = O2, radius = a2)])
+a = 0.2
+b = 3
+O1 = np.array([0, b/2]) #1st cylinder location
+O2 = np.array([0, -b/2]) #2nd cylinder location
+O3 = np.array([-b/2, 0])
+O4 = np.array([0,0])
+
+sc = scattering([cyl(0, 'd', pos = O1, radius = a), cyl(1, 'd', pos = O2, radius = a), cyl(2, 'd', pos = O3, radius = a), cyl(3, 'd', pos = O4, radius = a)])
 
 print('O1:', sc.cyls[0].pos, ' radius1:', sc.cyls[0].radius)
 print('O2:', sc.cyls[1].pos, ' radius2:', sc.cyls[1].radius)
