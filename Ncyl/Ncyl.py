@@ -117,7 +117,6 @@ class scattering(cyl):
                     scat_mat[i][j] = self.make_direct_scattering_block(self.cyls[i])
                 else:
                     scat_mat[i][j] = self.make_mul_scattering_block(self.cyls[i], self.cyls[j])
-        #print(np.block(scat_mat))
         return np.block(scat_mat)
  
     def make_d_coeffs_1cyl(self, label):
