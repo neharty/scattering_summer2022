@@ -188,7 +188,7 @@ class scattering(cyl):
         u_inc = np.exp(1j*k*r*np.cos(theta - alpha))
 
         return (u_inc+self.make_u_sc(x,y))*mask
-
+'''
 a = 0.2
 b = 3
 O1 = np.array([0, b/2]) #1st cylinder location
@@ -220,7 +220,7 @@ fig.colorbar(im, ax=ax)
 plt.tight_layout()
 plt.show()
 #plt.savefig('Ncyl_test_3bcs.png')
-
+'''
 '''
 a1 = rd.uniform(0.05, 1.5) #radius of each cylinder
 a2 = rd.uniform(0.05, 1.5)
