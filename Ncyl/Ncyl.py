@@ -21,9 +21,9 @@ alpha = np.pi
 N_points = 200
 lam = 1+1j
 
-M_sum = 10
-block_size=2*M_sum+1
-idxd = np.arange(-M_sum, M_sum+1)[::-1]
+#M_sum = 10
+#block_size=2*M_sum+1
+#idxd = np.arange(-M_sum, M_sum+1)[::-1]
 
 def cart_to_polar(v):
     return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -57,28 +57,29 @@ class cyl:
         self.bc = bc
 
 class scattering(cyl):
-    def __init__(self, cyls):
+    def __init__(self, cyls, M_sum=10):
         self.cyls = cyls
         self.cyl_num = len(cyls)
         #self.bcs = bcs
         self.labels = range(self.cyl_num) #0-indexed cylinder labels
+        self.M_sum = M_sum
 
-    #block matrix functions
-    block_size = 2*M_sum+1
-    idxd = np.arange(-M_sum, M_sum+1)[::-1]
-    scat_blk_mat = None
+        #block matrix functions
+        self.block_size = 2*self.M_sum+1
+        self.idxd = np.arange(-self.M_sum, self.M_sum+1)[::-1]
+        scat_blk_mat = None
 
     def make_direct_scattering_block(self, cyl):
-        Hblk = 1j*np.zeros((block_size, block_size))
+        Hblk = 1j*np.zeros((self.block_size, self.block_size))
         bc = cyl.bc
         radius = cyl.radius
-        for i in range(block_size):
+        for i in range(self.block_size):
             if bc == 'd':
-                Hblk[i,i] = h1v(idxd[i], k*radius)
+                Hblk[i,i] = h1v(self.idxd[i], k*radius)
             elif bc == 'n':
-                Hblk[i,i] = h1vp(idxd[i], k*radius)
+                Hblk[i,i] = h1vp(self.idxd[i], k*radius)
             elif bc == 'i':
-                Hblk[i,i] = k*h1vp(idxd[i], k*radius) + lam*h1v(idxd[i], k*radius) 
+                Hblk[i,i] = k*h1vp(self.idxd[i], k*radius) + lam*h1v(self.idxd[i], k*radius) 
             else:
                 print('invalid bc')
         return Hblk
@@ -89,14 +90,14 @@ class scattering(cyl):
         # cyl_i = incident cylinder, 
         # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
 
-        JSblk = 1j*np.zeros((block_size, block_size))
+        JSblk = 1j*np.zeros((self.block_size, self.block_size))
         bc = cyl_i.bc
         radius = cyl_i.radius
         b = cyl_i.pos - cyl_sc.pos
 
-        for i in range(block_size):
-            for j in range(block_size):
-                m, n = idxd[i], idxd[j]
+        for i in range(self.block_size):
+            for j in range(self.block_size):
+                m, n = self.idxd[i], self.idxd[j]
                 if bc == 'd':
                     JSblk[i,j] = jv(m, k*radius)*S(n, m, b)
                 elif bc == 'n':
@@ -120,12 +121,12 @@ class scattering(cyl):
         return np.block(scat_mat)
  
     def make_d_coeffs_1cyl(self, label):
-        d_ms = 1j*np.zeros(2*M_sum+1)  
-        N_sum = 3*M_sum # should be chosen based on prepresecribed tolerance
+        d_ms = 1j*np.zeros(2*self.M_sum+1)  
+        N_sum = 3*self.M_sum # should be chosen based on prepresecribed tolerance
         didx = np.arange(-N_sum, N_sum + 1)[::-1]
         origin = self.cyls[label].pos
-        for i in range(2*M_sum+1):
-            m = idxd[i]
+        for i in range(2*self.M_sum+1):
+            m = self.idxd[i]
             tmpsum1 = 0
             tmpsum2 = 0
             for j in range(2*N_sum+1):
@@ -139,8 +140,8 @@ class scattering(cyl):
         return np.array([self.make_d_coeffs_1cyl(i) for i in self.labels]).flatten()
 
     def make_rhs_vector_1cyl(self, label):
-        idxd = np.arange(-M_sum, M_sum+1)[::-1]
-        jvect = 1j*np.zeros(2*M_sum + 1)
+        idxd = np.arange(-self.M_sum, self.M_sum+1)[::-1]
+        jvect = 1j*np.zeros(2*self.M_sum + 1)
         bc = self.cyls[label].bc
         radius  = self.cyls[label].radius
         if bc == 'd':
@@ -161,11 +162,11 @@ class scattering(cyl):
     def scattering_coeffs(self):
         #print(self.make_scattering_blocks(), '\n')
         #print(self.make_rhs_vector())
-        return np.linalg.solve(self.make_scattering_blocks(), self.make_rhs_vector()).reshape((len(self.labels), 2*M_sum+1))
+        return np.linalg.solve(self.make_scattering_blocks(), self.make_rhs_vector()).reshape((len(self.labels), 2*self.M_sum+1))
 
     def make_u_sc(self, x, y):
         r, theta = cart_to_polar([x, y])
-        idxd = np.arange(-M_sum, M_sum + 1)[::-1]
+        idxd = np.arange(-self.M_sum, self.M_sum + 1)[::-1]
         cs = self.scattering_coeffs()
         u_sc = 1j*np.zeros(r.shape)
         for j in self.labels:
