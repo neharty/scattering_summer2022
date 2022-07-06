@@ -57,12 +57,17 @@ class cyl:
         self.bc = bc
 
 class scattering(cyl):
-    def __init__(self, cyls, M_sum=10):
+    def __init__(self, cyls, M_sum = None, tol = 1e-8):
         self.cyls = cyls
         self.cyl_num = len(cyls)
         #self.bcs = bcs
         self.labels = range(self.cyl_num) #0-indexed cylinder labels
-        self.M_sum = M_sum
+        self.tol = tol
+        if M_sum == None:
+            max_rad = max([self.cyls[i].radius for i in self.labels])
+            self.M_sum = int(k*max_rad + (np.log(2*np.sqrt(2)*np.pi*k*max_rad/tol))/(2*np.sqrt(2))**(2/3)*(k*max_rad)**(1/3) + 1)
+        else:
+            self.M_sum = M_sum
 
         #block matrix functions
         self.block_size = 2*self.M_sum+1
