@@ -41,8 +41,8 @@ def plot_soln(x, y, sc, title, fname):
     fig.colorbar(im, ax=ax)
 
     plt.tight_layout()
-    #plt.show()
-    plt.savefig(fname, dpi = 300)
+    plt.show()
+    #plt.savefig(fname, dpi = 300)
 
 def grid_of_cyls():
     # 3x3 grid of cylinders
@@ -96,7 +96,9 @@ def main():
     x = np.linspace(xl, xr, num = N_points)
     y = np.linspace(yl, yr, num = N_points)
     
-    plot_soln(x, y, grid_of_cyls(), 'radius = 0.2, spacing = 1.5', 'examples/9cyls.png')
-    plot_soln(x, y, pentagram(), 'radius = 0.3, spacing = 2', 'examples/pentagram.png')
+    #plot_soln(x, y, grid_of_cyls(), 'radius = 0.2, spacing = 1.5', 'examples/9cyls.png')
+    #plot_soln(x, y, pentagram(), 'radius = 0.3, spacing = 2', 'examples/pentagram.png')
+    
+    plot_soln(x, y, scattering([cyl(0, 'd', pos = np.array([-1, -1]), radius = 0.3)]), '', '')
 
 main()

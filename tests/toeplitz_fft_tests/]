@@ -1,0 +1,23 @@
+import numpy as np
+from scipy.signal import convolve
+from scipy.linalg import toeplitz
+from hwcounter import Timer, count, count_end
+
+np.random.seed(seed=12345)
+
+
+Ns = np.arange(int(1e3), int(1e6), int(1e3))
+for n in Ns:
+    start = count()
+    N = 2*n + 1
+    M = n + 1
+    a = np.random.randint(1, 10, size = N)
+    b = np.random.randint(1, 10, size = M)
+    conv = convolve(a, b, mode='full')
+
+    A = np.zeros((N + M - 1, M))
+    for i in range(A.shape[1]):
+        A[i:i+N, i] = a[:]
+    c = A@b
+    print(np.log10((count_end()-start)/(n*np.log2(n))))
+

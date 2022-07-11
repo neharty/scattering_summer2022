@@ -30,7 +30,7 @@ class cyl:
         self.bc = bc
 
 class scattering(cyl):
-    def __init__(self, cyls, M_sum = None, tol = 1e-8, freq = 1, inc_angle = np.pi):
+    def __init__(self, cyls, M_sum = None, tol = 1e-8, freq = 1, inc_angle = np.pi, precond = None):
         self.cyls = cyls
         self.cyl_num = len(cyls)
         #self.bcs = bcs
@@ -46,11 +46,12 @@ class scattering(cyl):
         else:
             self.M_sum = M_sum
 
+        self.__precond = precond
+
         #block matrix functions
         self.block_size = 2*self.M_sum+1
         self.idxd = np.arange(-self.M_sum, self.M_sum+1)[::-1]
-        scat_blk_mat = None
-
+        self.scat_mat = self.make_scattering_blocks()
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -128,19 +129,8 @@ class scattering(cyl):
         return np.block(scat_mat)
  
     def make_d_coeffs_1cyl(self, label):
-        d_ms = 1j*np.zeros(2*self.M_sum+1)  
-        N_sum = 3*self.M_sum # should be chosen based on prepresecribed tolerance
-        didx = np.arange(-N_sum, N_sum + 1)[::-1]
-        origin = self.cyls[label].pos
-        for i in range(2*self.M_sum+1):
-            m = self.idxd[i]
-            tmpsum1 = 0
-            tmpsum2 = 0
-            for j in range(2*N_sum+1):
-                n = didx[j]
-                tmpsum1 += (1j**n)*np.exp(-1j*n*self.inc_angle)*self.Shat(n, m, origin)
-            d_ms[i] = tmpsum1
-        #print(d_ms)
+        b, theta = self.cart_to_polar(self.cyls[label].pos)
+        d_ms = np.array([1j**n*np.exp(-1j*n*self.inc_angle)*np.exp(1j*self.k*b*np.cos(theta)) for n in np.arange(-self.M_sum, self.M_sum+1)[::-1]])
         return d_ms
         
     def make_d_coeffs(self):
@@ -159,17 +149,27 @@ class scattering(cyl):
             jvect = self.k*jvp(idxd[:], self.k*radius) + lam*jv(idxd, self.k*radius)
         else:
             print('invalid bc')
-        #print(jvect)
+        
         return np.multiply(jvect, self.make_d_coeffs_1cyl(label))
 
     def make_rhs_vector(self):
         return -np.array([self.make_rhs_vector_1cyl(i) for i in self.labels]).flatten()
 
+    def make_precond_matrix(self):
+        if self.__precond == 'simple':
+            return np.diag(np.array([1/self.scat_mat[i,i] for i in range(self.scat_mat.shape[0])]))
+        else:
+            return np.eye(self.scat_mat.shape[0])
 
     def scattering_coeffs(self):
         #print(self.make_scattering_blocks(), '\n')
         #print(self.make_rhs_vector())
-        return np.linalg.solve(self.make_scattering_blocks(), self.make_rhs_vector()).reshape((len(self.labels), 2*self.M_sum+1))
+        if self.__precond is not None:
+            Dinv = self.make_precond_matrix()
+            self.scat_mat = Dinv @ self.scat_mat
+            return np.linalg.solve(self.scat_mat, Dinv @ self.make_rhs_vector()).reshape((len(self.labels), 2*self.M_sum+1))
+        else:
+            return np.linalg.solve(self.make_scattering_blocks(), self.make_rhs_vector()).reshape((len(self.labels), 2*self.M_sum+1))
 
     def make_u_sc(self, x, y):
         r, theta = self.cart_to_polar([x, y])
