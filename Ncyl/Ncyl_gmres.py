@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random as rd
 from scipy.special import jv, jvp, h1vp
-from scipy.special import hankel1 as h1v
+from scipy.special import hankel1
 import matplotlib.pyplot as plt
 
 np.set_printoptions(linewidth=np.inf, precision=3)
@@ -23,14 +23,18 @@ lam = 1+1j
 #block_size=2*M_sum+1
 #idxd = np.arange(-M_sum, M_sum+1)[::-1]
 class cyl:
-    def __init__(self, label, bc, pos=None, radius=None):
+    def __init__(self, label, bc, pos=None, radius=None, M_sum = None):
         self.label = label
         self.pos = pos
         self.radius = radius
         self.bc = bc
+        self.M_sum = M_sum
+
+    
+
 
 class scattering(cyl):
-    def __init__(self, cyls, M_sum = None, tol = 1e-8, freq = 1, inc_angle = np.pi, precond = None):
+    def __init__(self, cyls, M_sum = None, tol = 1e-8, freq = 1, inc_angle = np.pi, precond = None, make_scat_matrix=False):
         self.cyls = cyls
         self.cyl_num = len(cyls)
         #self.bcs = bcs
@@ -41,7 +45,7 @@ class scattering(cyl):
         self.wavelength = c/freq
         self.inc_angle = inc_angle
         if M_sum == None:
-            max_rad = max([self.cyls[i].radius for i in self.labels])
+            
             self.M_sum = int(self.k*max_rad + ((np.log(2*np.sqrt(2)*np.pi*self.k*max_rad/tol))/(2*np.sqrt(2)))**(2/3)*(self.k*max_rad)**(1/3) + 1)
         else:
             self.M_sum = M_sum
@@ -51,7 +55,10 @@ class scattering(cyl):
         #block matrix functions
         self.block_size = 2*self.M_sum+1
         self.idxd = np.arange(-self.M_sum, self.M_sum+1)[::-1]
-        self.scat_mat = self.make_scattering_blocks()
+        if make_scat_matrix:
+            self.scat_mat = self.make_scattering_blocks()
+        else:
+            self.scat_mat = None
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
