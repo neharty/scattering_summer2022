@@ -23,16 +23,12 @@ print(scat_mat @ test_c)
 M_sum = sc.M_sum
 def mvp(x):
     x = np.array(x, dtype=np.complex128)
-    lengths = np.array([0, 2*M_sum + 1, 2*M_sum + 1]) # get sum indices -- should be tied to cyls
-    xs = np.array([x[lengths[i-1]:lengths[i-1]+lengths[i]] for i in range(1,len(lengths))]) # break up all p coefficients
+    lengths = np.zeros(len(sc.cyls) + 1, dtype=int)
+    for i in range(len(sc.cyls)):
+        lengths[i+1] = 2*M_sum+1 + lengths[i] # get sum indices -- should be tied to cyls
+    xs = np.array([x[lengths[i-1]:lengths[i]] for i in range(1,len(lengths))]) # break up all p coefficients
     xcalc = np.copy(xs)
-    
-    '''
-    for i in range(1, len(lengths)):
-        print(x[lengths[i-1]:lengths[i-1]+lengths[i]])
-    
-    print(xs)
-    '''
+
     #labels for cylinders must be zero-indexed
     for p in sc.labels:
         xtmp = 1j*np.zeros(len(xs[p]))
