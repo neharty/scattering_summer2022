@@ -11,14 +11,14 @@ import sys
 sys.path.append('../../Ncyl/')
 from Ncyl import scattering, cyl
 
-np.random.seed(seed=12345)
+#np.random.seed(seed=12345)
 
 sc = scattering([cyl(0, 'd', pos=np.array([0, -1]), radius = 0.3), cyl(1, 'd', pos=np.array([0, 1]), radius=0.3)], M_sum = 2, precond='simple')
 
 scat_mat = sc.scat_mat
 test_c = np.random.randint(1, 10, size=sc.scat_mat.shape[0]) + 0*1j
-print(len(test_c), test_c)
-print(scat_mat @ test_c)
+#print(len(test_c), test_c)
+#print(scat_mat @ test_c)
 
 M_sum = sc.M_sum
 def mvp(x):
@@ -54,7 +54,7 @@ def mvp(x):
 dim = 2 *(2*sc.M_sum+1)
 A_la = LinearOperator((dim, dim), matvec = mvp)
 
-x_gmres, ecode = gmres(A_la, scat_mat @ test_c)
+x_gmres, ecode = gmres(A_la, scat_mat @ test_c, tol=1e-12)
 
 print(ecode)
 print(np.linalg.norm(x_gmres - test_c))
