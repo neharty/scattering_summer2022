@@ -13,10 +13,10 @@ from Ncyl import scattering, cyl
 
 #np.random.seed(seed=12345)
 
-sc = scattering([cyl(0, 'd', pos=np.array([0, -1]), radius = 0.3), cyl(1, 'd', pos=np.array([0, 1]), radius=0.3)], M_sum = 2, precond='simple')
+sc = scattering([cyl(0, 'd', pos=np.array([0, -1.1]), radius = 0.3), cyl(1, 'd', pos=np.array([1, 1]), radius=0.3)], precond='simple')
 
 scat_mat = sc.scat_mat
-test_c = np.random.randint(1, 10, size=sc.scat_mat.shape[0]) + 0*1j
+test_c = sc.scattering_coeffs().flatten()
 #print(len(test_c), test_c)
 #print(scat_mat @ test_c)
 
@@ -57,6 +57,7 @@ A_la = LinearOperator((dim, dim), matvec = mvp)
 x_gmres, ecode = gmres(A_la, scat_mat @ test_c, tol=1e-12)
 
 print(ecode)
+print(x_gmres)
 print(np.linalg.norm(x_gmres - test_c))
 
 
