@@ -15,7 +15,6 @@ for i in range(len(freq)):
     k[i] = sc.get_wavenumber()
     iternums[i] = sc.get_gmres_iter()
 
-
 fig, ax = plt.subplots()
 ax.semilogx(k, iternums, '.')
 ax.set_title('sum_tol, gmres_tol = 1e-12')

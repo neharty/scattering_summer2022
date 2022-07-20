@@ -17,7 +17,7 @@ freq = np.logspace(0, 2, num = 20)
 k = np.zeros(len(freq))
 infty_norm = np.zeros(len(freq))
 
-sc = scattering([cyl('d', np.array([0, 1]), 0.5, sum_index=2), cyl('d', np.array([0, -1]), 0.2, sum_index=1)], gmres_tol = 1e-12, sum_tol=1e-2)
+sc = scattering([cyl('d', np.array([0, 1]), 0.5), cyl('d', np.array([0, -1]), 0.5)], gmres_tol = 1e-12, sum_tol=1e-12)
 
 gmres_coefs = sc.get_scattering_coeffs()[0]/np.linalg.norm(sc.get_scattering_coeffs()[0])
 explicit_coefs = sc.get_scattering_coeffs(method='explicit')/np.linalg.norm(sc.get_scattering_coeffs(method='explicit'))
@@ -26,14 +26,17 @@ print(np.arccos(np.real(np.dot(gmres_coefs, explicit_coefs.conjugate()))))
 
 fig, ax = plt.subplots()
 im = ax.imshow(np.log10(np.abs(sc.make_u(X,Y, method = 'explicit') - sc.make_u(X,Y))), extent=[-lim, lim, -lim, lim], origin = 'lower', cmap='viridis')
+
+'''
 x = np.random.randint(1,10, 8)
 print(sc.scat_mat @x)
 print(sc.mvp(x))
+'''
 
 fig.colorbar(im, ax=ax)
 ax.set_title('gmres_tol, sum_tol = 1e-12, abs(npsolve - gmres)')
 ax.set_xlabel('x')
 ax.set_ylabel('y')
 plt.tight_layout()
-plt.show()
-#plt.savefig('abs_npsolve-gmres_diff_radius.png', dpi = 150)
+#plt.show()
+plt.savefig('abs_npsolve-gmres_same_radius.png', dpi = 150)

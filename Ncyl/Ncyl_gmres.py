@@ -61,7 +61,7 @@ class scattering(cyl):
         self.__labels = np.array([int(self.__cyls[i].get_label()) for i in range(len(self.__cyls))])
         self.__sum_tol = sum_tol
         self.__freq = freq
-        self.__k = 2*np.pi*freq/c
+        self.__k = 2*np.pi*self.__freq/c
         self.__wavelength = c/freq
         self.__inc_angle = inc_angle 
         self.__gmres_tol = gmres_tol
@@ -211,7 +211,9 @@ class scattering(cyl):
         sum_index = self.__cyls[label].get_sum_index()
         bc = self.__cyls[label].get_bc()
         radius = self.__cyls[label].get_radius()
-        return np.array([1j**n*np.exp(-1j*n*self.__inc_angle)*np.exp(1j*self.__k*b*np.cos(theta)) for n in np.arange(-sum_index, sum_index + 1)])
+        #return np.array([1j**n*np.exp(-1j*n*self.__inc_angle)*np.exp(1j*self.__k*b*np.cos(theta)) for n in np.arange(-sum_index, sum_index + 1)])
+        return np.array([1j**n*np.exp(-1j*n*self.__inc_angle)*np.exp(1j*self.__k*b*np.cos(theta-self.__inc_angle)) for n in np.arange(-sum_index, sum_index + 1)])
+
                 
     def make_rhs_vector_1cyl(self, label):
         idxa = np.arange(-self.__cyls[label].get_sum_index(), self.__cyls[label].get_sum_index() + 1)
@@ -328,7 +330,7 @@ class scattering(cyl):
             rhs = self.make_rhs_vector()
             x0 = (2*rhs - linearop(rhs))
             counter = self.gmres_counter()
-            return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, x0=x0, callback=counter)
+            return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, x0=x0)#, callback=counter)
 
         elif method == 'explicit':
             if self.scat_mat is None:
@@ -364,10 +366,7 @@ class scattering(cyl):
         for i in self.__labels[1:]:
             Oi = self.__cyls[i].get_pos()
             radius = self.__cyls[i].get_radius()
-            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
-        
-        for c in self.__cyls:
-            print(c.get_sum_index())
+            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius)# | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2)) 
 
         r, theta = self.cart_to_polar([x,y])
         u_inc = np.exp(1j*self.__k*r*np.cos(theta - self.__inc_angle))        

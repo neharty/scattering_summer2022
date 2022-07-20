@@ -8,32 +8,33 @@ import sys
 sys.path.append('../../Ncyl/')
 from Ncyl_gmres import scattering, cyl
 
-lim = 5
-x = np.linspace(-lim, lim, num = 500)
+sys.path.append('../../utils/')
+import example_setups
+
+lim = 2
+x = np.linspace(-lim, lim, num = 400)
 y = np.copy(x)
 X, Y = np.meshgrid(x,y)
 
-freq = np.logspace(0, 2, num = 20)
-k = np.zeros(len(freq))
-infty_norm = np.zeros(len(freq))
+spacing = [1]#, 0.5, 0.3]
 
-'''
-for i in range(len(freq)):
-    print(i)
-    sc = scattering([cyl('d', np.array([-1, 2]), 0.3), cyl('n', np.array([-1, -2]), 0.5), cyl('i', np.array([1, 0]), 0.2)], gmres_tol = 1e-12, sum_tol = 1e-12, freq = freq[i])
-    
-    infty_norm[i] = np.amax(np.abs(sc.make_u(X,Y, method = 'explicit') - sc.make_u(X,Y)))
-    k[i] = sc.get_wavenumber()
-'''
-sc = scattering([cyl('d', np.array([0, 1]), 0.3), cyl('n', np.array([0, -1]), 0.5), cyl('i', np.array([1, 0]), 0.2)], sum_tol = 1e-12)
+freq = np.logspace(0, 1.5, num = 10)
+k = np.zeros(len(freq))
+infty_norm = np.zeros((len(spacing), len(freq)))
 
 fig, ax = plt.subplots()
-#ax.loglog(k, infty_norm, '-.')
-im = ax.imshow(np.abs(sc.make_u(X,Y, method = 'explicit') - sc.make_u(X,Y)), extent=[-lim, lim, -lim, lim], origin = 'lower', cmap='viridis')
-fig.colorbar(im, ax=ax)
-ax.set_title('sum_tol, gmres_tol = 1e-12, infty norm between npsolve and gmres solns')
-ax.set_xlabel('x')
-ax.set_ylabel('y')
+
+for s in range(len(spacing)):
+    for i in range(len(freq)):
+        print(i)
+        sc = example_setups.uniform_grid_3x3(0.3, spacing[s], freq[i])    
+        infty_norm[s, i] = np.amax(np.abs(sc.make_u(X,Y, method = 'explicit') - sc.make_u(X,Y)))
+        k[i] = sc.get_wavenumber()
+        
+    ax.loglog(k, infty_norm[s, :], '.-', label = 'spacing = ' + str(spacing))
+
+ax.set_title('sum_tol = 1e-12, infty norm between npsolve and gmres solns')
+ax.set_xlabel('infty norm')
+ax.set_ylabel('k')
 plt.tight_layout()
-plt.show()
-#plt.savefig('infty_norm_npsolve_vs_gmres.png', dpi = 150)
+plt.savefig('infty_norm_npsolve_vs_gmres.png', dpi = 150)
