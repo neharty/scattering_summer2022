@@ -7,7 +7,7 @@ from Ncyl_gmres import scattering, cyl
 def uniform_grid_3x3(radius, spacing, freq, sum_tol = 1e-12, gmres_tol = 1e-8, sum_index = None):
     # 3x3 grid of cylinders
     cyls = [None for i in range(9)]
-    space = spacing + radius
+    space = spacing + 2*radius
     origins = np.array([[-space, -space], [-space, 0], [-space, space], 
             [0, -space], [0, 0],[0, space], 
             [space, -space], [space, 0], [space, space]])

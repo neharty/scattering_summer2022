@@ -259,7 +259,7 @@ class scattering(cyl):
         x = np.array(x, dtype=np.complex128)
         xs = np.array([np.array(x[self.__lengths[i-1]:self.__lengths[i]], dtype=np.complex128) for i in range(1, len(self.__lengths))]) # break up all p coefficients
         xcalc = np.copy(xs)
-        ST = self.make_root_matrix()
+        ST = self.__ST
 
         mulscat = np.array([1j*np.zeros(len(xn)) for xn in xs])
         for p in self.__labels:
@@ -288,49 +288,15 @@ class scattering(cyl):
         return np.hstack(xs)
 
     def scattering_coeffs(self, method='gmres'):
-        ST = self.make_root_matrix()
-        def mvp(x):
-            x = np.array(x, dtype=np.complex128)
-            xs = np.array([np.array(x[self.__lengths[i-1]:self.__lengths[i]], dtype=np.complex128) for i in range(1, len(self.__lengths))]) # break up all p coefficients
-            xcalc = np.copy(xs)
-                        
-            self.__gmres_iter += 1
-            
-            for p in self.__labels:
-                mulscat = 1j*np.zeros(len(xs[p]))
-                bc = self.__cyls[p].get_bc()
-                radius = self.__cyls[p].get_radius()
-                idxa_p = np.arange(-self.__cyls[p].get_sum_index(), self.__cyls[p].get_sum_index() + 1)
-                for q in self.__labels:
-                    if p == q:
-                        continue
-                    else:
-                        STpq = np.array(ST[p][q], dtype=np.complex128)
-                        Cq = np.array(xcalc[q], dtype=np.complex128)
-                        SCmvp = np.array(convolve(STpq, Cq, mode='valid', method='fft'), dtype=np.complex128)
-                        if bc == 'd':
-                            jh = jv(idxa_p, self.__k*radius)/hankel1(idxa_p, self.__k*radius)
-                        elif bc == 'n':
-                            jh = jvp(idxa_p, self.__k*radius)/h1vp(idxa_p, self.__k*radius)
-                        elif bc == 'i':
-                            jh = (lam*jv(idxa_p, self.__k*radius) + self.__k*jvp(idxa_p, self.__k*radius))/(lam*hankel1(idxa_p, self.__k*radius) + self.__k*h1vp(idxa_p, self.__k*radius))
-                        
-                        DSCmvp = np.multiply(jh, SCmvp)
-                    
-                    mulscat += DSCmvp
-
-                xs[p] += mulscat
-            
-            return np.hstack(xs)
-
         if method == 'gmres':
+            self.__ST = self.make_root_matrix()        
             self.__gmres_iter = 0
             dim = self.__scat_matrix_dim
             linearop = LinearOperator((dim, dim), matvec = self.mvp)
             rhs = self.make_rhs_vector()
             x0 = (2*rhs - linearop(rhs))
             counter = self.gmres_counter()
-            return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, x0=x0)#, callback=counter)
+            return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol)#, x0=x0)#, callback=counter)
 
         elif method == 'explicit':
             if self.scat_mat is None:

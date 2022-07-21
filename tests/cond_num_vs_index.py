@@ -9,18 +9,29 @@ from Ncyl_gmres import scattering, cyl
 sys.path.append('../utils/')
 import example_setups
 
-sum_index = np.arange(1, 21)
-conds = np.zeros(len(sum_index))
+freq = [1]
 
-for i in range(len(sum_index)):
-    sc = example_setups.uniform_grid_3x3(1/(2*np.pi), 1, 1, sum_index = sum_index[i])
-    conds[i] = np.linalg.cond(sc.make_scattering_blocks())
-    print(i)
+sum1 = np.arange(1, 101, 20) 
+sum2 = np.arange(100, 201, 20)
 
-plt.semilogy([int(s) for s in sum_index], conds, '.-')
+original = np.arange(1, 21)
+
+sum_index = original
+print(sum_index)
+conds = np.zeros((len(freq), len(sum_index)))
+
+for f in range(len(freq)):
+    for i in range(len(sum_index)):
+        sc = example_setups.uniform_grid_3x3(1/(2*np.pi), 1, freq[f], sum_index = sum_index[i])
+        conds[f, i] = np.linalg.cond(sc.make_scattering_blocks())
+        print(i)
+
+    plt.semilogy([int(s) for s in sum_index], conds[f, :], '.-', label = 'freq = ' + str(freq[f]))
+
 plt.title('a = 1/(2*pi), spacing = 1, sum_tol = 1e-12')
 plt.xlabel('sum index N_p')
 plt.ylabel('matrix condition number')
+plt.legend()
 plt.tight_layout()
-#plt.show()
-plt.savefig('cond_vs_sum_index.png', dpi = 150)
+plt.show()
+#plt.savefig('cond_vs_sum_index_spacing=0.3.png', dpi = 150)

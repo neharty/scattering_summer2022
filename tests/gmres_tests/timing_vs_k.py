@@ -13,7 +13,7 @@ import example_setups
 
 spacing = [1, 0.4]
 
-freq = np.logspace(0, 1.5, num = 10)
+freq = np.logspace(0, 1, num = 10)
 k = np.zeros(len(freq))
 gmres_time = np.zeros((len(spacing), len(freq)))
 npsolve_time = np.zeros((len(spacing), len(freq)))
@@ -40,10 +40,10 @@ for s in range(len(spacing)):
     ax.loglog(k, gmres_time[s, :], '.', label = 'gmres, spacing = ' + str(spacing[s]))
     ax.loglog(k, npsolve_time[s, :], '*', label = 'npsolve, spacing = ' + str(spacing[s]))
 
-ax.set_title('sum_tol = 1e-12')
+ax.set_title('a = 1/(2*pi), sum_tol = 1e-12')
 ax.set_xlabel('k')
 ax.set_ylabel('cpu cycles')
 plt.legend()
 plt.tight_layout()
-#plt.show()
-plt.savefig('timing_npsolve_vs_gmres.png', dpi = 150)
+plt.show()
+#plt.savefig('timing_npsolve_vs_gmres.png', dpi = 150)
