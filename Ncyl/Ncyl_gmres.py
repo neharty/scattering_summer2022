@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.random as rd
-from scipy.special import jv, jvp, h1vp
-from scipy.special import hankel1
+from scipy.special import jv, jvp, hankel1, h1vp
 from scipy.signal import convolve
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
@@ -9,14 +8,16 @@ from scipy.sparse.linalg import LinearOperator
 np.set_printoptions(linewidth=np.inf, precision=3)
 
 c = 1
-lam = 1+1j
 
 class cyl:
-    def __init__(self, bc, pos, radius, sum_index = None):
+    def __init__(self, bc, pos, radius, sum_index = None, impedance = None):
         self.__label = 0
         self.__pos = pos
         self.__radius = radius
         self.__bc = bc
+        self.__impedance = impedance
+        if self.__bc == 'i' and impedance == None:
+            print("set an impedance")
         self.__sum_index = sum_index 
     
     def set_label(self, l):
@@ -48,6 +49,12 @@ class cyl:
 
     def get_sum_index(self):
         return self.__sum_index
+
+    def set_impedance(self, imp):
+        self.__impedance = imp
+
+    def get_impedance(self):
+        return self.__impedance
 
 
 class scattering(cyl):
@@ -173,7 +180,8 @@ class scattering(cyl):
         bc = cyl_i.get_bc()
         radius = cyl_i.get_radius()
         b = cyl_i.get_pos() - cyl_sc.get_pos()
-        
+        lam = cyl_i.get_impedance()
+
         idxa_i = np.arange(-cyl_i.get_sum_index(), cyl_i.get_sum_index() + 1)
         idxa_sc = np.arange(-cyl_sc.get_sum_index(), cyl_sc.get_sum_index() + 1)
         
@@ -219,6 +227,7 @@ class scattering(cyl):
         idxa = np.arange(-self.__cyls[label].get_sum_index(), self.__cyls[label].get_sum_index() + 1)
         jvect = 1j*np.zeros(2*self.__cyls[label].get_sum_index() + 1)
         bc = self.__cyls[label].get_bc()
+        lam = self.__cyls[label].get_impedance()
         radius  = self.__cyls[label].get_radius()
         if bc == 'd':
             jvect = jv(idxa, self.__k*radius)/hankel1(idxa, self.__k*radius)
@@ -265,6 +274,7 @@ class scattering(cyl):
         for p in self.__labels:
             bc = self.__cyls[p].get_bc()
             radius = self.__cyls[p].get_radius()
+            lam = self.__cyls[p].get_impedance()
             idxa_p = np.arange(-self.__cyls[p].get_sum_index(), self.__cyls[p].get_sum_index() + 1)
             for q in self.__labels:
                 if p == q:
@@ -323,21 +333,24 @@ class scattering(cyl):
                 idxa = np.arange(-self.__cyls[l].get_sum_index(), self.__cyls[l].get_sum_index() + 1)
                 u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
 
-        return u_sc
+        return u_sc*self.mask(x,y)
 
     def make_u(self, x, y, method = 'gmres'):
+        r, theta = self.cart_to_polar([x,y])
+        u_inc = np.exp(1j*self.__k*r*np.cos(theta - self.__inc_angle))        
+        return (u_inc+self.make_u_sc(x,y, method = method))*self.mask(x,y)
+    
+    def mask(self, x, y):
         Oi = self.__cyls[0].get_pos()
         radius = self.__cyls[0].get_radius()
         mask = (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         for i in self.__labels[1:]:
             Oi = self.__cyls[i].get_pos()
             radius = self.__cyls[i].get_radius()
-            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius)# | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2)) 
+            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2)) 
+        
+        return mask
 
-        r, theta = self.cart_to_polar([x,y])
-        u_inc = np.exp(1j*self.__k*r*np.cos(theta - self.__inc_angle))        
-        return (u_inc+self.make_u_sc(x,y, method = method))*mask
-    
     def get_scattering_coeffs(self, method = 'gmres'):
         return self.scattering_coeffs(method=method)
 
