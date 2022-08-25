@@ -17,7 +17,7 @@ class cyl:
         self.__bc = bc
         self.__impedance = impedance
         if self.__bc == 'i' and impedance == None:
-            print("set an impedance")
+            raise NotImplementedError("Impedance is not set")
         self.__sum_index = sum_index 
     
     def set_label(self, l):
