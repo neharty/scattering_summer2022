@@ -58,7 +58,7 @@ class cyl:
 
 
 class scattering(cyl):
-    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = None, make_scat_matrix=False, method = 'gmres'):
+    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = False, precond_dist = 0, make_scat_matrix=False, method = 'gmres'):
         self.__cyls = cyls
         
         # create 0-indexed labels for cylinders
@@ -91,6 +91,7 @@ class scattering(cyl):
             self.__lengths[i+1] = 2*self.__cyls[i].get_sum_index() + 1 + self.__lengths[i]
 
         self.__precond = precond
+        self.__precond_dist = precond_dist
         
         self.__scat_matrix_dim = np.sum([2*self.__cyls[l].get_sum_index()+1 for l in self.__labels])
 
@@ -246,14 +247,20 @@ class scattering(cyl):
         return rhs
 
     def make_precond_matrix(self):
-        '''
-        scm = np.diag(self.__make_scattering_blocks_no_precond())
-        if self.__precond == 'simple':
-            return np.diag(np.array([1/scm[i] for i in range(len(scm))]))
-        else:
-            return np.eye(self.scat_mat.shape[0])
-        '''
-        return np.eye(self.__scat_matrix_dim)
+        precond_mat = [[None for i in self.__labels] for j in self.__labels]
+        for i in self.__labels:
+            for j in self.__labels:
+                if i == j:
+                    precond_mat[i][j] = self.make_direct_scattering_block(self.__cyls[i])
+                else:
+                    if np.linalg.norm(self.__cyls[i].get_pos() - self.__cyls[j].get_pos()) > self.__precond_dist:
+                        precond_mat[i][j] = np.zeros((2*self.__cyls[i].get_sum_index()+1, 2*self.__cyls[j].get_sum_index() + 1))
+                    else:
+                        precond_mat[i][j] = self.make_mul_scattering_block(self.__cyls[i], self.__cyls[j])
+
+        precond_mat = np.block(precond_mat)
+
+        return 2*np.eye(self.__scat_matrix_dim) - precond_mat
     
     class gmres_counter(object):
         def __init__(self, disp=True):
@@ -296,7 +303,7 @@ class scattering(cyl):
         xs += mulscat
             
         return np.hstack(xs)
-
+    
     def scattering_coeffs(self, method='gmres'):
         if method == 'gmres':
             self.__ST = self.make_root_matrix()        
@@ -304,9 +311,11 @@ class scattering(cyl):
             dim = self.__scat_matrix_dim
             linearop = LinearOperator((dim, dim), matvec = self.mvp)
             rhs = self.make_rhs_vector()
-            x0 = (2*rhs - linearop(rhs))
             counter = self.gmres_counter()
-            return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol)#, x0=x0)#, callback=counter)
+            if self.__precond:
+                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix())
+            else:
+                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol)#, x0=x0)#, callback=counter)
 
         elif method == 'explicit':
             if self.scat_mat is None:
@@ -314,7 +323,11 @@ class scattering(cyl):
            
             sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
             rhs = np.array(self.make_rhs_vector(), dtype=np.complex128)
-            return np.linalg.solve(sm, rhs)
+            if self.__precond:
+                pc_mat = self.make_precond_matrix()
+                return np.linalg.solve(pc_mat@sm, pc_mat@rhs)    
+            else:
+                return np.linalg.solve(sm, rhs)
 
     def make_u_sc(self, x, y, method = 'gmres'):
         r, theta = self.cart_to_polar([x, y]) 

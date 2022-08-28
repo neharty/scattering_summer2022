@@ -64,12 +64,12 @@ def uniform_grid_NxN(N, bcs, radius, spacing, freq, sum_tol = 1e-12, gmres_tol =
     if N%2 == 1:
         coeffs = np.arange(-(N-1)/2, (N-1)/2 + 1)
     else:
-        coeffs = np.arange(-N/2, N/2 + 1)
+        coeffs = np.arange(-N/2, N/2 + 1) + 0.5*spacing
 
     origins = np.array([[coeffs[i], coeffs[j]] for i in range(N) for j in range(N)])
     
     for i in range(N*N):
-        cyls[i] = cyl(bcs[i], origins[i], radius)
+        cyls[i] = cyl(bcs[i%N], origins[i], radius)
 
     return scattering(cyls, freq=freq, sum_tol=sum_tol, gmres_tol=gmres_tol, sum_index=sum_index, method=method)
 
@@ -96,7 +96,7 @@ def uniform_grating(N, bcs, radius, spacing, freq, sum_tol = 1e-12, gmres_tol = 
     if N%2 == 1:
         coeffs = np.arange(-(N-1)/2, (N-1)/2 + 1)
     else:
-        coeffs = np.arange(-N/2, N/2 + 1)
+        coeffs = np.arange(-N/2, N/2 + 1) + 0.5*spacing
 
     origins = np.array([[0, coeffs[j]] for j in range(N)])
     
