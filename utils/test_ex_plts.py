@@ -9,8 +9,9 @@ from Ncyl_gmres import scattering, cyl
 sys.path.append('../utils/')
 import example_setups
 
-N = 10
-sc = example_setups.uniform_grating(N, ['d' for i in range(N)], 1/(2*np.pi), 1, 1.5)
+N = 6
+cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1/(2*np.pi), 1)
+sc = scattering(cyls, precond=True, precond_dist = 2)
 fig, ax = plt.subplots()
 
 lim = 5
@@ -20,7 +21,7 @@ X, Y = np.meshgrid(x,y)
 
 #print(np.abs(sc.make_u(X,Y, method='explicit') - sc.make_u(X, Y)).max())
 
-#im = ax.imshow(np.abs(sc.make_u(X,Y, method='gmres')), extent=[-lim, lim, -lim, lim], origin = 'lower', cmap='viridis')
+im = ax.imshow(np.abs(sc.make_u(X,Y, method='gmres')), extent=[-lim, lim, -lim, lim], origin = 'lower', cmap='viridis')
 #ax.set_title('abs(u) T-matrix, a = 1/(2*pi), spacing = 1, freq = 1.5, sum_tol = 1e-12')
 
 angs = np.linspace(0, 2*np.pi, num = 20)

@@ -313,9 +313,9 @@ class scattering(cyl):
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
             if self.__precond:
-                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix())
+                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), callback = counter)
             else:
-                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol)#, x0=x0)#, callback=counter)
+                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, callback=counter)
 
         elif method == 'explicit':
             if self.scat_mat is None:
