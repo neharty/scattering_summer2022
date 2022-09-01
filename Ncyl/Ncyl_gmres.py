@@ -12,7 +12,7 @@ c = 1
 class cyl:
     def __init__(self, bc, pos, radius, sum_index = None, impedance = None):
         self.__label = 0
-        self.__pos = pos
+        self.__pos = np.array(pos)
         self.__radius = radius
         self.__bc = bc
         self.__impedance = impedance
@@ -58,7 +58,7 @@ class cyl:
 
 
 class scattering(cyl):
-    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = False, precond_dist = 0, make_scat_matrix=False, method = 'gmres'):
+    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = False, precond_dist = 0, make_scat_matrix=False, method = 'gmres', gmres_restart = None):
         self.__cyls = cyls
         
         # create 0-indexed labels for cylinders
@@ -72,6 +72,7 @@ class scattering(cyl):
         self.__wavelength = c/freq
         self.__inc_angle = inc_angle 
         self.__gmres_tol = gmres_tol
+        self.__gmres_restart = gmres_restart
         self.__method = method      
 
         # set the sum index for each cylinder, depending on if there's a global index or not
@@ -263,7 +264,7 @@ class scattering(cyl):
         return 2*np.eye(self.__scat_matrix_dim) - precond_mat
     
     class gmres_counter(object):
-        def __init__(self, disp=True):
+        def __init__(self, disp=False):
             self._disp = disp
             self.niter = 0
         def __call__(self, rk=None):
@@ -313,9 +314,10 @@ class scattering(cyl):
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
             if self.__precond:
-                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), callback = counter)
+                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), restart=self.__gmres_restart, callback = counter)
             else:
-                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, callback=counter)
+                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, restart=self.__gmres_restart, callback=counter)
+            self.__gmres_iter = counter.niter
 
         elif method == 'explicit':
             if self.scat_mat is None:

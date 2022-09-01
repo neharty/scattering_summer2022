@@ -34,7 +34,7 @@ def uniform_grid_5x5(radius, spacing):
 
     return uniform_grid_NxN(5, bcs, radius, spacing)
 
-def uniform_grid_NxN(N, bcs, radius, spacing):
+def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None):
     cyls = [None for i in range(N*N)]
     space = spacing+2*radius
     
@@ -46,7 +46,7 @@ def uniform_grid_NxN(N, bcs, radius, spacing):
     origins = np.array([[coeffs[i], coeffs[j]] for i in range(N) for j in range(N)])
     
     for i in range(N*N):
-        cyls[i] = cyl(bcs[i%N], origins[i], radius)
+        cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_num)
 
     return cyls
 
