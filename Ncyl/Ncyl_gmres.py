@@ -79,7 +79,9 @@ class scattering(cyl):
         if sum_index == None:    
             for l in self.__labels:
                 if self.__cyls[l].get_sum_index() == None: 
-                    self.__cyls[l].set_sum_index(int(self.__k*self.__cyls[l].get_radius() + ((np.log(2*np.sqrt(2)*np.pi*self.__k*self.__cyls[l].get_radius()/sum_tol))/(2*np.sqrt(2)))**(2/3)*(self.__k*self.__cyls[l].get_radius())**(1/3) + 1))
+                    ka = self.__k*self.__cyls[l].get_radius()
+                    self.__cyls[l].set_sum_index(int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1))
+                    #print(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1))
                 else:
                     continue
         else:
@@ -105,6 +107,8 @@ class scattering(cyl):
         
         self.__u = None
         self.__gmres_iter = 0
+        self.__gmres_res = np.array([])
+        self.__mvp_counter = 0
     
     def get_wavenumber(self):
         return self.__k
@@ -135,6 +139,12 @@ class scattering(cyl):
 
     def get_gmres_iter(self):
         return self.__gmres_iter
+
+    def get_gmres_res(self):
+        return self.__gmres_res
+    
+    def get_mvp_counter(self):
+        return self.__mvp_counter
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -167,7 +177,8 @@ class scattering(cyl):
         return np.hstack(([self.S(n, idxa_p[0], b) for n in idxd_q], [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]))
     
     def make_root_matrix(self):
-        return np.array([[self.make_root_vect_1cyl(self.__cyls[p], self.__cyls[q]) for q in self.__labels] for p in self.__labels], dtype=object)
+        self.__ST = np.array([[self.make_root_vect_1cyl(self.__cyls[p], self.__cyls[q]) for q in self.__labels] for p in self.__labels], dtype=object)
+        return self.__ST
 
     def make_direct_scattering_block(self, cyl):
         return np.eye(2*cyl.get_sum_index() + 1)
@@ -267,8 +278,10 @@ class scattering(cyl):
         def __init__(self, disp=False):
             self._disp = disp
             self.niter = 0
+            self.res = np.array([0])
         def __call__(self, rk=None):
             self.niter += 1
+            self.res = np.append(self.res, rk)
             if self._disp:
                 print('iter %3i\trk = %s' % (self.niter, str(rk)))
     
@@ -318,6 +331,7 @@ class scattering(cyl):
             else:
                 return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, restart=self.__gmres_restart, callback=counter)
             self.__gmres_iter = counter.niter
+            self.__gmres_res = counter.res[1:]
 
         elif method == 'explicit':
             if self.scat_mat is None:

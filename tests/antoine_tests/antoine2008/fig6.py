@@ -12,7 +12,7 @@ import example_setups
 
 #dirichlet
 
-N_ps = np.arange(1, 51, 10)
+N_ps = np.arange(1, 201, 10)
 gmres_iter = np.zeros(len(N_ps))
 
 for i in range(len(N_ps)):
@@ -30,3 +30,17 @@ plt.tight_layout()
 plt.savefig('figs/fig6/fig6_dirichlet.png')
 plt.clf()
 
+for i in range(len(N_ps)):
+    cyls = example_setups.uniform_grid_NxN(4, ['n', 'n', 'n', 'n'], 1, 1, sum_num=N_ps[i])
+    sc = scattering(cyls, freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
+
+    sc.scattering_coeffs()
+    gmres_iter[i] = sc.get_gmres_iter()
+
+plt.plot(N_ps, gmres_iter, '.')
+plt.xlabel('N_p')
+plt.ylabel('number of iterations')
+plt.title('neumann bcs')
+plt.tight_layout()
+plt.savefig('figs/fig6/fig6_neumann.png')
+plt.clf()
