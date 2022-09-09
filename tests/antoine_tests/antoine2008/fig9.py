@@ -47,7 +47,6 @@ plt.savefig('figs/fig9/fig9_dirichlet.png')
 plt.clf()
 
 #neumann
-
 for i in range(len(freqs)):
     sc = scattering(example_setups.uniform_grating(30, ['n' for i in range(30)], 1, 1), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
     
