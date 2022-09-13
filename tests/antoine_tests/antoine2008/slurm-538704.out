@@ -1,0 +1,22 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+Starting /home/n/nh287/.bash_profile ... standard AFS bash profile
+
+========================
+Home directory : /home/n/nh287 is not in AFS -- skipping quota check
+========================
+
+On host node753 :
+	 19:33:15 up 229 days,  4:22,  0 users,  load average: 21.15, 21.81, 22.14
+
+=== === === Your Kerberos ticket and AFS token status === === ===
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_zD0s6Usylj)
+Kerberos : 
+AFS      : 
+Running your /home/n/nh287/.modules file:
+fig12 start
+No handles with labels found to put in legend.
+No handles with labels found to put in legend.
+fig12 done

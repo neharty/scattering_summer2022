@@ -1,0 +1,38 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+Starting /home/n/nh287/.bash_profile ... standard AFS bash profile
+
+========================
+Home directory : /home/n/nh287 is not in AFS -- skipping quota check
+========================
+
+On host node786 :
+	 19:33:15 up 229 days,  4:22,  0 users,  load average: 10.23, 9.89, 10.08
+
+=== === === Your Kerberos ticket and AFS token status === === ===
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_zD0s6Usylj)
+Kerberos : 
+AFS      : 
+Running your /home/n/nh287/.modules file:
+fig9 start
+1.0 5
+11.183673469387756 21
+21.367346938775512 33
+31.551020408163268 45
+41.734693877551024 57
+51.91836734693878 68
+62.102040816326536 79
+72.28571428571429 91
+82.46938775510205 102
+92.6530612244898 113
+102.83673469387756 123
+113.02040816326532 134
+123.20408163265307 145
+133.38775510204084 156
+143.57142857142858 167
+153.75510204081633 178
+163.9387755102041 188
+/var/spool/slurmd/job538701/slurm_script: line 10: 139704 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/make_figs/fig9/fig9.py
+slurmstepd: error: Detected 1 oom-kill event(s) in step 538701.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
