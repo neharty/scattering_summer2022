@@ -315,7 +315,7 @@ class scattering(cyl):
                 mulscat[p] += DSCmvp
          
         xs += mulscat
-            
+        self.__mvp_counter += 1
         return np.hstack(xs)
     
     def scattering_coeffs(self, method='gmres'):
