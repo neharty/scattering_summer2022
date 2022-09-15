@@ -64,6 +64,7 @@ plt.title('neumann bcs')
 plt.legend()
 plt.tight_layout()
 plt.savefig('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/figs/fig5/fig5_neumann.png')
+plt.clf()
 
 #impedance
 zetas = np.array([0.5, 5])
@@ -93,6 +94,7 @@ for z in range(len(zetas)):
     plt.legend()
     plt.tight_layout()
     plt.savefig('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/figs/fig5/fig5_impedance_zeta='+str(zetas[z])+'.png')
+    plt.clf()
 
 print('fig5 done')
 

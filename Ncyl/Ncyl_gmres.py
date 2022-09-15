@@ -322,16 +322,18 @@ class scattering(cyl):
         if method == 'gmres':
             self.__ST = self.make_root_matrix()        
             self.__gmres_iter = 0
+            self.__mvp_counter = 0
             dim = self.__scat_matrix_dim
             linearop = LinearOperator((dim, dim), matvec = self.mvp)
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
             if self.__precond:
-                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), restart=self.__gmres_restart, callback = counter, maxiter=min(dim, 10))
+                outp = gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), restart=self.__gmres_restart, callback = counter, maxiter=max(dim, 50))
             else:
-                return gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, restart=self.__gmres_restart, callback=counter, maxiter=min(dim, 10))
+                outp =  gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, restart=self.__gmres_restart, callback=counter, maxiter=max(dim, 50))
             self.__gmres_iter = counter.niter
             self.__gmres_res = counter.res[1:]
+            return outp
 
         elif method == 'explicit':
             if self.scat_mat is None:

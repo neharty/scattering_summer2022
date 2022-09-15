@@ -1,0 +1,22 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+Starting /home/n/nh287/.bash_profile ... standard AFS bash profile
+
+========================
+Home directory : /home/n/nh287 is not in AFS -- skipping quota check
+========================
+
+On host node762 :
+	 22:46:46 up 286 days, 14 min,  0 users,  load average: 19.75, 20.32, 20.31
+
+=== === === Your Kerberos ticket and AFS token status === === ===
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_NfzCFqGCm7)
+Kerberos : 
+AFS      : 
+Running your /home/n/nh287/.modules file:
+fig10 start
+1952.0 1952
+4052.0 4052
+slurmstepd: error: *** JOB 539124 ON node762 CANCELLED AT 2022-09-14T00:33:33 ***

@@ -23,8 +23,9 @@ for i in range(len(N_ps)):
     
     sc.scattering_coeffs()
     gmres_iter[i] = sc.get_gmres_iter()
+    print(gmres_iter[i], sc.get_gmres_iter())
 
-plt.plot(N_ps, gmres_iter, '.')
+plt.plot(N_ps, gmres_iter)
 plt.xlabel('N_p')
 plt.ylabel('number of iterations')
 plt.title('dirichlet bcs')
@@ -39,7 +40,7 @@ for i in range(len(N_ps)):
     sc.scattering_coeffs()
     gmres_iter[i] = sc.get_gmres_iter()
 
-plt.plot(N_ps, gmres_iter, '.')
+plt.plot(N_ps, gmres_iter)
 plt.xlabel('N_p')
 plt.ylabel('number of iterations')
 plt.title('neumann bcs')

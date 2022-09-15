@@ -26,6 +26,7 @@ for i in range(len(N_ps)):
         res_120 = sc.get_gmres_res()
     if i == 1:
         res_150 = sc.get_gmres_res()
+    print(res_120, res_150)
 
 plt.plot(res_120, 'o-')
 plt.plot(res_150, '-')

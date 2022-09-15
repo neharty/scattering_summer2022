@@ -24,6 +24,7 @@ for i in range(len(freqs)):
 
     sc.scattering_coeffs()
     mvp[i] = sc.get_mvp_counter()
+    print(mvp[i], sc.get_mvp_counter())
 
     sc_50.scattering_coeffs()
     mvp_50[i] = sc.get_mvp_counter()
