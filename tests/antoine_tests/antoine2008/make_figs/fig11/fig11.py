@@ -19,8 +19,8 @@ delta_small = np.zeros(len(Ms))
 delta_norm = np.zeros(len(Ms))
 
 for i in range(len(Ms)):
-    sc_small = scattering(example_setups.uniform_grating(Ms[i], ['d' for i in range(Ms[i])], 1, 0.01), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
-    sc_norm = scattering(example_setups.uniform_grating(Ms[i], ['d' for i in range(Ms[i])], 1, 1), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc_small = scattering(example_setups.uniform_grating(Ms[i], ['d' for i in range(Ms[i])], 1, 2+0.01), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc_norm = scattering(example_setups.uniform_grating(Ms[i], ['d' for i in range(Ms[i])], 1, 3), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
 
     sc_small.scattering_coeffs()
     delta_small[i] = sc_small.get_mvp_counter()
@@ -40,8 +40,8 @@ plt.clf()
 
 #neumann
 for i in range(len(Ms)):
-    sc_small = scattering(example_setups.uniform_grating(Ms[i], ['n' for i in range(Ms[i])], 1, 0.01), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
-    sc_norm = scattering(example_setups.uniform_grating(Ms[i], ['n' for i in range(Ms[i])], 1, 1), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc_small = scattering(example_setups.uniform_grating(Ms[i], ['n' for i in range(Ms[i])], 1, 2+0.01), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc_norm = scattering(example_setups.uniform_grating(Ms[i], ['n' for i in range(Ms[i])], 1, 3), freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
 
     sc_small.scattering_coeffs()
     delta_small[i] = sc_small.get_mvp_counter()

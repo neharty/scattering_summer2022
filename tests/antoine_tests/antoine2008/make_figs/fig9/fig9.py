@@ -19,7 +19,7 @@ direct_times = np.zeros(len(freqs))
 fast_times = np.zeros(len(freqs))
 
 for i in range(len(freqs)):
-    sc = scattering(example_setups.uniform_grating(30, ['d' for i in range(30)], 1, 1), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
+    sc = scattering(example_setups.uniform_grating(30, ['d' for i in range(30)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
     
     A = sc.make_scattering_blocks()
     sc.make_root_matrix()
@@ -50,7 +50,7 @@ plt.clf()
 
 #neumann
 for i in range(len(freqs)):
-    sc = scattering(example_setups.uniform_grating(30, ['n' for i in range(30)], 1, 1), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
+    sc = scattering(example_setups.uniform_grating(30, ['n' for i in range(30)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
     
     A = sc.make_scattering_blocks()
     sc.make_root_matrix()

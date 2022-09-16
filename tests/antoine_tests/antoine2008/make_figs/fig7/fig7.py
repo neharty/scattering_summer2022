@@ -18,7 +18,7 @@ res_120 = None
 res_150 = None
 
 for i in range(len(N_ps)):
-    cyls = example_setups.uniform_grid_NxN(4, ['d', 'd', 'd', 'd'], 1, 1, sum_num=N_ps[i])
+    cyls = example_setups.uniform_grid_NxN(4, ['d', 'd', 'd', 'd'], 1, 3, sum_num=N_ps[i])
     sc = scattering(cyls, freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
     
     sc.scattering_coeffs()
@@ -40,7 +40,7 @@ plt.clf()
 #neumann
 
 for i in range(len(N_ps)):
-    cyls = example_setups.uniform_grid_NxN(4, ['n', 'n', 'n', 'n'], 1, 1, sum_num=N_ps[i])
+    cyls = example_setups.uniform_grid_NxN(4, ['n', 'n', 'n', 'n'], 1, 3, sum_num=N_ps[i])
     sc = scattering(cyls, freq=100/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1)
 
     sc.scattering_coeffs()
