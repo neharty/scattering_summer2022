@@ -17,13 +17,13 @@ Ms = np.arange(2, 9)
 mvp = np.zeros(len(Ms))
 
 for i in range(len(Ms)):
-    sc = scattering(example_setups.uniform_grid(Ms[i], ['d' for i in range(Ms[i])], 1, 3), freq=50/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc = scattering(example_setups.uniform_grid_NxN(Ms[i], ['d' for i in range(Ms[i])], 1, 3), freq=50/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
     
     sc.scattering_coeffs()
     mvp[i] = sc.get_mvp_counter()
     print(mvp[i], sc.get_mvp_counter())
 
-plt.plot(freqs, mvp, '.-')
+plt.plot(Ms, mvp, '.-')
 plt.xlabel('ka')
 plt.ylabel('MVP')
 plt.title('dirichlet bcs')
@@ -34,13 +34,13 @@ plt.clf()
 
 #neumann
 for i in range(len(Ms)):
-    sc = scattering(example_setups.uniform_grid(Ms[i], ['n' for i in range(Ms[i])], 1, 3), freq=50/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc = scattering(example_setups.uniform_grid_NxN(Ms[i], ['n' for i in range(Ms[i])], 1, 3), freq=50/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
     
     sc.scattering_coeffs()
     mvp[i] = sc.get_mvp_counter()
     print(mvp[i], sc.get_mvp_counter())
 
-plt.plot(freqs, mvp, '.-')
+plt.plot(Ms, mvp, '.-')
 plt.xlabel('ka')
 plt.ylabel('MVP')
 plt.title('neumann bcs')

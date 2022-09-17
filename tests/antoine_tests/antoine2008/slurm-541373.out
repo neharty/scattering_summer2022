@@ -17,3 +17,4 @@ Kerberos :
 AFS      : 
 Running your /home/n/nh287/.modules file:
 fig11 start
+slurmstepd: error: *** JOB 541373 ON node723 CANCELLED AT 2022-09-16T22:18:10 DUE TO TIME LIMIT ***

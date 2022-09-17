@@ -16,9 +16,10 @@ print('fig16 start')
 freqs = np.linspace(1, 200, num=30)
 mvp = np.zeros(len(freqs))
 
-for rstrt = [1, 50]:
+rstrt = [1, 50]
+for r in rstrt:
     for i in range(len(freqs)):
-        sc = scattering(example_setups.uniform_grating(75, ['d' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=rstrt)
+        sc = scattering(example_setups.uniform_grating(75, ['d' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=r)
         
         sc.scattering_coeffs()
         mvp[i] = sc.get_mvp_counter()
@@ -41,9 +42,9 @@ plt.savefig('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008
 plt.clf()
 
 #neumann
-for rstrt = [1, 50]:
+for r in rstrt:
     for i in range(len(freqs)):
-        sc = scattering(example_setups.uniform_grating(75, ['d' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=rstrt)
+        sc = scattering(example_setups.uniform_grating(75, ['d' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=r)
         
         sc.scattering_coeffs()
         mvp[i] = sc.get_mvp_counter()

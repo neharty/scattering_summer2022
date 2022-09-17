@@ -42,7 +42,7 @@ plt.clf()
 #neuman
 for m in m_y:
     for i in range(len(freqs)):
-        sc = scattering(example_setups.rectangular_lattice(5, m, ['n' for i in range(8)], 1, 8, 13), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = tr)
+        sc = scattering(example_setups.rectangular_lattice(5, m, ['n' for i in range(8)], 1, 8, 13), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
         
         sc.scattering_coeffs()
         mvp[i] = sc.get_mvp_counter()
