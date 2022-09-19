@@ -28,8 +28,8 @@ for i in range(len(N_ps)):
         res_150 = sc.get_gmres_res()
     print(res_120, res_150)
 
-plt.plot(res_120, 'o-')
-plt.plot(res_150, '-')
+plt.semilogy(res_120, 'o-')
+plt.semilogy(res_150, '-')
 plt.xlabel('number of iterations')
 plt.ylabel('Residuals')
 plt.title('dirichlet bcs')
@@ -49,8 +49,8 @@ for i in range(len(N_ps)):
     if i == 1:
         res_150 = sc.get_gmres_res()
 
-plt.plot(res_120, 'o-')
-plt.plot(res_150, '-')
+plt.semilogy(res_120, 'o-')
+plt.semilogy(res_150, '-')
 plt.xlabel('number of iterations')
 plt.ylabel('Residuals')
 plt.title('neumann bcs')

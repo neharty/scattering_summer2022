@@ -3,7 +3,7 @@
 #SBATCH --partition=public 
 #SBATCH --mem-per-cpu=4GB
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00 
+#SBATCH --time=48:00:00 
 #SBATCH --mail-type=end
 #SBATCH --mail-user=nh287@njit.edu
 

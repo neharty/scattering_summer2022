@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=make_fig9
 #SBATCH --partition=public 
-#SBATCH --mem-per-cpu=16GB
+#SBATCH --mem=32GB
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00 
 #SBATCH --mail-type=end
