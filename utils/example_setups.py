@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('../Ncyl/')
+sys.path.append('/home/n/nh287/scattering_summer2022/Ncyl/')
 from Ncyl_gmres import scattering, cyl
 
 def uniform_grid_3x3(radius, spacing):
@@ -73,7 +73,7 @@ def uniform_grating(N, bcs, radius, spacing):
     else:
         coeffs = np.arange(-N/2, N/2 + 1) + 0.5
 
-    origins = np.array([[0, coeffs[j]] for j in range(N)])*spacing
+    origins = np.array([[coeffs[j], 0] for j in range(N)])*spacing
     
     for i in range(N):
         cyls[i] = cyl(bcs[i], origins[i], radius)

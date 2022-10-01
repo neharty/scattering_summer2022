@@ -58,7 +58,7 @@ class cyl:
 
 
 class scattering(cyl):
-    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = False, precond_dist = 0, make_scat_matrix=False, method = 'gmres', gmres_restart = None):
+    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = False, precond_dist = 0, make_scat_matrix=False, method = 'gmres', gmres_restart = None, gmres_maxiter = None):
         self.__cyls = cyls
         
         # create 0-indexed labels for cylinders
@@ -73,6 +73,7 @@ class scattering(cyl):
         self.__inc_angle = inc_angle 
         self.__gmres_tol = gmres_tol
         self.__gmres_restart = gmres_restart
+        self.__gmres_maxiter = gmres_maxiter
         self.__method = method      
 
         # set the sum index for each cylinder, depending on if there's a global index or not
@@ -134,6 +135,9 @@ class scattering(cyl):
     def get_pos(self, label):
         return self.__cyls[label].get_pos()
     
+    def get_scat_matrix_dim(self):
+        return self.__scat_matrix_dim
+
     def get_u(self):
         return self.__u
 
@@ -328,9 +332,9 @@ class scattering(cyl):
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
             if self.__precond:
-                outp = gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), restart=self.__gmres_restart, callback = counter, maxiter=max(dim, 50))
+                outp = gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, M=self.make_precond_matrix(), restart=self.__gmres_restart, callback = counter, maxiter = self.__gmres_maxiter)
             else:
-                outp =  gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, restart=self.__gmres_restart, callback=counter, maxiter=max(dim, 50))
+                outp =  gmres(linearop, self.make_rhs_vector(), tol = self.__gmres_tol, restart=self.__gmres_restart, callback=counter, maxiter=self.__gmres_maxiter)
             self.__gmres_iter = counter.niter
             self.__gmres_res = counter.res[1:]
             return outp
