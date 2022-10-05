@@ -1,0 +1,29 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_TgnjWPIlxM)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig6/fig6_dirichlet.py", line 23, in <module>
+    cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3, sum_num=N_ps[i])
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 48, in uniform_grid_NxN
+    cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_num = sum_num, impedance = None)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig6/fig6_neumann.py", line 22, in <module>
+    cyls = example_setups.uniform_grid_NxN(2, ['n', 'n', 'n', 'n'], 1, 3, sum_num=N_ps[i])
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 48, in uniform_grid_NxN
+    cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_num = sum_num, impedance = None)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig6/fig6_impedance_small.py", line 22, in <module>
+    cyls = example_setups.uniform_grid_NxN(2, ['i', 'i', 'i', 'i'], 1, 3, sum_num=N_ps[i], impedance = 100/(0.5 + 0.5*1j))
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 48, in uniform_grid_NxN
+    cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_num = sum_num, impedance = None)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig6/fig6_impedance_large.py", line 22, in <module>
+    cyls = example_setups.uniform_grid_NxN(2, ['i', 'i', 'i', 'i'], 1, 3, sum_num=N_ps[i], impedance = 100/(5 + 5*1j))
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 48, in uniform_grid_NxN
+    cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_num = sum_num, impedance = None)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'

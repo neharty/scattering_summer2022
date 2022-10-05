@@ -2,26 +2,62 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #make dirichlet fig
-Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_x.npy')
-mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_y.npy')
-plt.plot(Ms, mvp, '.-')
-plt.xlabel('M')
-plt.ylabel('MVP')
-plt.title('dirichlet bcs')
-#plt.legend()
-plt.tight_layout()
-plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig15/fig15_dirichlet.png')
-plt.clf()
+try:
+    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_x.npy')
+    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_y.npy')
+    plt.plot(Ms, mvp, '.-')
+    plt.xlabel('M')
+    plt.ylabel('MVP')
+    plt.title('dirichlet bcs')
+    #plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig15/fig15_dirichlet.png')
+    plt.clf()
+except:
+    pass
 
 #make neumann fig
-Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_x.npy')
-mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_y.npy')
-plt.plot(Ms, mvp, '.-')
-plt.xlabel('M')
-plt.ylabel('MVP')
-plt.title('dirichlet bcs')
-#plt.legend()
-plt.tight_layout()
-plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig15/fig15_neumann.png')
-plt.clf()
+try:
+    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_x.npy')
+    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_y.npy')
+    plt.plot(Ms, mvp, '.-')
+    plt.xlabel('M')
+    plt.ylabel('MVP')
+    plt.title('neumann bcs')
+    #plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig15/fig15_neumann.png')
+    plt.clf()
+except:
+    pass
+
+#small impedance
+try:
+    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_small_x.npy')
+    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_small_y.npy')
+    plt.plot(Ms, mvp, '.-')
+    plt.xlabel('M')
+    plt.ylabel('MVP')
+    plt.title('impedance bcs, lam=k/(0.5 + 0.5*1j)')
+    #plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig15/fig15_impedance_small.png')
+    plt.clf()
+except:
+    pass
+
+#large impedance
+try:
+    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_large_x.npy')
+    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_large_y.npy')
+    plt.plot(Ms, mvp, '.-')
+    plt.xlabel('M')
+    plt.ylabel('MVP')
+    plt.title('impedance bcs, lam=k/(5 + 5*1j)')
+    #plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig15/fig15_impedance_large.png')
+    plt.clf()
+except:
+    pass
 

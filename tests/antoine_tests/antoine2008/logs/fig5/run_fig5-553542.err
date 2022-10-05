@@ -1,0 +1,9 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_TgnjWPIlxM)
+/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig5/fig5_impedance_small.py:34: RuntimeWarning: divide by zero encountered in true_divide
+  mat_times[i] = np.log10((process_time()-mts)/np.abs(N_p**2 - 2*N_p))
+/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig5/fig5_impedance_large.py:34: RuntimeWarning: divide by zero encountered in true_divide
+  mat_times[i] = np.log10((process_time()-mts)/np.abs(N_p**2 - 2*N_p))

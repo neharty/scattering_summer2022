@@ -1,0 +1,27 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_TgnjWPIlxM)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig13/fig13_dirichlet.py", line 28, in <module>
+    sc = scattering(example_setups.rectangular_lattice(8, m_y[m], ['d' for i in range(8)], 1, 8, 13), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = preconds[tr], inc_angle = 0)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 99, in rectangular_lattice
+    cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_num = sum_num, impedance = impedance)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig13/fig13_neumann.py", line 20, in <module>
+    mvp = np.zeros((2, len(m_y), len(freqs)))
+NameError: name 'freqs' is not defined
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig13/fig13_impedance_small.py", line 28, in <module>
+    sc = scattering(example_setups.rectangular_lattice(8, m_y[m], ['d' for i in range(8)], 1, 8, 13, impedance=freqs[i]/(0.5 + 0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = preconds[tr], inc_angle = 0)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 99, in rectangular_lattice
+    cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_num = sum_num, impedance = impedance)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig13/fig13_impedance_large.py", line 28, in <module>
+    sc = scattering(example_setups.rectangular_lattice(8, m_y[m], ['d' for i in range(8)], 1, 8, 13, impedance=freqs[i]/(5 + 5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = preconds[tr], inc_angle = 0)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 99, in rectangular_lattice
+    cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_num = sum_num, impedance = impedance)
+TypeError: __init__() got an unexpected keyword argument 'sum_num'

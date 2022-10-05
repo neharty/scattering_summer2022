@@ -1,0 +1,15 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_ijOl52wRgO)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig14/fig14.py", line 57, in <module>
+    sc.scattering_coeffs()
+  File "/home/n/nh287/scattering_summer2022/Ncyl/Ncyl_gmres.py", line 331, in scattering_coeffs
+    linearop = LinearOperator((dim, dim), matvec = self.mvp)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/scipy/sparse/linalg/interface.py", line 518, in __init__
+    self._init_dtype()
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/scipy/sparse/linalg/interface.py", line 174, in _init_dtype
+    v = np.zeros(self.shape[-1])
+TypeError: 'numpy.float64' object cannot be interpreted as an integer

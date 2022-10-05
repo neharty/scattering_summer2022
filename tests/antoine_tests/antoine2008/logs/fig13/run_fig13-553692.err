@@ -1,0 +1,12 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_JR8cLUsAyH)
+/var/spool/slurmd/job553692/slurm_script: line 14: 236673 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig13/fig13_dirichlet.py
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig13/fig13_neumann.py", line 20, in <module>
+    mvp = np.zeros((2, len(m_y), len(freqs)))
+NameError: name 'freqs' is not defined
+slurmstepd: error: *** JOB 553692 ON node718 CANCELLED AT 2022-10-04T14:10:42 DUE TO TIME LIMIT ***
+slurmstepd: error: Detected 1 oom-kill event(s) in step 553692.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

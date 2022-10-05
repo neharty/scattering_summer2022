@@ -1,0 +1,12 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_TgnjWPIlxM)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig5/fig5_neumann.py", line 13, in <module>
+    root_times = np.zeros(len(freqs))
+NameError: name 'freqs' is not defined
+/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig5/fig5_impedance_small.py:34: RuntimeWarning: divide by zero encountered in true_divide
+  mat_times[i] = np.log10((process_time()-mts)/np.abs(N_p**2 - 2*N_p))
+slurmstepd: error: *** JOB 553526 ON node762 CANCELLED AT 2022-10-01T21:11:30 DUE TO TIME LIMIT ***

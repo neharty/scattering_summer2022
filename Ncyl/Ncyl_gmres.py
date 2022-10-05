@@ -97,7 +97,7 @@ class scattering(cyl):
         self.__precond = precond
         self.__precond_dist = precond_dist
         
-        self.__scat_matrix_dim = np.sum([2*self.__cyls[l].get_sum_index()+1 for l in self.__labels])
+        self.__scat_matrix_dim = int(np.sum([2*self.__cyls[l].get_sum_index()+1 for l in self.__labels]))
 
         if make_scat_matrix:
             self.scat_mat = np.zeros((self.__scat_matrix_dim, self.__scat_matrix_dim))

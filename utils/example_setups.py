@@ -34,7 +34,7 @@ def uniform_grid_5x5(radius, spacing):
 
     return uniform_grid_NxN(5, bcs, radius, spacing)
 
-def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None):
+def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None, impedance=None):
     cyls = [None for i in range(N*N)]
     
     if N%2 == 1:
@@ -45,7 +45,7 @@ def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None):
     origins = np.array([[coeffs[i], coeffs[j]] for i in range(N) for j in range(N)])*spacing
     
     for i in range(N*N):
-        cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_num)
+        cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_index = sum_num, impedance = impedance)
 
     return cyls
 
@@ -64,7 +64,7 @@ def uniform_pentagon(penta_radius, cyl_radius, ang_shift):
     radius = 0.3
     return scattering([cyl(i, bcs[i], pos=origins[i], radius = cyl_radius) for i in range(5)])
 
-def uniform_grating(N, bcs, radius, spacing):
+def uniform_grating(N, bcs, radius, spacing, sum_num = None, impedance = None):
     cyls = [None for i in range(N)]
     space = spacing+2*radius
     
@@ -76,11 +76,11 @@ def uniform_grating(N, bcs, radius, spacing):
     origins = np.array([[coeffs[j], 0] for j in range(N)])*spacing
     
     for i in range(N):
-        cyls[i] = cyl(bcs[i], origins[i], radius)
+        cyls[i] = cyl(bcs[i], origins[i], radius, sum_index=sum_num, impedance = impedance)
 
     return cyls    
 
-def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None):
+def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None):
     cyls = [None for i in range(Nx*Ny)]
     
     if Nx%2 == 1:
@@ -96,13 +96,13 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None):
     origins = np.array([[xcoeffs[i]*xspace, ycoeffs[j]*yspace] for i in range(Nx) for j in range(Ny)])
 
     for i in range(Nx*Ny):
-        cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_num)
+        cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_index = sum_num, impedance = impedance)
 
     return cyls
 
-def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None):
-    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num)
-    cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num)
+def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None):
+    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_index=sum_num, impedance = impedance)
+    cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_index=sum_num, impedance = impedance)
     return cyls_main + cyls_off
 
 
