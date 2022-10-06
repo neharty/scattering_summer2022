@@ -1,11 +1,11 @@
 #!/bin/bash -l
 #SBATCH --job-name=run_fig10
 #SBATCH --partition=public 
-#SBATCH --mem=16GB
+#SBATCH --mem-per-cpu=32GB
 #SBATCH --ntasks=4
 #SBATCH --cpus-per-task=1
 #SBATCH --nodes=1
-#SBATCH --time=2-0 
+#SBATCH --time=5-0 
 #SBATCH --mail-type=end
 #SBATCH --mail-user=nh287@njit.edu
 #SBATCH --output=/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/logs/fig10/%x-%j.out

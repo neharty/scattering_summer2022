@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from time import process_time
 
 import sys
@@ -13,7 +12,7 @@ import example_setups
 print('fig9_d start')
 
 #dirichlet
-freqs = np.linspace(1, 500, num=50)
+freqs = np.linspace(1, 200, num=50)
 
 direct_times = np.zeros(len(freqs))
 fast_times = np.zeros(len(freqs))
@@ -25,10 +24,10 @@ for i in range(len(freqs)):
     A = sc.make_scattering_blocks()
     sc.make_root_matrix()
     
-    x = np.random.rand(A.shape[0])
+    x = np.zeros(A.shape[0])
 
     ts = process_time()
-    A.dot(x)
+    A @ x
     direct_times[i] = process_time() - ts
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_y1.npy', direct_times)
     

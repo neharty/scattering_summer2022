@@ -1,0 +1,19 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_WbXCc8yONY)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/linalg/linalg.py:2474: RuntimeWarning: overflow encountered in double_scalars
+  sqnorm = dot(x.real, x.real) + dot(x.imag, x.imag)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/scipy/sparse/linalg/isolve/iterative.py:600: RuntimeWarning: invalid value encountered in multiply
+  work[slice2] += sclr1*matvec(x)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/linalg/linalg.py:2474: RuntimeWarning: overflow encountered in double_scalars
+  sqnorm = dot(x.real, x.real) + dot(x.imag, x.imag)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/scipy/sparse/linalg/isolve/iterative.py:600: RuntimeWarning: invalid value encountered in multiply
+  work[slice2] += sclr1*matvec(x)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/linalg/linalg.py:2474: RuntimeWarning: overflow encountered in double_scalars
+  sqnorm = dot(x.real, x.real) + dot(x.imag, x.imag)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/linalg/linalg.py:2474: RuntimeWarning: overflow encountered in double_scalars
+  sqnorm = dot(x.real, x.real) + dot(x.imag, x.imag)
+/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/scipy/sparse/linalg/isolve/iterative.py:600: RuntimeWarning: invalid value encountered in multiply
+  work[slice2] += sclr1*matvec(x)

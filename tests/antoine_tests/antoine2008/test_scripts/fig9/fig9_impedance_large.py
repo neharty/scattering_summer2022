@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from time import process_time
 
 import sys
@@ -25,10 +24,10 @@ for i in range(len(freqs)):
     A = sc.make_scattering_blocks()
     sc.make_root_matrix()
     
-    x = np.random.rand(A.shape[0])
+    x = np.zeros(A.shape[0])
 
     ts = process_time()
-    A.dot(x)
+    A @ x
     direct_times[i] = process_time() - ts
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_y1.npy', direct_times)
     
