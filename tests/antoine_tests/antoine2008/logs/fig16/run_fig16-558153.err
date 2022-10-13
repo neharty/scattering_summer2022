@@ -5,3 +5,6 @@ Due to MODULEPATH changes, the following have been reloaded:
 klist: No credentials cache found (filename: /tmp/krb5cc_474061_WbXCc8yONY)
 /var/spool/slurmd/job558153/slurm_script: line 12: 64579 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig16/fig16_dirichlet.py
 /var/spool/slurmd/job558153/slurm_script: line 13: 76620 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig16/fig16_neumann.py
+/var/spool/slurmd/job558153/slurm_script: line 14: 135623 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig16/fig16_impedance_small.py
+/var/spool/slurmd/job558153/slurm_script: line 15: 215848 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig16/fig16_impedance_large.py
+slurmstepd: error: Detected 4 oom-kill event(s) in step 558153.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

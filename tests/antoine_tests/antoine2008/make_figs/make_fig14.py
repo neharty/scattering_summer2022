@@ -3,9 +3,16 @@ import matplotlib.pyplot as plt
 
 #make dirichlet fig
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_dirichlet_x.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_dirichlet_x.npy')
+    except:
+        print('fig14_dirichlet_x.npy not found')
+
     m_y = [2, 3, 4, 5, 6]
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_dirichlet_ys.npy')
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_dirichlet_ys.npy')
+    except:
+        print('fig14_dirichlet_ys.npy')
 
     for m in range(len(m_y)):
         plt.plot(ka, mvp[m, :], '-', label='M_y='+str(m_y[m]))
@@ -22,9 +29,17 @@ except:
 
 #make neumann fig
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_neumann_x.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_neumann_x.npy')
+    except:
+        print('fig14_neumann_x.npy not found')
+
     m_y = [2, 3, 4, 5, 6]
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_neumann_ys.npy')
+    
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_neumann_ys.npy')
+    except:
+        print('fig14_neumann_ys.npy not found')
 
     for m in range(len(m_y)):
         plt.plot(ka, mvp[m, :], '-', label='M_y='+str(m_y[m]))
@@ -41,9 +56,16 @@ except:
 
 #small impedance
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_small_x.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_small_x.npy')
+    except:
+        print('fig14_impedance_small_x.npy')
+
     m_y = [2, 3, 4, 5, 6]
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_small_ys.npy')
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_small_ys.npy')
+    except:
+        print('fig14_impedance_small_ys.npy')
 
     for m in range(len(m_y)):
         plt.plot(ka, mvp[m, :], '-', label='M_y='+str(m_y[m]))
@@ -60,9 +82,17 @@ except:
 
 #large impedance
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_large_x.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_large_x.npy')
+    except:
+        print('fig14_impedance_large_x.npy not found')
+    
     m_y = [2, 3, 4, 5, 6]
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_large_ys.npy')
+    
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig14/fig14_impedance_large_ys.npy')
+    except:
+        print('fig14_impedance_large_ys.npy not found')
 
     for m in range(len(m_y)):
         plt.plot(ka, mvp[m, :], '-', label='M_y='+str(m_y[m]))

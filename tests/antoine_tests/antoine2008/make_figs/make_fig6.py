@@ -3,8 +3,15 @@ import matplotlib.pyplot as plt
 
 #make dirichlet fig
 try:
-    N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_dirichlet_x.npy')
-    iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_dirichlet_y.npy')
+    try:
+        N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_dirichlet_x.npy')
+    except:
+        print('fig6_dirichlet_x.npy not found')
+
+    try:
+        iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_dirichlet_y.npy')
+    except:
+        print('fig6_dirichlet_y.npy not found')
 
     plt.plot(N_p, iter_num, '-')
     plt.xlabel('N_p')
@@ -35,8 +42,15 @@ except:
 
 #make neumann fig
 try:
-    N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_neumann_x.npy')
-    iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_neumann_y.npy')
+    try:
+        N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_neumann_x.npy')
+    except:
+        print('fig6_neumann_x.npy not found')
+
+    try:
+        iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_neumann_y.npy')
+    except:
+        print('fig6_neumann_y.npy not found')
 
     plt.plot(N_p, iter_num, '-')
     plt.xlabel('N_p')
@@ -67,8 +81,15 @@ except:
 
 #small impedance
 try:
-    N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_small_x.npy')
-    iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_small_y.npy')
+    try:
+        N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_small_x.npy')
+    except:
+        print('fig6_impedance_small_x.npy not found')
+
+    try:
+        iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_small_y.npy')
+    except:
+        print('fig6_impedance_small_y.npy not found')
 
     plt.plot(N_p, iter_num, '-')
     plt.xlabel('N_p')
@@ -99,8 +120,15 @@ except:
 
 #large impedance
 try:
-    N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_large_x.npy')
-    iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_large_y.npy')
+    try:
+        N_p = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_large_x.npy')
+    except:
+        print('fig6_impedance_large_x.npy not found')
+
+    try:
+        iter_num = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig6/fig6_impedance_large_y.npy')
+    except:
+        print('fig6_impedance_large_y.npy not found')
 
     plt.plot(N_p, iter_num, '-')
     plt.xlabel('N_p')

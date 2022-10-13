@@ -1,0 +1,21 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_WbXCc8yONY)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig10/fig10_dirichlet.py", line 34, in <module>
+    mvp_50[i] = sc.get_mvp_counter()
+NameError: name 'sc' is not defined
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig10/fig10_neumann.py", line 33, in <module>
+    mvp_50[i] = sc.get_mvp_counter()
+NameError: name 'sc' is not defined
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig10/fig10_impedance_small.py", line 23
+    sc = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freq[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), inc_angle=0)
+    ^
+SyntaxError: invalid syntax
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig10/fig10_impedance_large.py", line 23
+    sc = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freq[i]/(5+5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), inc_angle=0)
+    ^
+SyntaxError: invalid syntax

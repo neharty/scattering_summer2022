@@ -3,9 +3,20 @@ import matplotlib.pyplot as plt
 
 #make dirichlet fig
 try:
-    freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_x.npy')
-    direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_y1.npy')
-    fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_y2.npy')
+    try:
+        freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_x.npy')
+    except:
+        print('fig9_dirichlet_x.npy not found')
+
+    try:
+        direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_y1.npy')
+    except:
+        print('fig9_dirichlet_y1.npy not found')
+
+    try:
+        fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_dirichlet_y2.npy')
+    except:
+        print('fig9_dirichlet_y2.npy not found')
 
     plt.plot(freqs, direct_times, '-', label = 'direct algorithm')
     plt.plot(freqs, fast_times, '--', label = 'fast algorithm')
@@ -22,9 +33,20 @@ except:
 
 #make neumann fig
 try:
-    freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_x.npy')
-    direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_y1.npy')
-    fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_y2.npy')
+    try:
+        freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_x.npy')
+    except:
+        print('fig9_neumann_x.npy not found')
+
+    try:
+        direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_y1.npy')
+    except:
+        print('fig9_neumann_y1.npy not found')
+
+    try:
+        fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_y2.npy')
+    except:
+        print('fig9_neumann_y2.npy not found')
 
     plt.plot(freqs, direct_times, '-', label = 'direct algorithm')
     plt.plot(freqs, fast_times, '--', label = 'fast algorithm')
@@ -40,9 +62,20 @@ except:
 
 #small impedance
 try:
-    freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_small_x.npy')
-    direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_small_y1.npy')
-    fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_small_y2.npy')
+    try:
+        freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_small_x.npy')
+    except:
+        print('fig9_impedance_small_x.npy not found')
+
+    try:
+        direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_small_y1.npy')
+    except:
+        print('fig9_impedance_small_y1.npy not found')
+    
+    try:
+        fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_small_y2.npy')
+    except:
+        print('fig9_impedance_small_y2.npy not found')
 
     plt.plot(freqs, direct_times, '-', label = 'direct algorithm')
     plt.plot(freqs, fast_times, '--', label = 'fast algorithm')
@@ -58,9 +91,20 @@ except:
 
 #large impedance
 try:
-    freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_x.npy')
-    direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_y1.npy')
-    fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_y2.npy')
+    try:
+        freqs = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_x.npy')
+    except:
+        print('fig9_impedance_large_x.npy not found')
+
+    try:
+        direct_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_y1.npy')
+    except:
+        print('fig9_impedance_large_y1.npy not found')
+
+    try:
+        fast_times = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_impedance_large_y2.npy')
+    except:
+        print('fig9_impedance_large_y2.npy not found')
 
     plt.plot(freqs, direct_times, '-', label = 'direct algorithm')
     plt.plot(freqs, fast_times, '--', label = 'fast algorithm')

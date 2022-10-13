@@ -5,8 +5,16 @@ dirname = '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/d
 
 #make dirichlet fig
 try:
-    ka = np.load(dirname+'fig13_dirichlet_x.npy')
-    mvp = np.load(dirname+'fig13_dirichlet_y.npy')
+    try:
+        ka = np.load(dirname+'fig13_dirichlet_x.npy')
+    except:
+        print('fig13_dirichlet_x.npy not found')
+    
+    try:
+        mvp = np.load(dirname+'fig13_dirichlet_y.npy')
+    except:
+        print('fig13_dirichlet_y.npy not found')
+    
     M_y = [2, 4, 8]
     for i in range(2):
         for j in range(3):
@@ -28,8 +36,16 @@ except:
 
 #make neumann fig
 try:
-    ka = np.load(dirname+'fig13_neumann_x.npy')
-    mvp = np.load(dirname+'fig13_neumann_y.npy')
+    try:
+        ka = np.load(dirname+'fig13_neumann_x.npy')
+    except:
+        print('fig13_neumann_x.npy not found')
+    
+    try:
+        mvp = np.load(dirname+'fig13_neumann_y.npy')
+    except:
+        print('fig13_neumann_y.npy not found')
+    
     M_y = [2, 4, 8]
     for i in range(2):
         for j in range(3):
@@ -51,8 +67,16 @@ except:
 
 #small impedance
 try:
-    ka = np.load(dirname+'fig13_impedance_small_x.npy')
-    mvp = np.load(dirname+'fig13_impedance_small_y.npy')
+    try:
+        ka = np.load(dirname+'fig13_impedance_small_x.npy')
+    except:
+        print('fig13_impedance_small_x.npy not found')
+    
+    try:
+        mvp = np.load(dirname+'fig13_impedance_small_y.npy')
+    except:
+        print('fig13_impedance_small_y.npy not found')
+    
     M_y = [2, 4, 8]
     for i in range(2):
         for j in range(3):
@@ -74,8 +98,16 @@ except:
 
 #large impedance
 try:
-    ka = np.load(dirname+'fig13_impedance_large_x.npy')
-    mvp = np.load(dirname+'fig13_impedance_large_y.npy')
+    try:
+        ka = np.load(dirname+'fig13_impedance_large_x.npy')
+    except:
+        print('fig13_impedance_large_x.npy not found')
+    
+    try:
+        mvp = np.load(dirname+'fig13_impedance_large_y.npy')
+    except:
+        print('fig13_impedance_large_y.npy not found')
+    
     M_y = [2, 4, 8]
     for i in range(2):
         for j in range(3):

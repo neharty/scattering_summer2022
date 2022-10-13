@@ -5,9 +5,20 @@ dirname = '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/d
 
 #make dirichlet fig
 try:
-    Ms = np.load(dirname+'fig11_dirichlet_x.npy')
-    delta_small = np.load(dirname+'fig11_dirichlet_y1.npy')
-    delta_norm = np.load(dirname+'fig11_dirichlet_y2.npy')
+    try:
+        Ms = np.load(dirname+'fig11_dirichlet_x.npy')
+    except:
+        print('fig11_dirichlet_x.npy not found')
+
+    try:
+        delta_small = np.load(dirname+'fig11_dirichlet_y1.npy')
+    except:
+        print('fig11_dirichlet_y1.npy not found')
+
+    try:
+        delta_norm = np.load(dirname+'fig11_dirichlet_y2.npy')
+    except:
+        print('fig11_dirichlet_y2.npy not found')
 
     plt.plot(Ms, delta_small, '.-', label = 'delta=0.01')
     plt.plot(Ms, delta_norm, '*-', label = 'delta=1')
@@ -23,9 +34,20 @@ except:
 
 #make neumann fig
 try:
-    Ms = np.load(dirname+'fig11_neumann_x.npy')
-    delta_small = np.load(dirname+'fig11_neumann_y1.npy')
-    delta_norm = np.load(dirname+'fig11_neumann_y2.npy')
+    try:
+        Ms = np.load(dirname+'fig11_neumann_x.npy')
+    except:
+        print('fig11_neumann_x.npy not found')
+
+    try:
+        delta_small = np.load(dirname+'fig11_neumann_y1.npy')
+    except:
+        print('fig11_neumann_y1.npy not found')
+
+    try:
+        delta_norm = np.load(dirname+'fig11_neumann_y2.npy')
+    except:
+        print('fig11_neumann_y2.npy not found')
 
     plt.plot(Ms, delta_small, '.-', label = 'delta=0.01')
     plt.plot(Ms, delta_norm, '*-', label = 'delta=1')
@@ -41,9 +63,19 @@ except:
 
 #small impedance
 try:
-    Ms = np.load(dirname+'fig11_impedance_small_x.npy')
-    delta_small = np.load(dirname+'fig11_impedance_small_y1.npy')
-    delta_norm = np.load(dirname+'fig11_impedance_small_y2.npy')
+    try:
+        Ms = np.load(dirname+'fig11_impedance_small_x.npy')
+    except:
+        print('fig11_impedance_small_x.npy not found')
+    try:
+        delta_small = np.load(dirname+'fig11_impedance_small_y1.npy')
+    except:
+        print('fig11_impedance_small_y1.npy not found')
+
+    try:
+        delta_norm = np.load(dirname+'fig11_impedance_small_y2.npy')
+    except:
+        print('fig11_impedance_small_y2.npy not found')
 
     plt.plot(Ms, delta_small, '.-', label = 'delta=0.01')
     plt.plot(Ms, delta_norm, '*-', label = 'delta=1')
@@ -59,9 +91,20 @@ except:
 
 #large impedance
 try:
-    Ms = np.load(dirname+'fig11_impedance_large_x.npy')
-    delta_small = np.load(dirname+'fig11_impedance_large_y1.npy')
-    delta_norm = np.load(dirname+'fig11_impedance_large_y2.npy')
+    try:
+        Ms = np.load(dirname+'fig11_impedance_large_x.npy')
+    except:
+        print('fig11_impedance_large_x.npy not found')
+
+    try:
+        delta_small = np.load(dirname+'fig11_impedance_large_y1.npy')
+    except:
+        print('fig11_impedance_large_y1.npy not found')
+    
+    try:
+        delta_norm = np.load(dirname+'fig11_impedance_large_y2.npy')
+    except:
+        print('fig11_impedance_large_y2.npy not found')
 
     plt.plot(Ms, delta_small, '.-', label = 'delta=0.01')
     plt.plot(Ms, delta_norm, '*-', label = 'delta=1')

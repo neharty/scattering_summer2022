@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=run_fig16
 #SBATCH --partition=public 
-#SBATCH --mem-per-cpu=12GB
+#SBATCH --mem-per-cpu=16GB
 #SBATCH --nodes=1
 #SBATCH --time=5-0 
 #SBATCH --mail-type=end

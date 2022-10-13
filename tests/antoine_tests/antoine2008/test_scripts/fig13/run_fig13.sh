@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=run_fig13
 #SBATCH --partition=public 
-#SBATCH --mem=16GB
+#SBATCH --mem-per-cpu=16GB
 #SBATCH --nodes=1
 #SBATCH --ntasks=4
 #SBATCH --cpus-per-task=1

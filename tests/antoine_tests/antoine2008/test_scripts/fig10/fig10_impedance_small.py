@@ -19,8 +19,8 @@ mvp = np.zeros(len(freqs))
 mvp_50 = np.zeros(len(freqs))
 
 for i in range(len(freqs)):
-    sc_test = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freq[i]/(0.5+0.5*1j), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=1, inc_angle=0)
-    sc = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freq[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), inc_angle=0)
+    sc_test = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freqs[i]/(0.5+0.5*1j), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=1, inc_angle=0)
+    sc = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), inc_angle=0)
     del sc_test
 
     sc.scattering_coeffs()
@@ -29,7 +29,7 @@ for i in range(len(freqs)):
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig10/fig10_impedance_small_y', mvp)
     del sc
 
-    sc_50 = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freq[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=50, inc_angle=0)
+    sc_50 = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance = freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=50, inc_angle=0)
     sc_50.scattering_coeffs()
     mvp_50[i] = sc.get_mvp_counter()
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig10/fig10_impedance_small_y50', mvp_50)

@@ -106,6 +106,7 @@ class scattering(cyl):
         else:
             self.scat_mat = None
         
+        self.__ST = None
         self.__u = None
         self.__gmres_iter = 0
         self.__gmres_res = np.array([])
@@ -181,7 +182,9 @@ class scattering(cyl):
         return np.hstack(([self.S(n, idxa_p[0], b) for n in idxd_q], [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]))
     
     def make_root_matrix(self):
-        self.__ST = np.array([[self.make_root_vect_1cyl(self.__cyls[p], self.__cyls[q]) for q in self.__labels] for p in self.__labels], dtype=object)
+        if self.__ST == None:
+            self.__ST = np.array([[self.make_root_vect_1cyl(self.__cyls[p], self.__cyls[q]) for q in self.__labels] for p in self.__labels], dtype=object)
+        
         return self.__ST
 
     def make_direct_scattering_block(self, cyl):

@@ -24,7 +24,7 @@ mvp = np.zeros((len(m_y), len(freqs)))
 
 for m in range(len(m_y)):
     for i in range(len(freqs)):
-        sc = scattering(example_setups.rectangular_lattice(5, m_y[m], ['d' for i in range(8)], 1, 3, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, inc_angle = 0)
+        sc = scattering(example_setups.rectangular_lattice(5, m_y[m], ['i' for i in range(8)], 1, 3, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, inc_angle = 0)
         
         sc.scattering_coeffs()
         mvp[m, i] = sc.get_mvp_counter()

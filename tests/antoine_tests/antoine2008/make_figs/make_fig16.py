@@ -3,9 +3,20 @@ import matplotlib.pyplot as plt
 
 #make dirichlet fig
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_dirichlet_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_dirichlet_y.npy')
-    mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_dirichlet_y50.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_dirichlet_x.npy')
+    except:
+        print('fig16_dirichlet_x.npy not found')
+    
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_dirichlet_y.npy')
+    except:
+        print('fig16_dirichlet_y.npy not found')
+
+    try:
+        mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_dirichlet_y50.npy')
+    except:
+        print('fig16_dirichlet_y50.npy not found')
 
     plt.plot(ka, mvp[0, :], '-', label='precondition GMRES')
     plt.plot(ka, mvp50[1, :], '-*', label='preconditioned GMRES(50)')
@@ -21,9 +32,20 @@ except:
 
 #make neumann fig
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_neumann_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_neumann_y.npy')
-    mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_neumann_y50.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_neumann_x.npy')
+    except:
+        print('fig16_neumann_x.npy not found')
+
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_neumann_y.npy')
+    except:
+        print('fig16_neumann_y.npy not found')
+    
+    try:
+        mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_neumann_y50.npy')
+    except:
+        print('fig16_neumann_y50.npy not found')
 
     plt.plot(ka, mvp[0, :], '-', label='precondition GMRES')
     plt.plot(ka, mvp50[1, :], '-*', label='preconditioned GMRES(50)')
@@ -39,9 +61,20 @@ except:
 
 #small impedance
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_small_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_small_y.npy')
-    mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_small_y50.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_small_x.npy')
+    except:
+        print('fig16_impedance_small_x.npy not found')
+    
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_small_y.npy')
+    except:
+        print('fig16_impedance_small_y.npy not found')
+
+    try:
+        mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_small_y50.npy')
+    except:
+        print('fig16_impedance_small_y50.npy not found')
 
     plt.plot(ka, mvp[0, :], '-', label='precondition GMRES')
     plt.plot(ka, mvp50[1, :], '-*', label='preconditioned GMRES(50)')
@@ -57,9 +90,20 @@ except:
 
 #large impedance
 try:
-    ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_large_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_large_y.npy')
-    mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_large_y50.npy')
+    try:
+        ka = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_large_x.npy')
+    except:
+        print('fig16_impedance_large_x.npy not found')
+
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_large_y.npy')
+    except:
+        print('fig16_impedance_large_y.npy not found')
+
+    try:
+        mvp50 = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig16/fig16_impedance_large_y50.npy')
+    except:
+        print('fig16_impedance_large_y50.npy not found')
 
     plt.plot(ka, mvp[0, :], '-', label='precondition GMRES')
     plt.plot(ka, mvp50[1, :], '-*', label='preconditioned GMRES(50)')

@@ -5,8 +5,16 @@ dirname = '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/d
 
 #make dirichlet fig
 try:
-    deltas = np.load(dirname + 'fig12_dirichlet_x.npy')
-    mvps = np.load(dirname+'fig12_dirichlet_y.npy')
+    try:
+        deltas = np.load(dirname + 'fig12_dirichlet_x.npy')
+    except:
+        print('fig12_dirichlet_x.npy not found')
+
+    try:
+        mvps = np.load(dirname+'fig12_dirichlet_y.npy')
+    except:
+        print('fig12_dirichlet_y.npy not found')
+
     plt.plot(np.log10(deltas), mvps, '.-')
     plt.xlabel('log10(delta)')
     plt.ylabel('MVP')
@@ -20,8 +28,16 @@ except:
 
 #make neumann fig
 try:
-    deltas = np.load(dirname+'fig12_neumann_x.npy')
-    mvps = np.load(dirname+'fig12_neumann_y.npy')
+    try:
+        deltas = np.load(dirname+'fig12_neumann_x.npy')
+    except:
+        print('fig12_neumann_x.npy not found')
+
+    try:
+        mvps = np.load(dirname+'fig12_neumann_y.npy')
+    except:
+        print('fig12_neumann_y.npy not found')
+    
     plt.plot(np.log10(deltas), mvps, '.-')
     plt.xlabel('log10(delta)')
     plt.ylabel('MVP')
@@ -35,8 +51,16 @@ except:
 
 #small impedance
 try:
-    deltas = np.load(dirname+'fig12_impedance_small_x.npy')
-    mvps = np.load(dirname+'fig12_impedance_small_y.npy')
+    try:
+        deltas = np.load(dirname+'fig12_impedance_small_x.npy')
+    except:
+        print('fig12_impedance_small_x.npy not found')
+    
+    try:
+        mvps = np.load(dirname+'fig12_impedance_small_y.npy')
+    except:
+        print('fig12_impedance_small_y.npy not found')
+
     plt.plot(np.log10(deltas), mvps, '.-')
     plt.xlabel('log10(delta)')
     plt.ylabel('MVP')
@@ -50,8 +74,16 @@ except:
 
 #large impedance
 try:
-    deltas = np.load(dirname+'fig12_impedance_large_x.npy')
-    mvps = np.load(dirname+'fig12_impedance_large_y.npy')
+    try:
+        deltas = np.load(dirname+'fig12_impedance_large_x.npy')
+    except:
+        print('fig12_impedance_large_x.npy not found')
+    
+    try:
+        mvps = np.load(dirname+'fig12_impedance_large_y.npy')
+    except:
+        print('fig12_impedance_large_y.npy not found')
+
     plt.plot(np.log10(deltas), mvps, '.-')
     plt.xlabel('log10(delta)')
     plt.ylabel('MVP')

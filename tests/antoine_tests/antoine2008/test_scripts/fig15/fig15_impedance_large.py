@@ -18,7 +18,7 @@ np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/dat
 mvp = np.zeros(len(Ms))
 
 for i in range(len(Ms)):
-    sc = scattering(example_setups.uniform_grid_NxN(Ms[i], ['d' for i in range(Ms[i])], 1, 3, impedance=50/(5+5*1j)), freq=50/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
+    sc = scattering(example_setups.uniform_grid_NxN(Ms[i], ['i' for i in range(Ms[i])], 1, 3, impedance=50/(5+5*1j)), freq=50/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50)
     
     sc.scattering_coeffs()
     mvp[i] = sc.get_mvp_counter()

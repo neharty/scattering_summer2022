@@ -3,8 +3,16 @@ import matplotlib.pyplot as plt
 
 #make dirichlet fig
 try:
-    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_y.npy')
+    try:
+        Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_x.npy')
+    except:
+        print('fig15_dirichlet_x.npy not found')
+
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_dirichlet_y.npy')
+    except:
+        print('fig15_dirichlet_y.npy not found')
+
     plt.plot(Ms, mvp, '.-')
     plt.xlabel('M')
     plt.ylabel('MVP')
@@ -18,8 +26,16 @@ except:
 
 #make neumann fig
 try:
-    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_y.npy')
+    try:
+        Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_x.npy')
+    except:
+        print('fig15_neumann_x.npy not found')
+    
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_neumann_y.npy')
+    except:
+        print('fig15_neumann_y.npy not found')
+
     plt.plot(Ms, mvp, '.-')
     plt.xlabel('M')
     plt.ylabel('MVP')
@@ -33,8 +49,16 @@ except:
 
 #small impedance
 try:
-    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_small_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_small_y.npy')
+    try:
+        Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_small_x.npy')
+    except:
+        print('fig15_impedance_small_x.npy not found')
+    
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_small_y.npy')
+    except:
+        print('fig15_impedance_small_y.npy not found')
+
     plt.plot(Ms, mvp, '.-')
     plt.xlabel('M')
     plt.ylabel('MVP')
@@ -48,8 +72,16 @@ except:
 
 #large impedance
 try:
-    Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_large_x.npy')
-    mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_large_y.npy')
+    try:
+        Ms = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_large_x.npy')
+    except:
+        print('fig15_impedance_large_x.npy not found')
+
+    try:
+        mvp = np.load('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig15/fig15_impedance_large_y.npy')
+    except:
+        print('fig15_impedance_large_y.npy not found')
+
     plt.plot(Ms, mvp, '.-')
     plt.xlabel('M')
     plt.ylabel('MVP')
