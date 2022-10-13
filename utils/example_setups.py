@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-sys.path.append('/home/n/nh287/scattering_summer2022/Ncyl/')
-from Ncyl_gmres import scattering, cyl
+#import sys
+#sys.path.append('/home/n/nh287/scattering_summer2022/Ncyl/')
+from Ncyl.Ncyl_gmres import scattering, cyl
 
 def uniform_grid_3x3(radius, spacing):
     # 3x3 grid of cylinders
@@ -105,4 +105,39 @@ def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impeda
     cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_index=sum_num, impedance = impedance)
     return cyls_main + cyls_off
 
+def random_pos(Lxmin, Lxmax, Lymin, Lymax, cutoff, N, bc, radius, sum_num=None, impedance=None):
+    
+    allcyls = False
+    while not allcyls:
+        xpos = np.random.uniform(low=Lxmin+radius, high=Lxmax-radius, size=2*N)
+        ypos = np.random.uniform(low=Lymin+radius, high=Lymax-radius, size=2*N)
+        
+        cylidx = np.zeros(N)
+
+        dist_matrix = np.zeros((2*N, 2*N))
+        for i in range(2*N):
+            for j in range(2*N):
+                dist_matrix[i, j] = np.sqrt((xpos[i] - xpos[j])**2 + (ypos[i] - ypos[j])**2)
+        
+        mask = dist_matrix >= cutoff
+
+        for i in range(2*N):
+            mask[i , i] = True
+        
+        cylctr = 0
+        for i in range(2*N):
+            if np.all(mask[i, :]):
+                cylidx[cylctr] = i
+                cylctr += 1
+            if cylctr >= N:
+                allcyls = True
+                break
+     
+    origins = np.array([[xpos[idxs[i][0]], ypos[idxs[i][1]]] for i in range(N)])
+
+    cyls = [None for i in range(N)]
+    for i in range(N):
+        cyls[i] = cyl(bc, origins[i], radius, sum_index=sum_num, impedance = impedance)
+
+    return cyls
 
