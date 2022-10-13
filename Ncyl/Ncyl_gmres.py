@@ -366,9 +366,6 @@ class scattering(cyl):
             cs = self.scattering_coeffs(method = 'explicit')
 
         for l in self.__labels:
-            R = np.array([x - self.__cyls[l].get_pos()[0], y - self.__cyls[l].get_pos()[1]])
-            for j in range(2*self.__cyls[l].get_sum_index() + 1):
-                idxa = np.arange(-self.__cyls[l].get_sum_index(), self.__cyls[l].get_sum_index() + 1)
                 u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
 
         return u_sc*self.mask(x,y)
