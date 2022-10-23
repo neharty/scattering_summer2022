@@ -31,7 +31,7 @@ for i in range(len(freqs)):
     
     sc_50 = scattering(example_setups.uniform_grating(75, ['d' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=50, inc_angle=0)
     sc_50.scattering_coeffs()
-    mvp_50[i] = sc.get_mvp_counter()
+    mvp_50[i] = sc_50.get_mvp_counter()
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig10/fig10_dirichlet_y50', mvp_50)
     del sc_50
 
