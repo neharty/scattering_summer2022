@@ -3,11 +3,11 @@ from time import process_time
 
 import sys
 sys.path.append('/home/n/nh287/scattering_summer2022/Ncyl/')
-from Ncyl_gmres import scattering, cyl
+from Ncyl.Ncyl_gmres import scattering, cyl
 
 import sys
 sys.path.append('/home/n/nh287/scattering_summer2022/utils/')
-import example_setups
+from utils import example_setups
 
 print('fig7_d start')
 #dirichlet
@@ -23,6 +23,7 @@ for i in range(len(N_ps)):
     del sc_test
 
     sc.scattering_coeffs()
+    print(sc.get_scat_matrix_dim(), ((sc.get_scat_matrix_dim()/4)-1)/2)
     if i == 0:
         res_120 = sc.get_gmres_res()
         np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig7/fig7_dirichlet_y120.npy', res_120)
