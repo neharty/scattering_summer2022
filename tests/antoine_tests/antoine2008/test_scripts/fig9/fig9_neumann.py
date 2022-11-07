@@ -21,17 +21,16 @@ np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/dat
 for i in range(len(freqs)):
     sc = scattering(example_setups.uniform_grating(30, ['n' for i in range(30)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=1, inc_angle=0)
     
-    A = sc.make_scattering_blocks()
-    sc.make_root_matrix()
-    
-    x = np.zeros(A.shape[0])
+    np.random.seed(12345)
+    x = np.random.random(sc.get_scat_matrix_dim())
 
     ts = process_time()
-    A @ x
+    sc.make_scattering_blocks() @ x
     direct_times[i] = process_time() - ts
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_y1.npy', direct_times)
     
     ts = process_time()
+    sc.make_root_matrix()
     sc.mvp(x)
     fast_times[i] = process_time() - ts
     np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig9/fig9_neumann_y2.npy', fast_times)

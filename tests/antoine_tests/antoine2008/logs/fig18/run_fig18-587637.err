@@ -1,0 +1,12 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_Bm8oZz6Jkl)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_dirichlet.py", line 24, in <module>
+    sc = scattering(example_setups.triangular_lattice(6, 6, ['d' for i in range(6)], 1, 5, 5), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = preconds[tr], precond_dist=7.5, inc_angle = 0)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 104, in triangular_lattice
+    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_index=sum_num, impedance = impedance)
+TypeError: rectangular_lattice() got an unexpected keyword argument 'sum_index'
+slurmstepd: error: *** JOB 587637 ON node762 CANCELLED AT 2022-11-04T11:27:29 ***

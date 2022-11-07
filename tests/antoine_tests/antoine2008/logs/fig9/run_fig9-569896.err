@@ -1,0 +1,9 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_DxyEUb73AI)
+/var/spool/slurmd/job569896/slurm_script: line 15: 67770 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig9/fig9_neumann.py
+/var/spool/slurmd/job569896/slurm_script: line 16: 184888 Killed                  python3 -u /home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig9/fig9_impedance_small.py
+slurmstepd: error: *** JOB 569896 ON node786 CANCELLED AT 2022-10-23T17:33:52 DUE TO TIME LIMIT ***
+slurmstepd: error: Detected 2 oom-kill event(s) in step 569896.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

@@ -19,18 +19,20 @@ np.save(dirname+'fig16_impedance_small_x', freqs)
 
 for i in range(len(freqs)):
     sc_test = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10)
-    sc = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim())
+    sc = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), precond=True, precond_dist=3)
     del sc_test
-    sc_50 = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=50)
+    sc_50 = scattering(example_setups.uniform_grating(75, ['i' for i in range(75)], 1, 3, impedance=freqs[i]/(0.5+0.5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=50, precond=True, precond_dist=3)
     
     sc.scattering_coeffs()
     mvp[0, i] = sc.get_mvp_counter()
     np.save(dirname+'fig16_impedance_small_y', mvp)
-    
+    del sc
+
     sc_50.scattering_coeffs()
     mvp[1, i] = sc_50.get_mvp_counter()
     np.save(dirname+'fig16_impedance_small_y50', mvp)
-    print(mvp[:, i], sc.get_mvp_counter())
+    print(mvp[:, i], sc_50.get_mvp_counter())
+    del sc_50
 
 print('fig16_i_s start')
 

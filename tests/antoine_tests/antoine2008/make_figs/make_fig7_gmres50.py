@@ -11,10 +11,12 @@ from Ncyl_gmres import scattering
 
 dirname = '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig7/'
 #make dirichlet fig
-N_ps= [50, 85, 120, 150]
+N_ps= [50, 85, 120, 150, 160, 170, 180]
 for i in range(len(N_ps)):
     res = np.load(dirname+'fig7_gmres50_dirichlet_y'+str(N_ps[i])+'.npy')
-
+    if N_ps[i] == 180:
+        n = len(res)
+        res = res[:int(n/50)]
     plt.semilogy(res, '-', label = 'N_p = '+str(N_ps[i]))
     
 plt.xlabel('number of iterations')
@@ -25,6 +27,7 @@ plt.tight_layout()
 plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig7/fig7_gmres50_dirichlet.png')
 plt.clf()
 
+'''
 #needed to get rid of duplicates in the plot legend labels
 #ripped from https://stackoverflow.com/questions/19385639/duplicate-items-in-legend-in-matplotlib
 def legend_without_duplicate_labels(ax):
@@ -77,6 +80,7 @@ for i in range(len(N_ps_restr)):
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig7/fig7_utot_dirichlet_'+str(N_ps_restr[i])+'.png')
     plt.clf()
+'''
 
 #make neumann fig
 '''

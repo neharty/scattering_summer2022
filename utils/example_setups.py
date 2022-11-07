@@ -101,8 +101,8 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
     return cyls
 
 def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None):
-    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_index=sum_num, impedance = impedance)
-    cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_index=sum_num, impedance = impedance)
+    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance)
+    cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance)
     return cyls_main + cyls_off
 
 def random_pos(Lxmin, Lxmax, Lymin, Lymax, cutoff, N, bc, radius, sum_num=None, impedance=None):

@@ -27,6 +27,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig5/fig5_dirichlet.png')
     plt.clf()
+
+    del ka
+    del root_times
+    del mat_times
 except:
     pass
 
@@ -56,6 +60,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig5/fig5_neumann.png')
     plt.clf()
+
+    del ka
+    del root_times
+    del mat_times
 except:
     pass
 
@@ -85,6 +93,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig5/fig5_impedance_small.png')
     plt.clf()
+
+    del ka
+    del root_times
+    del mat_times
 except:
     pass
 
@@ -114,6 +126,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig5/fig5_impedance_large.png')
     plt.clf()
+
+    del ka
+    del root_times
+    del mat_times
 except:
     pass
 

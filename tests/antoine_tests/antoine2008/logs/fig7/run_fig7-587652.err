@@ -1,0 +1,5 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_Bm8oZz6Jkl)

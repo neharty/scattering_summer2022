@@ -20,7 +20,7 @@ mvp_50 = np.zeros(len(freqs))
 
 for i in range(len(freqs)):
     sc_test = scattering(example_setups.uniform_grating(75, ['n' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=1, inc_angle = 0)
-    sc = scattering(example_setups.uniform_grating(75, ['d' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), inc_angle=0)
+    sc = scattering(example_setups.uniform_grating(75, ['n' for i in range(75)], 1, 3), freq=freqs[i]/(2*np.pi), sum_tol=1e-10, gmres_tol=1e-10, gmres_restart=sc_test.get_scat_matrix_dim(), inc_angle=0)
     del sc_test
 
     sc.scattering_coeffs()

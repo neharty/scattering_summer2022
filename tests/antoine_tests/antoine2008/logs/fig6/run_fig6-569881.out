@@ -1,0 +1,13 @@
+Starting /home/n/nh287/.bash_profile ... standard AFS bash profile
+
+========================
+Home directory : /home/n/nh287 is not in AFS -- skipping quota check
+========================
+
+On host node762 :
+	 17:27:56 up 315 days, 18:55,  0 users,  load average: 14.00, 14.19, 14.77
+
+=== === === Your Kerberos ticket and AFS token status === === ===
+Kerberos : 
+AFS      : 
+Running your /home/n/nh287/.modules file:

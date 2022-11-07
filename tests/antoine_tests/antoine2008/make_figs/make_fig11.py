@@ -29,6 +29,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig11/fig11_dirichlet.png')
     plt.clf()
+
+    del Ms
+    del delta_small
+    del delta_norm
 except:
     pass
 
@@ -58,6 +62,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig11/fig11_neumann.png')
     plt.clf()
+
+    del Ms
+    del delta_small
+    del delta_norm
 except:
     pass
 
@@ -86,6 +94,10 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig11/fig11_impedance_small.png')
     plt.clf()
+
+    del Ms
+    del delta_small
+    del delta_norm
 except:
     pass
 
@@ -115,5 +127,9 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig11/fig11_impedance_large.png')
     plt.clf()
+
+    del Ms
+    del delta_small
+    del delta_norm
 except:
     pass

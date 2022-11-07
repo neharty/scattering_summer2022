@@ -1,0 +1,29 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_DxyEUb73AI)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig15/fig15_dirichlet.py", line 10, in <module>
+    import example_setups
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 5, in <module>
+    from Ncyl.Ncyl_gmres import scattering, cyl
+ModuleNotFoundError: No module named 'Ncyl.Ncyl_gmres'; 'Ncyl' is not a package
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig15/fig15_neumann.py", line 10, in <module>
+    import example_setups
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 5, in <module>
+    from Ncyl.Ncyl_gmres import scattering, cyl
+ModuleNotFoundError: No module named 'Ncyl.Ncyl_gmres'; 'Ncyl' is not a package
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig15/fig15_impedance_small.py", line 10, in <module>
+    import example_setups
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 5, in <module>
+    from Ncyl.Ncyl_gmres import scattering, cyl
+ModuleNotFoundError: No module named 'Ncyl.Ncyl_gmres'; 'Ncyl' is not a package
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig15/fig15_impedance_large.py", line 10, in <module>
+    import example_setups
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 5, in <module>
+    from Ncyl.Ncyl_gmres import scattering, cyl
+ModuleNotFoundError: No module named 'Ncyl.Ncyl_gmres'; 'Ncyl' is not a package

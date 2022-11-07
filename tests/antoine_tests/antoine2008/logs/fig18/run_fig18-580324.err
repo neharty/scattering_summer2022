@@ -1,0 +1,30 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_oIRbB5TCWr)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_dirichlet.py", line 16, in <module>
+    np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig18/fig18_dirichlet_x', freqs)
+  File "<__array_function__ internals>", line 5, in save
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 541, in save
+    fid = open(file, "wb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig18/fig18_dirichlet_x.npy'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_neumann.py", line 17, in <module>
+    mvp = np.zeros((2, len(freqs)))
+NameError: name 'freqs' is not defined
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_impedance_small.py", line 16, in <module>
+    np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig18/fig18_impedance_small_x', freqs)
+  File "<__array_function__ internals>", line 5, in save
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 541, in save
+    fid = open(file, "wb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig18/fig18_impedance_small_x.npy'
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_impedance_large.py", line 16, in <module>
+    np.save('/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig18/fig18_impedance_large_x', freqs)
+  File "<__array_function__ internals>", line 5, in save
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 541, in save
+    fid = open(file, "wb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/data/fig18/fig18_impedance_large_x.npy'
