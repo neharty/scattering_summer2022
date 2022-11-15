@@ -28,6 +28,23 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig18/fig18_dirichlet.png')
     plt.clf()
+   
+    print('here!')
+    for i in range(2):            
+        if i == 0:
+            plt.plot(ka[2:], mvp[i,2:], '-', label='no precond')
+        if i == 1:
+            plt.plot(ka[2:], mvp[i,2:], '-*', label='with precond') 
+
+    plt.xlabel('ka')
+    plt.ylabel('MVP')
+    plt.title('dirichlet bcs')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig18/fig18_dirichlet_reduced.png')
+    plt.clf() 
+    
+    print('Here!')
 
     del ka
     del mvp

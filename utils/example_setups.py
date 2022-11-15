@@ -143,7 +143,7 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, cutoff, N, bc, radius, sum_num=None, 
 
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None):
-    pos = np.loadtxt('fig17_points.csv', delimiter=',')
+    pos = np.loadtxt('/home/n/nh287/scattering_summer2022/utils/fig17_points.csv', delimiter=',')
     cyls = [None for i in range(len(pos))]
     for i in range(len(pos)):
         cyls[i] = cyl(bc, pos[i], radius, sum_index=sum_num, impedance=impedance)

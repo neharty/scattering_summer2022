@@ -19,9 +19,23 @@ preconds = [False, True]
 
 mvp = np.zeros((2, len(freqs)))
 
+cyls = example_setups.fig17_pos('d', 1)
+N = len(cyls)
+pos = np.zeros((N, 2))
+for i in range(N):
+    pos[i, :] = cyls[i].get_pos()
+
+dist = np.zeros((N, N))
+for n in range(N):
+     for m in range(N):
+         dist[n, m] = np.linalg.norm(pos[n] - pos[m])
+
+mindist = np.amin(dist[dist > 0])
+
 for tr in range(len(preconds)):
         for i in range(len(freqs)):
-            sc = scattering(example_setups.rectangular_lattice(6, 6, ['i' for i in range(6)], 1, 5, 5, impedance=freqs[i]/(5 + 5*1j)), freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = preconds[tr], precond_dist=7.5, inc_angle = 0)
+            cyls = example_setups.fig17_pos('i', 1, impedance=freqs[i]/(5 + 5*1j))
+            sc = scattering(cyls, freq=freqs[i]/(2*np.pi), sum_tol=1e-8, gmres_tol=1e-8, gmres_restart=50, precond = preconds[tr], precond_dist=1.5*mindist, inc_angle = 0)
             
             sc.scattering_coeffs()
             mvp[tr, i] = sc.get_mvp_counter()

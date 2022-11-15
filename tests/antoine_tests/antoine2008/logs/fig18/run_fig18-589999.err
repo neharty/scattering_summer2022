@@ -1,0 +1,53 @@
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/.2.34     2) ncurses/.6.2     3) zlib/.1.2.11
+
+klist: No credentials cache found (filename: /tmp/krb5cc_474061_hUNsURUPw4)
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_dirichlet.py", line 22, in <module>
+    cyls = example_setups.fig17_pos('d', 1)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 146, in fig17_pos
+    pos = np.loadtxt('fig17_points.csv', delimiter=',')
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 981, in loadtxt
+    fh = np.lib._datasource.open(fname, 'rt', encoding=encoding)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 269, in open
+    return ds.open(path, mode, encoding=encoding, newline=newline)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 623, in open
+    raise IOError("%s not found." % path)
+OSError: fig17_points.csv not found.
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_neumann.py", line 22, in <module>
+    cyls = example_setups.fig17_pos('n', 1)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 146, in fig17_pos
+    pos = np.loadtxt('fig17_points.csv', delimiter=',')
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 981, in loadtxt
+    fh = np.lib._datasource.open(fname, 'rt', encoding=encoding)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 269, in open
+    return ds.open(path, mode, encoding=encoding, newline=newline)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 623, in open
+    raise IOError("%s not found." % path)
+OSError: fig17_points.csv not found.
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_impedance_small.py", line 22, in <module>
+    cyls = example_setups.fig17_pos('d', 1)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 146, in fig17_pos
+    pos = np.loadtxt('fig17_points.csv', delimiter=',')
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 981, in loadtxt
+    fh = np.lib._datasource.open(fname, 'rt', encoding=encoding)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 269, in open
+    return ds.open(path, mode, encoding=encoding, newline=newline)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 623, in open
+    raise IOError("%s not found." % path)
+OSError: fig17_points.csv not found.
+Traceback (most recent call last):
+  File "/home/n/nh287/scattering_summer2022/tests/antoine_tests/antoine2008/test_scripts/fig18/fig18_impedance_large.py", line 22, in <module>
+    cyls = example_setups.fig17_pos('d', 1)
+  File "/home/n/nh287/scattering_summer2022/utils/example_setups.py", line 146, in fig17_pos
+    pos = np.loadtxt('fig17_points.csv', delimiter=',')
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/npyio.py", line 981, in loadtxt
+    fh = np.lib._datasource.open(fname, 'rt', encoding=encoding)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 269, in open
+    return ds.open(path, mode, encoding=encoding, newline=newline)
+  File "/opt/site/easybuild/software/SciPy-bundle/2020.03-foss-2020a-Python-3.8.2/lib/python3.8/site-packages/numpy/lib/_datasource.py", line 623, in open
+    raise IOError("%s not found." % path)
+OSError: fig17_points.csv not found.

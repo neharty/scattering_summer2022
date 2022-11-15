@@ -71,6 +71,16 @@ try:
     plt.tight_layout()
     plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig9/fig9_neumann.png')
     plt.clf()
+    
+    plt.loglog(freqs, direct_times, '-', label = 'direct algorithm')
+    plt.loglog(freqs, fast_times, '--', label = 'fast algorithm')
+    plt.xlabel('ka')
+    plt.ylabel('CPU time')
+    plt.title('neumann bcs')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig9/fig9_neumann_loglog.png')
+    plt.clf()
 
     del freqs
     del direct_times
