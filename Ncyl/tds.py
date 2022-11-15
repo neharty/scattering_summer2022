@@ -4,7 +4,7 @@ from scipy.special import jv, jvp, hankel1, h1vp
 from scipy.signal import convolve
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
-from scipy.fft import fft, ifft, fftfreq
+from scipy.fft import fft, ifft, fftfreq, fftn
 
 np.set_printoptions(linewidth=np.inf, precision=3)
 
@@ -66,7 +66,7 @@ class scattering(cyl):
 
         self.__labels = np.array([int(self.__cyls[i].get_label()) for i in range(len(self.__cyls))])
         self.__sum_tol = sum_tol
-        self.__freq = freq
+        self.__freq = np.abs(freq)
         self.__wavespeed = wavespeed
         self.__k = 2*np.pi*self.__freq/self.__wavespeed
         self.__wavelength = self.__wavespeed/freq
@@ -81,7 +81,12 @@ class scattering(cyl):
             for l in self.__labels:
                 if self.__cyls[l].get_sum_index() == None: 
                     ka = self.__k*self.__cyls[l].get_radius()
-                    self.__cyls[l].set_sum_index(int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1))
+                    try:
+                        self.__cyls[l].set_sum_index(int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1))
+                    except:
+                        print('ka = ', ka)
+                        print('setting cylinder sum index to 0, this may cause unexpected behavior')
+                        self.__cyls[l].set_sum_index(0)
                     #print(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1))
                 else:
                     continue
@@ -182,7 +187,7 @@ class scattering(cyl):
         return np.hstack(([self.S(n, idxa_p[0], b) for n in idxd_q], [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]))
     
     def make_root_matrix(self):
-        if self.__ST == None:
+        if self.__ST is None:
             self.__ST = np.array([[self.make_root_vect_1cyl(self.__cyls[p], self.__cyls[q]) for q in self.__labels] for p in self.__labels], dtype=object)
         
         return self.__ST
@@ -355,7 +360,8 @@ class scattering(cyl):
                 return np.linalg.solve(sm, rhs)
 
     def make_u_sc(self, x, y, method = 'gmres'):
-        r, theta = self.cart_to_polar([x, y]) 
+        r, theta = self.cart_to_polar([x, y])
+        
         u_sc = 1j*np.zeros(r.shape)
         del r
         del theta
@@ -364,9 +370,16 @@ class scattering(cyl):
             cs, ecode = self.scattering_coeffs(method = 'gmres')
         elif method == 'explicit':
             cs = self.scattering_coeffs(method = 'explicit')
-
+        
+        for l in self.__labels:
+            R = np.array([x - self.__cyls[l].get_pos()[0], y - self.__cyls[l].get_pos()[1]])
+            for j in range(2*self.__cyls[l].get_sum_index() + 1):
+                idxa = np.arange(-self.__cyls[l].get_sum_index(), self.__cyls[l].get_sum_index() + 1)
+                u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
+        '''
         for l in self.__labels:
                 u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
+        '''
 
         return u_sc*self.mask(x,y)
 
@@ -395,29 +408,51 @@ class scattering(cyl):
         elif self.__u != None and not recompute:
             self.__u = make_u(x, y, method=method)
     
-class time_domain_scattering():
+class time_domain_scattering(scattering):
     
     def __init__(self, cyls, input_signal, time_points):
         self.cyls = cyls
-        self.input_signal = input_signal
+        self.input_signal = input_signal #function handle for input signal
         self.times = time_points
         self.fft_freqs = fftfreq(len(time_points))
 
-    def make_U(self, x, y, t):
-        U = np.zeros((len(x), len(y)))
-        for f in self.fft_freqs:
+    def mask(self, x, y):
+        Oi = self.cyls[0].get_pos()
+        radius = self.cyls[0].get_radius()
+        mask = (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
+        
+        for i in range(1, len(self.cyls)):
+            Oi = self.cyls[i].get_pos()
+            radius = self.cyls[i].get_radius()
+            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
+
+        return mask
+
+    def __make_U_sc_one_time(self, x, y, t):
+        print(t)
+        U = np.zeros((x.shape[0], x.shape[1]))
+
+        for i in range(len(self.fft_freqs)):
+            f = self.fft_freqs[i]
             sc = scattering(self.cyls, freq=f)
-            U += np.real(sc.make_u_sc(x, y)*np.exp(-1j*2*np.pi*f*t))
+            U += np.real(self.sig_fft[:, :, i]*sc.make_u_sc(x[:, :, 0], y[:, :, 0])*np.exp(-1j*2*np.pi*f*t))
 
-        U += self.input_signal(x, y, t)
+        return U*self.mask(x[:, :, 0], y[:, :, 0])
+    
+    def __make_U_one_time(self, x, y, t, freq, sig_fft):
+        return self.mask(x, y)*(self.__make_U_sc_one_time(x, y, t) + self.input_signal(x, y, t))
 
-        return U*sc.mask(x, y)
-
-    def make_U_alltimes(self, x, y):
-        U = np.zeros((len(x), len(y), len(self.times)))
+    def make_U_sc(self, x, y):
+        U = np.zeros(x.shape)
+        
         for i in range(len(self.times)):
-            U[:, :, i] = self.make_U(x, y, self.times[i])
+            U[:, :, i] = self.__make_U_sc_one_time(x, y, self.times[i])
 
         return U
 
-     
+    def make_U(self, x, y):
+        self.sig_fft = sig_fft = fftn(self.input_signal(x, y, self.times), axes=2)
+        return self.mask(x,y)*(self.make_U_sc(x,y) + self.input_signal(x, y, self.times))
+
+
+
