@@ -235,6 +235,16 @@ class scattering(cyl):
         self.scat_mat = np.block(scat_mat)
         return np.block(scat_mat)
 
+    def make_scattering_blocks_blockform(self):
+        scat_mat = [[None for i in self.__labels] for j in self.__labels]
+        for i in self.__labels:
+            for j in self.__labels:
+                if i == j:
+                    scat_mat[i][j] = self.make_direct_scattering_block(self.__cyls[i])
+                else:
+                    scat_mat[i][j] = self.make_mul_scattering_block(self.__cyls[i], self.__cyls[j])
+        return scat_mat
+
     def make_scattering_blocks(self):
         scm = self.__make_scattering_blocks_no_precond()
         return scm
