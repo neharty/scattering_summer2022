@@ -5,8 +5,9 @@ from scipy.sparse.linalg import svds
 from matplotlib import pyplot as plt
 from Ncyl.tds import cyl, scattering
 from utils import example_setups
+from id import ID_col, ID_row, ID_double
 
-cylnum = 5
+cylnum = 10
 cyls = example_setups.uniform_grid_NxN(cylnum, ['d' for n in range(cylnum)], 1, 4)
 sc = scattering(cyls)
 
@@ -26,8 +27,8 @@ plt.legend()
 plt.show()
 '''
 
-tol = 1e-6
-epsrank = np.argmin(np.abs(svdvals(A_b[0, 1]) - tol))
+tol = 1e-2
+epsrank = np.argmin(np.abs(svdvals(A_b[0, 1]) - tol))+1
 print(cyls[0].get_sum_index(), epsrank)
 
 U = np.array([None for n in range(rows)])
@@ -36,22 +37,30 @@ for i in range(rows):
     colarr = np.arange(cols)
     colarr = np.delete(colarr, i)
     B = np.concatenate(np.array(A_b[i, colarr]), axis=1)
-    U_i, X_i, Y_i = svd(B)
+    #U_i, X_i, Y_i = svd(B)
     #U_i, X_i, Y_i = svds(B, k=epsrank)
-    U[i] = U_i[:, :epsrank]
+    #U[i] = U_i[:, :epsrank]
+    Jrow, U_i = ID_row(B, epsrank)
+    U[i] = U_i
+    #V[i] = Y_i.conj().T[:, :epsrank]
 
 A_bH = np.array([[None for i in range(rows)] for j in range(cols)])
+
 for i in range(cols):
     for j in range(rows):
         A_bH[i, j] = A_b[j, i].conj().T
+
 
 for i in range(cols):
     rowarr = np.arange(rows)
     rowarr = np.delete(rowarr, i)
     B = np.concatenate(np.array(A_bH[i, rowarr]), axis=1)
-    V_i, X_i, Y_i = svd(B)
+    #V_i, X_i, Y_i = svd(B)
     #V_i, X_i, Y_i = svds(B, k=epsrank)
-    V[i] = V_i[:, :epsrank]
+    Jcol, V_i = ID_row(B, epsrank)
+    V[i] = V_i
+    #V[i] = V_i[:, :epsrank]
+
 
 #print(block_diag(*U))
 
@@ -84,15 +93,18 @@ print(U.shape, V.shape, Atilde.shape, Dhat.shape, E.shape, F.shape)
 print(np.linalg.cond(Atilde), np.linalg.cond(Dhat))
 Ainv = E @ np.linalg.inv(Atilde + Dhat) @ F.conj().T 
 A = sc.make_scattering_blocks()
+#print(np.linalg.norm(U@Atilde@V.conj().T +D - A))
 print(np.linalg.norm(D - Ainv@A))
-print(Ainv@A)
+print(np.linalg.norm(U@Atilde@V.conj().T + D - A))
+
+'''
 plt.spy(A)
 plt.show()
 plt.clf()
 
-plt.spy(Ainv@A)
+plt.spy(Ainv@A, precision=1e-6)
 plt.show()
 plt.clf()
-
+'''
 # test GMRES iterations
 
