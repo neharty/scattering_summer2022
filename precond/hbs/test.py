@@ -1,0 +1,47 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import svd, svdvals, block_diag
+from scipy.sparse.linalg import svds
+from matplotlib import pyplot as plt
+from Ncyl.tds import cyl, scattering
+from utils import example_setups
+from id import ID_col, ID_row, ID_double
+from hbs import construct_Ainv, construct_Aapprox_svd
+
+cylnum = 5
+cyls = example_setups.uniform_grid_NxN(cylnum, ['d' for n in range(cylnum)], 1, 10)
+sc = scattering(cyls)
+
+
+A_b = np.array(sc.make_scattering_blocks_blockform())
+
+tols = np.logspace(-20, -16, num=30)
+norms = np.zeros(len(tols))
+sig = svdvals(A_b[0, 1])
+
+A = sc.make_scattering_blocks()
+
+for i in range(len(tols)):
+    tol = tols[i]
+    epsrank = np.argmin(np.abs(sig - tol))+1
+    #U, Atilde, V, D = construct_Aapprox_svd(A_b, epsrank)
+    Ainv = construct_Ainv(A_b, epsrank)
+    #print(np.linalg.norm(U @ Atilde @ V.conj().T + D)*np.linalg.norm(Ainv))
+
+    norms[i] = np.linalg.norm(np.eye(sc.get_scat_matrix_dim()) - Ainv@A)
+    #print(np.linalg.norm(U@Atilde@V.conj().T + D - A))
+    #print(np.linalg.cond(Ainv), np.linalg.cond(A))
+
+plt.loglog(tols, norms)
+plt.show()
+plt.clf()
+
+r1 = np.arange(1, 6)
+for i in r1:
+    plt.semilogy(svdvals(A_b[0, i]))
+
+#plt.axhline(tol, color='k')
+plt.show()
+plt.clf()
+
+
