@@ -2,10 +2,10 @@ import numpy as np
 import unittest
 import sys
 
-sys.path.append('../Ncyl/')
-from Ncyl_gmres import scattering, cyl
+from Ncyl.tds import scattering, cyl
 
 class TestCylSetGet(unittest.TestCase):
+    
     def test_dirichlet(self):
         pos_d = np.random.random(size=2)
         rad_d = np.random.random() + 0.1
@@ -83,21 +83,41 @@ class ScatteringTest(unittest.TestCase):
         self.assertLess(np.abs(sc1.make_u(1,0) - scgmres1.make_u(1,0)), 1e-8)
         self.assertLess(np.abs(sc2.make_u(1,0) - scgmres2.make_u(1,0)), 1e-8)
 
-
-    #def test_rand_types(self):
-
     def test_precond(self):
         rads = np.random.uniform(0.1, 0.4, size=3)
         imps = np.random.uniform(0.3, 3, size =3) + 1j*np.random.uniform(0.3, 3, size=3)
         
         sc1 = scattering([cyl('i', np.array([0,0]), 0.5, impedance=3+1j)], method='explicit')
-        sc2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl ('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], method='explicit', precond=True, precond_dist = 2)
+        sc2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], method='explicit', precond=True, precond_dist = 2)
 
         scgmres1 = scattering([cyl('i', np.array([0,0]), 0.5, impedance=3+1j)])
-        scgmres2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl ('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], precond=True, precond_dist=2)
+        scgmres2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], precond=True, precond_dist=2)
 
         self.assertLess(np.abs(sc1.make_u(1,0) - scgmres1.make_u(1,0)), 1e-8)
         self.assertLess(np.abs(sc2.make_u(1,0) - scgmres2.make_u(1,0)), 1e-8)
 
+    def test_mul_scatter_block_from_root_vector(self):
+        freq = 10
+
+        cyls = [cyl('d', [0, -1], 1), cyl('d', [1, 1], 1.5)]
+        sc_r = scattering(cyls, freq=freq)
+        sc = scattering(cyls, freq=freq)
+        A_root = sc.make_scattering_blocks()
+        A = sc.make_scattering_blocks()
+        self.assertTrue(np.allclose(A_root, A))
+
+        cyls = [cyl('d', [0, -1], 1), cyl('d', [1, 1], 1.5)]
+        sc_r = scattering(cyls, freq=freq)
+        sc = scattering(cyls, freq=freq)
+        A_root = sc.make_scattering_blocks()
+        A = sc.make_scattering_blocks()
+        self.assertTrue(np.allclose(A_root, A))
+        
+        cyls = [cyl('i', [0, -1], 1, impedance=1+1j), cyl('d', [1, 1], 1.5, impedance=2+0.5*1j)]
+        sc_r = scattering(cyls, freq=freq)
+        sc = scattering(cyls, freq=freq)
+        A_root = sc.make_scattering_blocks()
+        A = sc.make_scattering_blocks()
+        self.assertTrue(np.allclose(A_root, A))
 
 unittest.main()

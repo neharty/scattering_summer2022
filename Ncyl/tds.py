@@ -2,6 +2,7 @@ import numpy as np
 import numpy.random as rd
 from scipy.special import jv, jvp, hankel1, h1vp
 from scipy.signal import convolve
+from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
 from scipy.fft import fft, ifft, fftfreq, fftn
@@ -9,6 +10,36 @@ from scipy.fft import fft, ifft, fftfreq, fftn
 np.set_printoptions(linewidth=np.inf, precision=3)
 
 class cyl:
+    '''
+    Class to build 1 cylinder. Cylinders are identified by a 
+    number label, set by the user or by the scattering class.
+
+    Attributes
+    ----------
+
+    bc : char 
+        boundary condition for the cylinder, d = Dirichlet, 
+        n = Neumann, i = Impedance. If the BC is impedance, 
+        then the impedance must be specified.
+
+    pos : 2D array
+        2D position of the cylinder
+
+    radius : int
+        radius of the cylinder
+
+    sum_index : int
+        related to the number of modes in the sum,
+        for a given value, the cylinder will have
+        (2*sum_index + 1) modes
+
+    impedance : complex
+        impedance for the cylinder -- needed for 
+        the impedance boundary condition 
+
+    label : int
+        identifier for the cylinder, 0 by default
+    '''
     def __init__(self, bc, pos, radius, sum_index = None, impedance = None):
         self.__label = 0
         self.__pos = np.array(pos)
@@ -57,7 +88,31 @@ class cyl:
 
 
 class scattering(cyl):
-    def __init__(self, cyls, sum_index = None, sum_tol = 1e-8, gmres_tol = 1e-6, freq = 1, inc_angle = np.pi, precond = False, precond_dist = 0, precond_matrix = None, make_scat_matrix=False, use_mat = False, method = 'gmres', gmres_restart = None, gmres_maxiter = None, wavespeed=1):
+    '''
+
+    '''
+    
+    def __init__(self, cyls, 
+            sum_index = None, 
+            sum_tol = 1e-8, 
+            gmres_tol = 1e-6, 
+            freq = 1, 
+            wavespeed = 1,
+            inc_angle = np.pi, 
+            precond = False, 
+            precond_dist = 0, 
+            precond_matrix = None, 
+            make_scat_matrix = False, 
+            use_mat = False, 
+            method = 'gmres', 
+            gmres_restart = None, 
+            gmres_maxiter = None,  
+            fast_matrix_build = True):
+        
+        '''
+        The scattering class takes in an assortment of cylinders as input, then 
+        computes the coefficients for the 
+        '''
         self.__cyls = cyls
         
         # create 0-indexed labels for cylinders
@@ -76,6 +131,7 @@ class scattering(cyl):
         self.__gmres_maxiter = gmres_maxiter
         self.__method = method
         self.use_mat = use_mat
+        self.fast_matrix_build = fast_matrix_build
 
         # set the sum index for each cylinder, depending on if there's a global index or not
         if sum_index == None:    
@@ -191,7 +247,6 @@ class scattering(cyl):
     def make_root_matrix(self):
         if self.__ST is None:
             self.__ST = np.array([[self.make_root_vect_1cyl(self.__cyls[p], self.__cyls[q]) for q in self.__labels] for p in self.__labels], dtype=object)
-        
         return self.__ST
 
     def make_direct_scattering_block(self, cyl):
@@ -226,6 +281,32 @@ class scattering(cyl):
                     break
         return scm
     
+    def make_mul_scattering_block_root(self, cyl_i, cyl_sc):
+        rv = self.make_root_vect_1cyl(cyl_i, cyl_sc)
+        Nq = cyl_sc.get_sum_index()
+        Np = cyl_i.get_sum_index()
+        col = np.flip(rv[:2*Nq+1])
+        row = rv[2*Nq:]
+        S = toeplitz(row, col)
+
+        bc = cyl_i.get_bc()
+        radius = cyl_i.get_radius()
+        b = cyl_i.get_pos() - cyl_sc.get_pos()
+        k = self.__k
+        lam = cyl_i.get_impedance()
+
+        idxa_i = np.arange(-cyl_i.get_sum_index(), cyl_i.get_sum_index() + 1)
+        if bc == 'd':
+            D = np.diag(jv(idxa_i, k*radius)/hankel1(idxa_i, k*radius))
+        elif bc == 'n':
+            D = np.diag(jvp(idxa_i, k*radius)/h1vp(idxa_i, k*radius))
+        elif bc == 'i':
+            D = np.diag((k*jvp(idxa_i, k*radius) + lam*jv(idxa_i, k*radius))/(k*h1vp(idxa_i, k*radius) + lam*hankel1(idxa_i, k*radius)))
+        else:
+            print('invalid bc')
+        
+        return D @ S
+
     def __make_scattering_blocks_no_precond(self):
         scat_mat = [[None for i in self.__labels] for j in self.__labels]
         for i in self.__labels:
@@ -244,12 +325,16 @@ class scattering(cyl):
                 if i == j:
                     scat_mat[i][j] = self.make_direct_scattering_block(self.__cyls[i])
                 else:
-                    scat_mat[i][j] = self.make_mul_scattering_block(self.__cyls[i], self.__cyls[j])
+                    if self.fast_matrix_build:
+                        scat_mat[i][j] = self.make_mul_scattering_block_root(self.__cyls[i], self.__cyls[j])
+                    else:
+                        scat_mat[i][j] = self.make_mul_scattering_block(self.__cyls[i], self.__cyls[j])
         return scat_mat
 
     def make_scattering_blocks(self):
-        scm = self.__make_scattering_blocks_no_precond()
-        return scm
+        #scm = self.__make_scattering_blocks_no_precond()
+        self.scat_mat = np.block(self.make_scattering_blocks_blockform())
+        return self.scat_mat
 
     def make_d_coeffs_1cyl(self, label):
         b, theta = self.cart_to_polar(self.__cyls[label].get_pos())
@@ -258,8 +343,7 @@ class scattering(cyl):
         radius = self.__cyls[label].get_radius()
         
         return np.array([1j**n*np.exp(-1j*n*self.__inc_angle)*np.exp(1j*self.__k*b*np.cos(theta-self.__inc_angle)) for n in np.arange(-sum_index, sum_index + 1)])
-
-                
+        
     def make_rhs_vector_1cyl(self, label):
         idxa = np.arange(-self.__cyls[label].get_sum_index(), self.__cyls[label].get_sum_index() + 1)
         jvect = 1j*np.zeros(2*self.__cyls[label].get_sum_index() + 1)
