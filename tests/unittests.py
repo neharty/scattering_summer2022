@@ -101,21 +101,21 @@ class ScatteringTest(unittest.TestCase):
 
         cyls = [cyl('d', [0, -1], 1), cyl('d', [1, 1], 1.5)]
         sc_r = scattering(cyls, freq=freq)
-        sc = scattering(cyls, freq=freq)
+        sc = scattering(cyls, freq=freq, fast_matrix_build=False)
         A_root = sc.make_scattering_blocks()
         A = sc.make_scattering_blocks()
         self.assertTrue(np.allclose(A_root, A))
 
         cyls = [cyl('d', [0, -1], 1), cyl('d', [1, 1], 1.5)]
         sc_r = scattering(cyls, freq=freq)
-        sc = scattering(cyls, freq=freq)
+        sc = scattering(cyls, freq=freq, fast_matrix_build=False)
         A_root = sc.make_scattering_blocks()
         A = sc.make_scattering_blocks()
         self.assertTrue(np.allclose(A_root, A))
         
         cyls = [cyl('i', [0, -1], 1, impedance=1+1j), cyl('d', [1, 1], 1.5, impedance=2+0.5*1j)]
         sc_r = scattering(cyls, freq=freq)
-        sc = scattering(cyls, freq=freq)
+        sc = scattering(cyls, freq=freq, fast_matrix_build=False)
         A_root = sc.make_scattering_blocks()
         A = sc.make_scattering_blocks()
         self.assertTrue(np.allclose(A_root, A))
