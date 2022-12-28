@@ -516,8 +516,9 @@ class time_domain_scattering(scattering):
     def __init__(self, cyls, input_signal, time_points):
         self.cyls = cyls
         self.input_signal = input_signal #function handle for input signal
-        self.times = time_points
+        self.times = time_points #assuming equally-spaced points in time
         self.fft_freqs = fftfreq(len(time_points))
+        self.fft_freqs = self.fft_freqs[self.fft_freqs != 0]
 
     def mask(self, x, y):
         Oi = self.cyls[0].get_pos()
@@ -530,32 +531,45 @@ class time_domain_scattering(scattering):
             mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
 
         return mask
-
-    def __make_U_sc_one_time(self, x, y, t):
-        print(t)
-        U = np.zeros((x.shape[0], x.shape[1]))
+    
+    def make_time_harmonic_soln(self, x, y):
+        self.u_sc = 1j*np.zeros((x.shape[0], x.shape[1], len(self.fft_freqs)))
 
         for i in range(len(self.fft_freqs)):
             f = self.fft_freqs[i]
             sc = scattering(self.cyls, freq=f)
-            U += np.real(self.sig_fft[:, :, i]*sc.make_u_sc(x[:, :, 0], y[:, :, 0])*np.exp(-1j*2*np.pi*f*t))
+            self.u_sc[:, :, i] = self.sig_fft[:, :, i]*sc.make_u_sc(x[:, :, i], y[:, :, i])
+
+        return self.u_sc
+
+
+    def __make_U_sc_one_time(self, x, y, t):
+        #print(t)
+        U = np.zeros((x.shape[0], x.shape[1]))
+        
+        for i in range(len(self.fft_freqs)):
+            f = self.fft_freqs[i]
+            U += np.real(self.u_sc[:, :, i]*np.exp(-1j*2*np.pi*f*t))
 
         return U*self.mask(x[:, :, 0], y[:, :, 0])
     
-    def __make_U_one_time(self, x, y, t, freq, sig_fft):
+    def __make_U_one_time(self, x, y, t):
         return self.mask(x, y)*(self.__make_U_sc_one_time(x, y, t) + self.input_signal(x, y, t))
 
     def make_U_sc(self, x, y):
         U = np.zeros(x.shape)
-        
+
         for i in range(len(self.times)):
             U[:, :, i] = self.__make_U_sc_one_time(x, y, self.times[i])
 
         return U
 
     def make_U(self, x, y):
-        self.sig_fft = sig_fft = fftn(self.input_signal(x, y, self.times), axes=2)
+        self.sig_fft = fftn(self.input_signal(x, y, self.times), axes=2)
+        self.make_time_harmonic_soln(x, y)
         return self.mask(x,y)*(self.make_U_sc(x,y) + self.input_signal(x, y, self.times))
+        #return self.mask(x,y)*(self.input_signal(x, y, self.times))
+
 
 
 
