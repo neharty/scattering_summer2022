@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-#import sys
-#sys.path.append('/home/n/nh287/scattering_summer2022/Ncyl/')
+import os
 from Ncyl.Ncyl_gmres import scattering, cyl
 
 def uniform_grid_3x3(radius, spacing):
@@ -105,35 +104,30 @@ def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impeda
     cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance)
     return cyls_main + cyls_off
 
-def random_pos(Lxmin, Lxmax, Lymin, Lymax, cutoff, N, bc, radius, sum_num=None, impedance=None):
-    
-    allcyls = False
-    while not allcyls:
-        xpos = np.random.uniform(low=Lxmin+radius, high=Lxmax-radius, size=2*N)
-        ypos = np.random.uniform(low=Lymin+radius, high=Lymax-radius, size=2*N)
-        
-        cylidx = np.zeros(N)
+def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, impedance=None):
+    allowed_domain_x = (Lxmin+radius, Lxmax-radius)
+    allowed_domain_y = (Lymin+radius, Lymax-radius)
 
-        dist_matrix = np.zeros((2*N, 2*N))
-        for i in range(2*N):
-            for j in range(2*N):
-                dist_matrix[i, j] = np.sqrt((xpos[i] - xpos[j])**2 + (ypos[i] - ypos[j])**2)
-        
-        mask = dist_matrix >= cutoff
+    xpos = np.zeros(N)
+    ypos = np.zeros(N)
 
-        for i in range(2*N):
-            mask[i , i] = True
-        
-        cylctr = 0
-        for i in range(2*N):
-            if np.all(mask[i, :]):
-                cylidx[cylctr] = i
-                cylctr += 1
-            if cylctr >= N:
-                allcyls = True
-                break
-     
-    origins = np.array([[xpos[idxs[i][0]], ypos[idxs[i][1]]] for i in range(N)])
+    xpos[0], ypos[0] = np.random.uniform(*allowed_domain_x), np.random.uniform(*allowed_domain_y)
+    for i in range(1, N):
+        #generate a new point
+        xtest, ytest = np.random.uniform(*allowed_domain_x), np.random.uniform(*allowed_domain_y)
+        ztest = xtest + 1j*ytest
+        for j in range(i):
+            #test new point against all previous points
+            z = xpos[:i] + 1j*ypos[:i]
+            allpoints = np.all(np.abs(z - ztest) > dist)
+            while not allpoints:
+                #if the new point doesnt work, retry until it does
+                xtest, ytest = np.random.uniform(*allowed_domain_x), np.random.uniform(*allowed_domain_y)
+                ztest = xtest + 1j*ytest
+                allpoints = np.all(np.abs(z - ztest) > dist)
+        xpos[i], ypos[i] = xtest, ytest
+
+    origins = np.array([[xpos[i], ypos[i]] for i in range(N)])
 
     cyls = [None for i in range(N)]
     for i in range(N):
@@ -141,9 +135,8 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, cutoff, N, bc, radius, sum_num=None, 
 
     return cyls
 
-
 def fig17_pos(bc, radius, sum_num=None, impedance=None):
-    pos = np.loadtxt('/home/n/nh287/scattering_summer2022/utils/fig17_points.csv', delimiter=',')
+    pos = np.loadtxt(os.environ.get('PYTHONPATH')+'/utils/fig17_points.csv', delimiter=',')
     cyls = [None for i in range(len(pos))]
     for i in range(len(pos)):
         cyls[i] = cyl(bc, pos[i], radius, sum_index=sum_num, impedance=impedance)
