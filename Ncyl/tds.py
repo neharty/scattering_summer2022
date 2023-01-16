@@ -52,40 +52,40 @@ class cyl:
         self.sum_index = sum_index
 
     def set_label(self, l):
-        self.__label = l
+        self.label = l
 
     def get_label(self):
-        return self.__label
+        return self.label
 
     def set_pos(self, pos):
-        self.__pos = pos
+        self.pos = pos
 
     def get_pos(self):
-        return self.__pos
+        return self.pos
 
     def set_radius(self, radius):
-        self.__radius = radius
+        self.radius = radius
 
     def get_radius(self):
-        return self.__radius
+        return self.radius
 
     def set_bc(self, bc):
-        self.__bc = bc
+        self.bc = bc
 
     def get_bc(self):
-        return self.__bc
+        return self.bc
 
     def set_sum_index(self, sum_idx):
-        self.__sum_index = sum_idx
+        self.sum_index = sum_idx
 
     def get_sum_index(self):
-        return self.__sum_index
+        return self.sum_index
 
     def set_impedance(self, imp):
-        self.__impedance = imp
+        self.impedance = imp
 
     def get_impedance(self):
-        return self.__impedance
+        return self.impedance
 
 
 class scattering(cyl):
@@ -180,43 +180,43 @@ class scattering(cyl):
             self.scat_mat = None
 
     def get_wavenumber(self):
-        return self.__k
+        return self.k
 
     def get_wavelength(self):
-        return self.__wavelength
+        return self.wavelength
 
     def get_cyls(self):
-        return self.__cyls
+        return self.cyls
     
     def get_labels(self):
-        return self.__labels
+        return self.labels
 
     def get_sum_index(self, label):
-        return self.__cyls[label].get_sum_index()
+        return self.cyls[label].get_sum_index()
     
     def get_radius(self, label):
-        return self.__cyls[label].get_radius()
+        return self.cyls[label].get_radius()
 
     def get_bc(self, label):
-        return self.__cyls[label].get_bc()
+        return self.cyls[label].get_bc()
 
     def get_pos(self, label):
-        return self.__cyls[label].get_pos()
+        return self.cyls[label].get_pos()
     
     def get_scat_matrix_dim(self):
-        return self.__scat_matrix_dim
+        return self.scat_matrix_dim
 
     def get_u(self):
-        return self.__u
+        return self.u
 
     def get_gmres_iter(self):
-        return self.__gmres_iter
+        return self.gmres_iter
 
     def get_gmres_res(self):
-        return self.__gmres_res
+        return self.gmres_res
     
     def get_mvp_counter(self):
-        return self.__mvp_counter
+        return self.mvp_counter
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
