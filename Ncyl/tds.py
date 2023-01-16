@@ -118,7 +118,7 @@ class scattering(cyl):
         self.cyls = cyls
 
         # create 0-indexed labels for cylinders
-        for i in range(len(self.__cyls)):
+        for i in range(len(self.cyls)):
             self.cyls[i].label = i
 
         self.labels = np.array([int(self.cyls[i].get_label()) for i in range(len(self.cyls))])
@@ -422,7 +422,20 @@ class scattering(cyl):
                 linearop = LinearOperator((dim, dim), matvec = self.mvp)
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
-            if self.precond:
+            if self.precond is not None:
+                precond_mat = self.precond(A = self.make_scattering_blocks(),
+                                           A_block = self.make_scattering_blocks_blockform(),
+                                           dist_mat = self.make_dist_matrix(), 
+                                           dist = self.precond_dist
+                                           ).inv_mat
+                outp = gmres(linearop,
+                            self.make_rhs_vector(), 
+                            tol = self.gmres_tol, 
+                            M=self.make_precond_matrix(), 
+                            restart=self.gmres_restart, 
+                            callback = counter, 
+                            maxiter = self.gmres_maxiter)
+            else:    
                 outp = gmres(linearop, 
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
@@ -430,23 +443,7 @@ class scattering(cyl):
                             restart=self.gmres_restart, 
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
-            else:
-                if self.precond_matrix is None:
-                    outp = gmres(linearop, 
-                                self.make_rhs_vector(), 
-                                tol = self.gmres_tol, 
-                                restart=self.gmres_restart, 
-                                callback=counter, 
-                                maxiter=self.gmres_maxiter)
-                else:
-                    outp = gmres(linearop, 
-                                self.make_rhs_vector(), 
-                                tol = self.gmres_tol, 
-                                M = self.precond_matrix, 
-                                restart=self.gmres_restart, 
-                                callback=counter, 
-                                maxiter=self.gmres_maxiter)
-
+            
             self.gmres_iter = counter.niter
             self.gmres_res = counter.res*np.linalg.norm(rhs)
             return outp
