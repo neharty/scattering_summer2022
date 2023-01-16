@@ -100,7 +100,7 @@ class scattering(cyl):
             freq = 1, 
             wavespeed = 1,
             inc_angle = np.pi, 
-            precond = False, 
+            precond = None, 
             precond_dist = 0, 
             precond_matrix = None, 
             make_scat_matrix = False, 
@@ -125,8 +125,8 @@ class scattering(cyl):
         self.sum_tol = sum_tol
         self.freq = np.abs(freq)
         self.wavespeed = wavespeed
-        self.k = 2*np.pi*self.__freq/self.wavespeed
-        self.wavelength = self.__wavespeed/freq
+        self.k = 2*np.pi*self.freq/self.wavespeed
+        self.wavelength = self.wavespeed/freq
         self.inc_angle = inc_angle
         self.gmres_tol = gmres_tol
         self.gmres_restart = gmres_restart
@@ -227,12 +227,12 @@ class scattering(cyl):
     def phi(self, n, v):
         # v is in cartesian coords
         r, theta = self.cart_to_polar(v)
-        return hankel1(n, self.__k*r)*np.exp(1j*n*theta)
+        return hankel1(n, self.k*r)*np.exp(1j*n*theta)
 
     def phihat(self, n, v):
         # v s in cartesian coords
         r, theta = self.cart_to_polar(v)
-        return jv(n, self.__k*r)*np.exp(1j*n*theta)
+        return jv(n, self.k*r)*np.exp(1j*n*theta)
 
     def S(self, m, n, v):
         # v is in cartesian coords
@@ -320,9 +320,9 @@ class scattering(cyl):
         return D @ S
 
     def make_scattering_blocks_blockform(self):
-        scat_mat = [[None for i in self.__labels] for j in self.__labels]
-        for i in self.__labels:
-            for j in self.__labels:
+        scat_mat = [[None for i in self.labels] for j in self.labels]
+        for i in self.labels:
+            for j in self.labels:
                 if i == j:
                     scat_mat[i][j] = self.make_direct_scattering_block(self.cyls[i])
                 else:
@@ -379,7 +379,7 @@ class scattering(cyl):
     
     def mvp(self, x):
         x = np.array(x, dtype=np.complex128)
-        xs = np.array([np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.__lengths))]) # break up all p coefficients
+        xs = np.array([np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.lengths))]) # break up all p coefficients
         xcalc = np.copy(xs)
         ST = self.ST
 
@@ -407,7 +407,7 @@ class scattering(cyl):
                 mulscat[p] += DSCmvp
          
         xs += mulscat
-        self.__mvp_counter += 1
+        self.mvp_counter += 1
         return np.hstack(xs)
     
     def scattering_coeffs(self, method='gmres'):
@@ -423,6 +423,7 @@ class scattering(cyl):
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
             if self.precond is not None:
+                #print(self.precond_dist)
                 precond_mat = self.precond(A = self.make_scattering_blocks(),
                                            A_block = self.make_scattering_blocks_blockform(),
                                            dist_mat = self.make_dist_matrix(), 
@@ -431,7 +432,7 @@ class scattering(cyl):
                 outp = gmres(linearop,
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
-                            M=self.make_precond_matrix(), 
+                            M=precond_mat, 
                             restart=self.gmres_restart, 
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
@@ -439,7 +440,7 @@ class scattering(cyl):
                 outp = gmres(linearop, 
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
-                            M=self.make_precond_matrix(), 
+                            M=None, 
                             restart=self.gmres_restart, 
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
