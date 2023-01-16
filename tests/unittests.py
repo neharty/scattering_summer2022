@@ -3,6 +3,7 @@ import unittest
 import sys
 
 from Ncyl.tds import scattering, cyl
+from precond import preconditioner
 
 class TestCylSetGet(unittest.TestCase):
     
@@ -83,15 +84,17 @@ class ScatteringTest(unittest.TestCase):
         self.assertLess(np.abs(sc1.make_u(1,0) - scgmres1.make_u(1,0)), 1e-8)
         self.assertLess(np.abs(sc2.make_u(1,0) - scgmres2.make_u(1,0)), 1e-8)
 
-    def test_precond(self):
+    def test_antoine_precond(self):
         rads = np.random.uniform(0.1, 0.4, size=3)
         imps = np.random.uniform(0.3, 3, size =3) + 1j*np.random.uniform(0.3, 3, size=3)
         
+        #TODO add other preconditioner tests
+
         sc1 = scattering([cyl('i', np.array([0,0]), 0.5, impedance=3+1j)], method='explicit')
-        sc2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], method='explicit', precond=True, precond_dist = 2)
+        sc2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], method='explicit', precond=preconditioner.antoine, precond_dist = 2)
 
         scgmres1 = scattering([cyl('i', np.array([0,0]), 0.5, impedance=3+1j)])
-        scgmres2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], precond=True, precond_dist=2)
+        scgmres2 = scattering([cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])], precond=preconditioner.antoine, precond_dist=2)
 
         self.assertLess(np.abs(sc1.make_u(1,0) - scgmres1.make_u(1,0)), 1e-8)
         self.assertLess(np.abs(sc2.make_u(1,0) - scgmres2.make_u(1,0)), 1e-8)
