@@ -6,7 +6,6 @@ from Ncyl.tds import scattering, cyl
 from precond import preconditioner
 
 class TestCylSetGet(unittest.TestCase):
-    
     def test_dirichlet(self):
         pos_d = np.random.random(size=2)
         rad_d = np.random.random() + 0.1
@@ -19,6 +18,13 @@ class TestCylSetGet(unittest.TestCase):
         self.assertEqual(testcyl.get_sum_index(), None, 'incorrect sum index')
         self.assertEqual(testcyl.get_impedance(), None, 'incorrect impedance')
 
+        self.assertEqual(testcyl.label, 0, "incorrect label")
+        self.assertEqual(testcyl.bc, 'd', 'incorrect bc')
+        self.assertEqual(testcyl.pos.tolist(), pos_d.tolist(), 'incorrect position')
+        self.assertEqual(testcyl.radius, rad_d, 'incorrect radius')
+        self.assertEqual(testcyl.sum_index, None, 'incorrect sum index')
+        self.assertEqual(testcyl.impedance, None, 'incorrect impedance')
+
     def test_neumann(self):
         pos_n = np.random.random(size=2)
         rad_n = np.random.random() + 0.1
@@ -30,6 +36,13 @@ class TestCylSetGet(unittest.TestCase):
         self.assertEqual(testcyl.get_radius(), rad_n, 'incorrect radius')
         self.assertEqual(testcyl.get_sum_index(), None, 'incorrect sum index')
         self.assertEqual(testcyl.get_impedance(), None, 'incorrect impedance')
+        
+        self.assertEqual(testcyl.label, 0, "incorrect label")
+        self.assertEqual(testcyl.bc, 'n', 'incorrect bc')
+        self.assertEqual(testcyl.pos.tolist(), pos_n.tolist(), 'incorrect position')
+        self.assertEqual(testcyl.radius, rad_n, 'incorrect radius')
+        self.assertEqual(testcyl.sum_index, None, 'incorrect sum index')
+        self.assertEqual(testcyl.impedance, None, 'incorrect impedance')
 
     def test_impedance(self):
         pos_i = np.random.random(size=2)
@@ -46,8 +59,28 @@ class TestCylSetGet(unittest.TestCase):
         self.assertEqual(testcyl.get_pos().tolist(), pos_i.tolist(), 'incorrect position')
         self.assertEqual(testcyl.get_radius(), rad_i, 'incorrect radius')
         self.assertEqual(testcyl.get_sum_index(), None, 'incorrect sum index')
+        
+        self.assertEqual(testcyl.impedance, 3+1j, 'incorrect impedance')
+        self.assertEqual(testcyl.label, 0, "incorrect label")
+        self.assertEqual(testcyl.bc, 'i', 'incorrect bc')
+        self.assertEqual(testcyl.pos.tolist(), pos_i.tolist(), 'incorrect position')
+        self.assertEqual(testcyl.radius, rad_i, 'incorrect radius')
+        self.assertEqual(testcyl.sum_index, None, 'incorrect sum index')
 
-class ScatteringTest(unittest.TestCase): 
+class ScatteringTest(unittest.TestCase):
+    def test_attributes(self):
+        pos_i = np.random.random(size=2)
+        rad_i = np.random.random() + 0.1
+
+        testcyl = [cyl('n', pos = pos_i, radius = rad_i)]
+        sc = scattering(testcyl)
+
+        self.assertEqual(sc.cyls[0].label, 0, "incorrect label")
+        self.assertEqual(sc.cyls[0].bc, 'n', 'incorrect bc')
+        self.assertEqual(sc.cyls[0].pos.tolist(), pos_i.tolist(), 'incorrect position')
+        self.assertEqual(sc.cyls[0].radius, rad_i, 'incorrect radius')
+        self.assertEqual(sc.cyls[0].sum_index, testcyl[0].sum_index, 'incorrect sum index')
+
     def test_dirichlet(self):
         rads = np.random.uniform(0.1, 0.4, size=3)
         sc1 = scattering([cyl('d', np.array([0,0]), 0.5)], method='explicit')
