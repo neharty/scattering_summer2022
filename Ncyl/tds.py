@@ -5,7 +5,8 @@ from scipy.signal import convolve
 from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
-from scipy.fft import fft, ifft, fftfreq, fftn, fftshift
+from scipy.fft import rfft, irfft, rfftfreq, fftn, fftshift
+from multiprocessing import Process, Queue, cpu_count
 
 np.set_printoptions(linewidth=np.inf, precision=3)
 
@@ -410,8 +411,8 @@ class scattering(cyl):
         self.mvp_counter += 1
         return np.hstack(xs)
     
-    def scattering_coeffs(self, method='gmres'):
-        if method == 'gmres':
+    def scattering_coeffs(self):
+        if self.method == 'gmres':
             self.ST = self.make_root_matrix()
             self.gmres_iter = 0
             self.mvp_counter = 0
@@ -449,7 +450,7 @@ class scattering(cyl):
             self.gmres_res = counter.res*np.linalg.norm(rhs)
             return outp
 
-        elif method == 'explicit':
+        elif self.method == 'explicit':
             if self.scat_mat is None:
                 self.scat_mat = self.make_scattering_blocks()
            
@@ -461,17 +462,17 @@ class scattering(cyl):
             else:
                 return np.linalg.solve(sm, rhs)
 
-    def make_u_sc(self, x, y, method = 'gmres'):
+    def make_u_sc(self, x, y):
         r, theta = self.cart_to_polar([x, y])
         
         u_sc = 1j*np.zeros(r.shape)
         del r
         del theta
 
-        if method == 'gmres':
-            cs, ecode = self.scattering_coeffs(method = 'gmres')
-        elif method == 'explicit':
-            cs = self.scattering_coeffs(method = 'explicit')
+        if self.method == 'gmres':
+            cs, ecode = self.scattering_coeffs()
+        elif self.method == 'explicit':
+            cs = self.scattering_coeffs()
         
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
@@ -484,11 +485,14 @@ class scattering(cyl):
         '''
 
         return u_sc*self.mask(x,y)
+    
+    def make_u_sc_parallel(self, x, y, queue):
+        queue.put(self.make_u_sc(x, y))
 
-    def make_u(self, x, y, method = 'gmres'):
+    def make_u(self, x, y):
         r, theta = self.cart_to_polar([x,y])
         u_inc = np.exp(1j*self.k*r*np.cos(theta - self.inc_angle))        
-        return (u_inc+self.make_u_sc(x,y, method = method))*self.mask(x,y)
+        return (u_inc+self.make_u_sc(x, y))*self.mask(x,y)
     
     def mask(self, x, y):
         Oi = self.cyls[0].pos
@@ -501,14 +505,14 @@ class scattering(cyl):
         
         return mask
 
-    def get_scattering_coeffs(self, method = 'gmres'):
-        return self.scattering_coeffs(method=method)
+    def get_scattering_coeffs(self):
+        return self.scattering_coeffs()
 
-    def set_u(self, x, y, method = 'gmres', recompute=False):
+    def set_u(self, x, y, recompute=False):
         if self.u == None:
-            self.u = make_u(x, y, method=method)
+            self.u = make_u(x, y)
         elif self.u != None and not recompute:
-            self.u = make_u(x, y, method=method)
+            self.u = make_u(x, y)
     
 class time_domain_scattering(scattering):
     
@@ -518,55 +522,59 @@ class time_domain_scattering(scattering):
         self.input_signal = input_signal #function handle for input signal
         self.times = time_points #assuming equally-spaced points in time
         dt = self.times[1] - self.times[0]
-        self.fft_freqs = fftfreq(len(time_points), d=dt)
-        self.fft_freqs = self.fft_freqs[self.fft_freqs != 0]
-        self.freqs = self.fft_freqs/self.times[1:]
- 
-    def make_time_harmonic_soln(self, x, y):
-        self.u_sc = 1j*np.zeros((x.shape[0], x.shape[1], len(self.fft_freqs)))
-        
-        def sinusoid(f, x, y):
-            r, theta = scattering.cart_to_polar(self, [x, y])
-            #phi = scattering.get_inc_angle(self)
-            phi = np.pi
-            return np.exp(1j*f*r*np.cos(phi - theta))
+        self.fft_freqs = rfftfreq(len(time_points), d=dt)
+        self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
+        self.sig_fft = rfft(self.input_signal(0, 0, self.times))
 
-        for i in range(len(self.freqs)):
-            f = self.freqs[i]
-            sc = scattering(self.cyls, freq=f)
-            #self.u_sc[:, :, i] = (self.sig_fft[:, :, i]/sinusoid(f, x[:, :, i], y[:, :, i]))*sc.make_u_sc(x[:, :, i], y[:, :, i])
-            self.u_sc[:, :, i] = self.sig_fft[i]*sc.make_u_sc(x[:, :, i], y[:, :, i])
+    def make_time_harmonic_soln(self, x, y):
+        self.u_sc = 1j*np.zeros(x.shape)
+        flen = range(len(self.fft_freqs))
+        
+        '''
+        for i in flen:
+            f = self.fft_freqs[i]
+            sc = scattering(self.cyls, freq=f) 
+            self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :, i+1], y[:, :, i+1])
+        '''
+
+        def compute_block(a, b=None):
+            if b is None:
+                freq_block = self.fft_freqs[a:]
+            else:
+                freq_block = self.fft_freqs[a: b]
+
+            fbrange = range(len(freq_block))
+
+            #find frequencies in parallel
+            sc = [scattering(self.cyls, freq = f) for f in freq_block]
+            q = np.array([Queue() for k in fbrange])
+            p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :, i+1], y[:, :, i+1], q[i])) for i in fbrange])
+            [p[i].start() for i in fbrange]
+
+            for i in fbrange:
+                self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
+
+            [p[i].join() for i in fbrange]
+
+        blocks = int(len(flen)/cpu_count())
+        #print(len(flen), blocks, cpu_count())
+        for b in range(blocks):
+            freq_block = self.fft_freqs[b*cpu_count(): (b+1)*cpu_count()]
+            compute_block(b*cpu_count(), (b+1)*cpu_count())
+ 
+        #finish remainder blocks
+        b = blocks*cpu_count()
+        compute_block(b)
 
         return self.u_sc
 
-    def __make_U_sc_one_time(self, x, y, t):
-        #print(t)
-        U = np.zeros((x.shape[0], x.shape[1]))
-        
-        for i in range(len(self.freqs)):
-            f = self.freqs[i]
-            U += np.real(self.u_sc[:, :, i]*np.exp(-1j*2*np.pi*f*t))
-
-        return U*scattering.mask(self, x[:, :, 0], y[:, :, 0])
-    
-    def make_U_one_time(self, x, y, t):
-        self.sig_fft = fft(self.input_signal(x, y, self.times), axis=2, norm='forward')
-        self.make_time_harmonic_soln(x, y)
-        return scattering.mask(self, x[:, :, 0], y[:, :, 0])*(self.__make_U_sc_one_time(x, y, t) + self.input_signal(x, y, t))
-
     def make_U_sc(self, x, y):
         U_sc = np.zeros(x.shape)
-
-        for i in range(len(self.times)):
-            U_sc[:, :, i] = self.__make_U_sc_one_time(x, y, self.times[i])
-
-        return U_sc
+        self.make_time_harmonic_soln(x, y)         
+        U_sc = irfft(self.u_sc, len(self.times))
+        
+        return scattering.mask(self, x, y)*U_sc
 
     def make_U(self, x, y):
-        print(np.array(self.input_signal(0, 0, self.times)).shape)
-        self.sig_fft = fft(self.input_signal(0, 0, self.times)).conjugate()
-        #kdotr = 
-        #self.sig_fft = self.sig_fft/np.exp(
-        self.make_time_harmonic_soln(x, y)
         return scattering.mask(self, x, y)*(self.make_U_sc(x,y) + self.input_signal(x, y, self.times))
 
