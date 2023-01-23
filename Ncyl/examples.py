@@ -1,4 +1,4 @@
-from Ncyl import cyl, scattering
+from tds import cyl, scattering
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -59,7 +59,8 @@ def grid_of_cyls():
     for i in range(9):
         bc = 'd'
         if i%3 == 0:
-            bc = 'd' 
+            bc = 'd'
+            impedance
         elif i%3 == 1:
             bc = 'n'
         elif i%3 == 2:
@@ -67,7 +68,7 @@ def grid_of_cyls():
         else:
             None
 
-        cyls[i] = cyl(i, bc, pos=origins[i], radius=radius)
+        cyls[i] = cyl(bc, origins[i], radius)
 
     return scattering(cyls)
 
@@ -83,9 +84,9 @@ def pentagram():
     origins[:, 1] = np.imag(origins_cmplx)[:]
     
     print(origins)
-    bcs = ['d', 'n', 'i', 'd', 'n']
+    bcs = ['d', 'n', 'd', 'd', 'n']
     radius = 0.3
-    return scattering([cyl(i, bcs[i], pos=origins[i], radius = radius) for i in range(5)])
+    return scattering([cyl(bcs[i], origins[i], radius) for i in range(5)])
 
 def main():
     xl = -3
@@ -97,8 +98,8 @@ def main():
     y = np.linspace(yl, yr, num = N_points)
     
     #plot_soln(x, y, grid_of_cyls(), 'radius = 0.2, spacing = 1.5', 'examples/9cyls.png')
-    #plot_soln(x, y, pentagram(), 'radius = 0.3, spacing = 2', 'examples/pentagram.png')
+    plot_soln(x, y, pentagram(), 'radius = 0.3, spacing = 2', 'examples/pentagram.png')
     
-    plot_soln(x, y, scattering([cyl(0, 'd', pos = np.array([-1, -1]), radius = 0.3)]), '', '')
+    plot_soln(x, y, scattering([cyl('d', pos = np.array([-1, -1]), radius = 0.3)]), '', '')
 
 main()

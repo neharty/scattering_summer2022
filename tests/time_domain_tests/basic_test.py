@@ -5,12 +5,13 @@ from scipy.fft import rfftfreq
 from Ncyl.tds import cyl, scattering, time_domain_scattering
 from utils import example_setups
 
-sigma=0.5
-gaussian_deriv = lambda x, y, t : np.sqrt(2/sigma)*(x+t-10)*np.exp(0.5-((x+t-10)**2)/sigma)
+sigma=0.1
+gaussian_deriv = lambda x, y, t : np.sqrt(2/sigma)*(x+t-10)*np.exp(0.5-((x+t-5)**2)/sigma)
 
 #cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
-cyls = [cyl('d', [0, 0], 1)]
-times = np.linspace(0, 30, num=200)
+cyls = [cyl('d', [0, 1.5], 1), cyl('d', [0, -1.5], 1)]
+#cyls = [cyl('d', [0, 0], 1)]
+times = np.linspace(0, 15, num=100)
 #x = [-5, 0, 5]
 #y = [-5, 0, 5]
 
@@ -22,7 +23,7 @@ td = time_domain_scattering(cyls, gaussian_deriv, times)
 #plt.plot(np.hstack(([0], td.fft_freqs)), np.abs(td.sig_fft))
 #plt.show()
 #plt.clf()
-U_sc = td.make_U_sc(X, Y)
+#U_sc = td.make_U_sc(X, Y)
 U = td.make_U(X, Y)
 
 '''
@@ -49,7 +50,7 @@ for t in range(len(times)):
     plt.colorbar()
     plt.clim(m, M)
     plt.savefig('deriv_of_gaussian/total_field/'+str(t)+'.png')
-
+'''
     plt.clf()
     plt.imshow(U_sc[:, :, t], origin='upper', extent=(x.min(), x.max(), y.min(), y.max()))
     plt.plot(circ[:, 0], circ[:, 1], 'r')
@@ -58,5 +59,5 @@ for t in range(len(times)):
     plt.colorbar()
     plt.clim(m, M)
     plt.savefig('deriv_of_gaussian/scattered_field/'+str(t)+'.png')
-
+'''
 

@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from Ncyl.Ncyl_gmres import scattering, cyl
+#from Ncyl.Ncyl_gmres import scattering, cyl
+from Ncyl.tds import scattering, cyl
 
 def uniform_grid_3x3(radius, spacing):
     # 3x3 grid of cylinders

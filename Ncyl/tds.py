@@ -5,7 +5,7 @@ from scipy.signal import convolve
 from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
-from scipy.fft import rfft, irfft, rfftfreq, fftn, fftshift
+from scipy.fft import fft, ifft, rfft, irfft, rfftfreq, fftn, fftshift
 from multiprocessing import Process, Queue, cpu_count
 
 np.set_printoptions(linewidth=np.inf, precision=3)
@@ -513,9 +513,9 @@ class scattering(cyl):
             self.u = make_u(x, y)
         elif self.u != None and not recompute:
             self.u = make_u(x, y)
-    
+
 class time_domain_scattering(scattering):
-    
+
     def __init__(self, cyls, input_signal, time_points):
         super().__init__(cyls)
         self.cyls = cyls
@@ -523,8 +523,9 @@ class time_domain_scattering(scattering):
         self.times = time_points #assuming equally-spaced points in time
         dt = self.times[1] - self.times[0]
         self.fft_freqs = rfftfreq(len(time_points), d=dt)
+        self.sig_fft = ifft(self.input_signal(0, 0, self.times))
         self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
-        self.sig_fft = rfft(self.input_signal(0, 0, self.times))
+        print(self.fft_freqs)
 
     def make_time_harmonic_soln(self, x, y):
         self.u_sc = 1j*np.zeros(x.shape)
@@ -533,7 +534,7 @@ class time_domain_scattering(scattering):
         '''
         for i in flen:
             f = self.fft_freqs[i]
-            sc = scattering(self.cyls, freq=f) 
+            sc = scattering(self.cyls, freq=f)
             self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :, i+1], y[:, :, i+1])
         '''
 
@@ -552,7 +553,7 @@ class time_domain_scattering(scattering):
             [p[i].start() for i in fbrange]
 
             for i in fbrange:
-                self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
+                self.u_sc[:, :, a+i+1] = 2*self.sig_fft[a+i+1]*q[i].get()
 
             [p[i].join() for i in fbrange]
 
@@ -561,18 +562,21 @@ class time_domain_scattering(scattering):
         for b in range(blocks):
             freq_block = self.fft_freqs[b*cpu_count(): (b+1)*cpu_count()]
             compute_block(b*cpu_count(), (b+1)*cpu_count())
- 
+
         #finish remainder blocks
         b = blocks*cpu_count()
         compute_block(b)
 
+        #flip the time-axis
+        #self.u_sc = np.flip(self.u_sc, axis=-1)
+        print(np.amax(self.u_sc))
         return self.u_sc
 
     def make_U_sc(self, x, y):
         U_sc = np.zeros(x.shape)
-        self.make_time_harmonic_soln(x, y)         
-        U_sc = irfft(self.u_sc, len(self.times))
-        
+        self.make_time_harmonic_soln(x, y)
+        U_sc = np.real(fft(self.u_sc))
+         
         return scattering.mask(self, x, y)*U_sc
 
     def make_U(self, x, y):
