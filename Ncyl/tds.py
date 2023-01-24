@@ -97,7 +97,7 @@ class scattering(cyl):
     def __init__(self, cyls, 
             sum_index = None, 
             sum_tol = 1e-8, 
-            gmres_tol = 1e-6, 
+            gmres_tol = 1e-8, 
             freq = 1, 
             wavespeed = 1,
             inc_angle = np.pi, 
@@ -116,6 +116,7 @@ class scattering(cyl):
         The scattering class takes in an assortment of cylinders as input, then 
         computes the coefficients for the 
         '''
+
         self.cyls = cyls
 
         # create 0-indexed labels for cylinders
@@ -139,7 +140,6 @@ class scattering(cyl):
         self.precond = precond
         self.precond_dist = precond_dist
         self.precond_matrix = precond_matrix
-
 
         self.ST = None
         self.u = None
@@ -171,6 +171,10 @@ class scattering(cyl):
             self.lengths[i+1] = 2*self.cyls[i].sum_index + 1 + self.lengths[i]
 
         self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index + 1 for l in self.labels]))
+        
+        if self.gmres_restart is None:
+            self.gmres_restart = self.scat_matrix_dim
+        
         self.dist_matrix = self.make_dist_matrix()
 
         if make_scat_matrix:
@@ -433,8 +437,8 @@ class scattering(cyl):
                 outp = gmres(linearop,
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
-                            M=precond_mat, 
-                            restart=self.gmres_restart, 
+                            M = precond_mat, 
+                            restart = self.gmres_restart, 
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
             else:    
@@ -471,9 +475,15 @@ class scattering(cyl):
 
         if self.method == 'gmres':
             cs, ecode = self.scattering_coeffs()
+            print(ecode, self.freq, np.amax(np.abs(cs)))
+            if ecode > 0:
+                self.gmres_tol = self.gmres_tol*10
+                cs, ecode = self.scattering_coeffs()
         elif self.method == 'explicit':
             cs = self.scattering_coeffs()
         
+        #print(self.freq, np.amax(np.abs(cs)))
+
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
             for j in range(2*self.cyls[l].sum_index + 1):
@@ -516,7 +526,7 @@ class scattering(cyl):
 
 class time_domain_scattering(scattering):
 
-    def __init__(self, cyls, input_signal, time_points):
+    def __init__(self, cyls, input_signal, time_points, kwargs = {}):
         super().__init__(cyls)
         self.cyls = cyls
         self.input_signal = input_signal #function handle for input signal
@@ -525,7 +535,8 @@ class time_domain_scattering(scattering):
         self.fft_freqs = rfftfreq(len(time_points), d=dt)
         self.sig_fft = ifft(self.input_signal(0, 0, self.times))
         self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
-        print(self.fft_freqs)
+        self.kwargs = kwargs
+        #print(self.fft_freqs, np.abs(hankel1(0, 2*np.pi*self.fft_freqs[0])))
 
     def make_time_harmonic_soln(self, x, y):
         self.u_sc = 1j*np.zeros(x.shape)
@@ -547,7 +558,7 @@ class time_domain_scattering(scattering):
             fbrange = range(len(freq_block))
 
             #find frequencies in parallel
-            sc = [scattering(self.cyls, freq = f) for f in freq_block]
+            sc = [scattering(self.cyls, freq = f, **self.kwargs) for f in freq_block]
             q = np.array([Queue() for k in fbrange])
             p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :, i+1], y[:, :, i+1], q[i])) for i in fbrange])
             [p[i].start() for i in fbrange]
@@ -569,12 +580,13 @@ class time_domain_scattering(scattering):
 
         #flip the time-axis
         #self.u_sc = np.flip(self.u_sc, axis=-1)
-        print(np.amax(self.u_sc))
+        #print(np.amax(self.u_sc))
         return self.u_sc
 
     def make_U_sc(self, x, y):
         U_sc = np.zeros(x.shape)
         self.make_time_harmonic_soln(x, y)
+        #print(np.amax(np.abs(self.u_sc)))
         U_sc = np.real(fft(self.u_sc))
          
         return scattering.mask(self, x, y)*U_sc

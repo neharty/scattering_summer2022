@@ -160,7 +160,7 @@ class antoine(preconditioner):
         return 2*np.eye(matdim) - np.block(self.mat_block)
 
 class neumann_lowrank(preconditioner):
-    def __init__(self, A_block = None, dist_mat = None, dist = 0, tol = 1e-6, neumann_terms=2):
+    def __init__(self, A = None, A_block = None, dist_mat = None, dist = 0, tol = 1e-6, neumann_terms=2):
         super().__init__(
                 A_block = A_block,
                 dist_mat = dist_mat,
