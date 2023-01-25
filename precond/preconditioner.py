@@ -5,35 +5,30 @@ from scipy.sparse.linalg import svds
 
 class preconditioner():
     '''
-        preconditioner template class for 
-        geometrically-based preconditioners
+        preconditioner template class for
+        scattering-based preconditioners
     '''
-    def __init__(self, A = None, A_block = None, dist_mat = None, dist = 0):
-        self.mat = A
-        self.mat_block = A_block
+    def __init__(self, sc):
+        self.sc = sc
         self.inv_mat = None
-        self.dist_mat = dist_mat
-        self.dist = dist
 
 class hbs(preconditioner):
-    def __init__(self, A_block = None, dist_mat = None, dist = 0, tol = 1e-6, level = 1):
-        super().__init__(
-                A_block = A_block, 
-                dist_mat = dist_mat,
-                dist = dist
-                )
+    def __init__(self, sc, tol = 1e-6, level = 1):
+        super().__init__(sc)
+        self.mat_block = self.sc.make_scattering_blocks_blockform()
+        self.dist_mat = sc.dist_matrix
+        self.dist = sc.precond_dist
         self.tol = tol
         self.level = level
-        self.inv_mat = self.construct_Ainv(A_block, self.tol, self.level)
+        self.inv_mat = self.construct_Ainv(self.mat_block, self.tol, self.level)
 
     def construct_Aapprox_blockform(self, A_b, tol):
         #A_b is the block form of A, as a list 
-        A_b = np.array(A_b)
         epsrank = np.zeros((len(A_b), len(A_b[0])))
         for i in range(len(A_b)):
             for j in range(len(A_b[0])):
                 if self.dist_mat[i, j] >= self.dist:
-                    epsrank[i, j] = np.argmin(np.abs(svdvals(A_b[i, j]) - tol))
+                    epsrank[i, j] = np.argmin(np.abs(svdvals(np.array(A_b[i][j])) - tol))
                 else:
                     epsrank[i, j] = 0
 
@@ -44,20 +39,23 @@ class hbs(preconditioner):
         for i in range(rows):
             colarr = np.arange(cols)
             colarr = np.delete(colarr, i)
-            B = np.concatenate(np.array(A_b[i, colarr]), axis=1)
+            B = [A_b[i][c] for c in colarr]
+            B = np.block(B)
+            #B = np.concatenate(np.array(A_b[i][colarr]), axis=1)
             U_i, X_i, Y_i = svd(B, lapack_driver='gesvd')#, k=epsrank)
             U[i] = U_i[:, :int(np.max(epsrank[i, :]))]
 
-        A_bH = np.array([[None for i in range(rows)] for j in range(cols)])
+        A_bH = [[None for i in range(rows)] for j in range(cols)]
 
         for i in range(cols):
             for j in range(rows):
-                A_bH[i, j] = A_b[j, i].conj().T
+                A_bH[i][j] = A_b[j][i].conj().T
         
         for i in range(cols):
             rowarr = np.arange(rows)
             rowarr = np.delete(rowarr, i)
-            B = np.concatenate(np.array(A_bH[i, rowarr]), axis=1)
+            B = [A_bH[i][r] for r in rowarr]
+            B = np.block(B)
             V_i, X_i, Y_i = svd(B, lapack_driver='gesvd')#, k=epsrank)
             V[i] = V_i[:, :int(np.max(epsrank[:, i]))]
 
@@ -66,12 +64,12 @@ class hbs(preconditioner):
         for i in range(rows):
             for j in range(cols):
                 if i != j:
-                    Atilde[i][j] = U[i].conj().T @ A_b[i, j] @ V[j]
+                    Atilde[i][j] = U[i].conj().T @ A_b[i][j] @ V[j]
                 else:
                     n, no = U[i].conj().T.shape
                     mo, m = V[j].shape
                     Atilde[i][j] = np.zeros((n, m))
-                    D[i] = A_b[i, j]
+                    D[i] = A_b[i][j]
         #print(Atilde.shape)
         return U, Atilde, V, D
 
@@ -101,7 +99,11 @@ class hbs(preconditioner):
 
         E, F, Dhat, G = self.construct_Ainv_matrices(U, V, D)
 
-        Atmp = np.array(self.reblock_blockform(np.array(Atilde)))
+        if l == 1:
+            Atilde = np.block(Atilde)
+            return E @ np.linalg.inv(Atilde + Dhat) @ F.conj().T + G
+
+        Atmp = np.array(self.reblock_blockform(Atilde))
         print(Atmp.shape)
         rows, cols, a, b = Atmp.shape
         
@@ -113,11 +115,7 @@ class hbs(preconditioner):
 
         Dhatblock = np.array(Dhatblock)
 
-        if l == 1:
-            Atilde = np.block(Atilde)
-            return E @ np.linalg.inv(Atilde + Dhat) @ F.conj().T + G
-        else:
-            return E @ self.construct_Ainv(Atmp + Dhatblock, tol, l-1) @ F.conj().T + G
+        return E @ self.construct_Ainv(Atmp + Dhatblock, tol, l-1) @ F.conj().T + G
 
     def reblock_blockform(self, A_b):
         #works if A_b has an even number of blocks
@@ -127,20 +125,18 @@ class hbs(preconditioner):
         A_new = [[None for i in range(cols)] for j in range(rows)]
         for i in range(rows):
             for j in range(cols):
-                block = [[A_b[2*i, 2*j], A_b[2*i, 2*j + 1]], [A_b[2*i + 1, 2*j], A_b[2*i + 1, 2*j + 1]]] 
+                block = [[A_b[2*i, 2*j], A_b[2*i, 2*j + 1]], [A_b[2*i + 1, 2*j], A_b[2*i + 1, 2*j + 1]]]
                 A_new[i][j] = np.block(block)
 
         return A_new #return as list
 
 class antoine(preconditioner):
-    def __init__(self, A = None, A_block = None, dist_mat = None, dist = 0):
-        super().__init__(
-                A = A, 
-                A_block = A_block, 
-                dist_mat = dist_mat, 
-                dist = dist
-                )
-        self.inv_mat = self.make_precond_matrix()    
+    def __init__(self, sc):
+        super().__init__(sc)
+        self.mat_block = self.sc.make_scattering_blocks_blockform()
+        self.dist = sc.precond_dist
+        self.dist_mat = sc.dist_matrix
+        self.inv_mat = self.make_precond_matrix()
 
     def make_precond_matrix(self):
         dims = len(self.mat_block), len(self.mat_block[0])
@@ -152,20 +148,16 @@ class antoine(preconditioner):
                     if self.dist_mat[i, j] > self.dist:
                         rows, cols = np.array(self.mat_block[i][j]).shape
                         self.mat_block[i][j] = np.zeros((rows, cols))
-        if self.mat is None:
-            matdim = np.block(self.mat_block).shape[0]
-        else:
-            matdim = self.mat.shape[0]
-
-        return 2*np.eye(matdim) - np.block(self.mat_block)
+        self.mat = np.block(self.mat_block)
+        matdim = self.mat.shape[0]
+        return 2*np.eye(matdim) - self.mat
 
 class neumann_lowrank(preconditioner):
-    def __init__(self, A = None, A_block = None, dist_mat = None, dist = 0, tol = 1e-6, neumann_terms=2):
-        super().__init__(
-                A_block = A_block,
-                dist_mat = dist_mat,
-                dist = dist
-                )
+    def __init__(self, sc, tol = 1e-8, neumann_terms=2):
+        super().__init__(sc)
+        self.mat_block = self.sc.make_scattering_blocks_blockform()
+        self.dist_mat = self.sc.dist_matrix
+        self.dist = self.sc.precond_dist
         self.tol = tol
         self.neumann_terms = neumann_terms
         self.inv_mat = self.make_precond_matrix()

@@ -7,6 +7,7 @@ from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
 from scipy.fft import fft, ifft, rfft, irfft, rfftfreq, fftn, fftshift
 from multiprocessing import Process, Queue, cpu_count
+import copy
 
 np.set_printoptions(linewidth=np.inf, precision=3)
 
@@ -154,7 +155,10 @@ class scattering(cyl):
                 if self.cyls[l].sum_index == None:
                     ka = self.k*self.cyls[l].radius
                     try:
-                        self.cyls[l].sum_index = int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
+                        if ka < 0.5:
+                            self.cyls[l].sum_index = 1
+                        else:
+                            self.cyls[l].sum_index = int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
                     except:
                         print('ka = ', ka)
                         print('setting cylinder sum index to 0, this may cause unexpected behavior')
@@ -367,7 +371,7 @@ class scattering(cyl):
         return -np.multiply(jvect, self.make_d_coeffs_1cyl(label))
 
     def make_rhs_vector(self):
-        rhs = np.hstack(np.array([self.make_rhs_vector_1cyl(i) for i in self.labels]))
+        rhs = np.hstack([self.make_rhs_vector_1cyl(i) for i in self.labels])
         self.rhs = rhs
         return rhs
 
@@ -384,11 +388,11 @@ class scattering(cyl):
     
     def mvp(self, x):
         x = np.array(x, dtype=np.complex128)
-        xs = np.array([np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.lengths))]) # break up all p coefficients
-        xcalc = np.copy(xs)
+        xs = [np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.lengths))] # break up all p coefficients
+        xcalc = xs.copy()
         ST = self.ST
 
-        mulscat = np.array([1j*np.zeros(len(xn)) for xn in xs])
+        mulscat = [1j*np.zeros(len(xn)) for xn in xs]
         for p in self.labels:
             bc = self.cyls[p].bc
             radius = self.cyls[p].radius
@@ -410,8 +414,10 @@ class scattering(cyl):
                     
                     DSCmvp = jh*SCmvp
                 mulscat[p] += DSCmvp
-         
-        xs += mulscat
+        
+        for i in range(len(xs)): 
+            xs[i] += mulscat[i]
+
         self.mvp_counter += 1
         return np.hstack(xs)
     
@@ -429,11 +435,8 @@ class scattering(cyl):
             counter = self.gmres_counter()
             if self.precond is not None:
                 #print(self.precond_dist)
-                precond_mat = self.precond(A = self.make_scattering_blocks(),
-                                           A_block = self.make_scattering_blocks_blockform(),
-                                           dist_mat = self.make_dist_matrix(), 
-                                           dist = self.precond_dist
-                                           ).inv_mat
+                precond_mat = self.precond(self).inv_mat
+
                 outp = gmres(linearop,
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
@@ -461,24 +464,29 @@ class scattering(cyl):
             sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
             rhs = np.array(self.make_rhs_vector(), dtype=np.complex128)
             if self.precond:
-                pc_mat = self.make_precond_matrix()
+                pc_mat = self.precond(self).inv_mat
                 return np.linalg.solve(pc_mat@sm, pc_mat@rhs)
             else:
                 return np.linalg.solve(sm, rhs)
 
     def make_u_sc(self, x, y):
-        r, theta = self.cart_to_polar([x, y])
-        
+        r, theta = self.cart_to_polar([x, y]) 
         u_sc = 1j*np.zeros(r.shape)
         del r
         del theta
 
         if self.method == 'gmres':
             cs, ecode = self.scattering_coeffs()
-            print(ecode, self.freq, np.amax(np.abs(cs)))
+            #for l in self.labels:
+                #print(self.cyls[l].sum_index)
+
+            #print(ecode, self.freq, np.amax(np.abs(cs)))
             if ecode > 0:
-                self.gmres_tol = self.gmres_tol*10
-                cs, ecode = self.scattering_coeffs()
+                #self.gmres_tol = self.gmres_tol*10
+                print('GMRES failed, switching to explicit')
+                self.method = 'explicit'
+                cs = self.scattering_coeffs()
+
         elif self.method == 'explicit':
             cs = self.scattering_coeffs()
         
@@ -529,6 +537,7 @@ class time_domain_scattering(scattering):
     def __init__(self, cyls, input_signal, time_points, kwargs = {}):
         super().__init__(cyls)
         self.cyls = cyls
+        print([c.sum_index for c in self.cyls])
         self.input_signal = input_signal #function handle for input signal
         self.times = time_points #assuming equally-spaced points in time
         dt = self.times[1] - self.times[0]
@@ -556,9 +565,12 @@ class time_domain_scattering(scattering):
                 freq_block = self.fft_freqs[a: b]
 
             fbrange = range(len(freq_block))
+            
+            for c in self.cyls:
+                c.sum_index = None
 
             #find frequencies in parallel
-            sc = [scattering(self.cyls, freq = f, **self.kwargs) for f in freq_block]
+            sc = [scattering(copy.deepcopy(self.cyls), freq = f, **self.kwargs) for f in freq_block]
             q = np.array([Queue() for k in fbrange])
             p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :, i+1], y[:, :, i+1], q[i])) for i in fbrange])
             [p[i].start() for i in fbrange]
@@ -586,9 +598,7 @@ class time_domain_scattering(scattering):
     def make_U_sc(self, x, y):
         U_sc = np.zeros(x.shape)
         self.make_time_harmonic_soln(x, y)
-        #print(np.amax(np.abs(self.u_sc)))
         U_sc = np.real(fft(self.u_sc))
-         
         return scattering.mask(self, x, y)*U_sc
 
     def make_U(self, x, y):
