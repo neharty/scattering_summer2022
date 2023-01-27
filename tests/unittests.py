@@ -168,24 +168,9 @@ class ScatteringTest(unittest.TestCase):
             )
         sc2 = scattering(
             [
-            cyl(
-                'i', 
-                np.array([0,0]), 
-                rads[0], 
-                impedance=imps[0]
-                ), 
-            cyl(
-                'i', 
-                np.array([0, 1.1]), 
-                rads[1], 
-                impedance=imps[1]
-                ), 
-            cyl(
-                'i', 
-                np.array([0, -1.1]), 
-                rads[2], 
-                impedance=imps[2]
-                )
+                cyl('i', np.array([0,0]), rads[0], impedance=imps[0]), 
+                cyl('i', np.array([0, 1.1]), rads[1], impedance=imps[1]), 
+                cyl('i', np.array([0, -1.1]), rads[2], impedance=imps[2])
              ], 
              method='explicit', 
              precond=preconditioner.antoine, 

@@ -13,7 +13,7 @@ class preconditioner():
         self.inv_mat = None
 
 class hbs(preconditioner):
-    def __init__(self, sc, tol = 1e-6, level = 1):
+    def __init__(self, sc, tol = 1e-10, level = 1):
         super().__init__(sc)
         self.mat_block = self.sc.make_scattering_blocks_blockform()
         self.dist_mat = sc.dist_matrix
@@ -27,14 +27,19 @@ class hbs(preconditioner):
         epsrank = np.zeros((len(A_b), len(A_b[0])))
         for i in range(len(A_b)):
             for j in range(len(A_b[0])):
-                if self.dist_mat[i, j] >= self.dist:
-                    epsrank[i, j] = np.argmin(np.abs(svdvals(np.array(A_b[i][j])) - tol))
+                svdvect = svdvals(np.array(A_b[i][j]))
+                if i != j:
+                    #if self.dist_mat[i, j] >= self.dist:
+                    epsrank[i, j] = len(svdvect[svdvect > tol])
                 else:
                     epsrank[i, j] = 0
+
+        #print(epsrank)
 
         rows, cols = len(A_b), len(A_b[0])
 
         U = np.array([None for n in range(rows)])
+        Y = np.array([None for n in range(rows)])
         V = np.array([None for n in range(cols)])
         for i in range(rows):
             colarr = np.arange(cols)
@@ -42,8 +47,10 @@ class hbs(preconditioner):
             B = [A_b[i][c] for c in colarr]
             B = np.block(B)
             #B = np.concatenate(np.array(A_b[i][colarr]), axis=1)
-            U_i, X_i, Y_i = svd(B, lapack_driver='gesvd')#, k=epsrank)
+            U_i, X_i, Y_i = svd(B)#, k=epsrank)
+            Y_i = Y_i.conj().T
             U[i] = U_i[:, :int(np.max(epsrank[i, :]))]
+            Y[i] = Y_i[:, :int(np.max(epsrank[i, :]))]
 
         A_bH = [[None for i in range(rows)] for j in range(cols)]
 
@@ -56,8 +63,9 @@ class hbs(preconditioner):
             rowarr = np.delete(rowarr, i)
             B = [A_bH[i][r] for r in rowarr]
             B = np.block(B)
-            V_i, X_i, Y_i = svd(B, lapack_driver='gesvd')#, k=epsrank)
+            V_i, X_i, Y_i = svd(B)#, k=epsrank)
             V[i] = V_i[:, :int(np.max(epsrank[:, i]))]
+            #print(U[i] @ V[i].conj().T)
 
         Atilde = [[None for i in range(cols)] for j in range(rows)]
         D = [None for i in range(cols)]
@@ -208,10 +216,8 @@ class neumann_lowrank(preconditioner):
                     rows, cols = np.array(self.mat_block[i][j]).shape
                     self.mat_block[i][j] = self.low_rank_factorization(self.mat_block[i][j])
 
-        if self.mat is None:
-            matdim = np.block(self.mat_block).shape[0]
-        else:
-            matdim = self.mat.shape[0]
-        
-        A = np.block(self.mat_block)
-        return self.neumann_series(A, self.neumann_terms)
+        self.mat = np.block(self.mat_block)
+        matdim = self.mat.shape[0]
+        #return self.neumann_series(self.mat, self.neumann_terms)
+        return 2*np.eye(matdim) - self.mat
+

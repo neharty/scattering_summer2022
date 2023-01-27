@@ -117,6 +117,7 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
         #generate a new point
         xtest, ytest = np.random.uniform(*allowed_domain_x), np.random.uniform(*allowed_domain_y)
         ztest = xtest + 1j*ytest
+        #print(i)
         for j in range(i):
             #test new point against all previous points
             z = xpos[:i] + 1j*ypos[:i]
@@ -136,8 +137,15 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 
     return cyls
 
+def vol_frac(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxtries=10, sum_num = None, impedance = None):
+    Vbox = (Lxmax-Lxmin)*(Lymax - Lymin)
+    N = int(np.floor(Vfrac*Vbox/(radius**2*np.pi)))
+    print(N, 'volume fraction is ' + str(N*radius**2*np.pi/Vbox))
+    return random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num = None, impedance = None)
+
 def fig17_pos(bc, radius, sum_num=None, impedance=None):
-    pos = np.loadtxt(os.environ.get('PYTHONPATH')+'/utils/fig17_points.csv', delimiter=',')
+    #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')
+    pos = np.loadtxt('/home/nicholas/scattering/utils/fig17_points.csv', delimiter=',')
     cyls = [None for i in range(len(pos))]
     for i in range(len(pos)):
         cyls[i] = cyl(bc, pos[i], radius, sum_index=sum_num, impedance=impedance)
