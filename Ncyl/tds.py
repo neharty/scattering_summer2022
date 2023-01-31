@@ -158,7 +158,7 @@ class scattering(cyl):
                         if ka < 0.5:
                             self.cyls[l].sum_index = 1
                         else:
-                            self.cyls[l].sum_index = int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
+                            self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)
                     except:
                         print('ka = ', ka)
                         print('setting cylinder sum index to 0, this may cause unexpected behavior')
@@ -250,7 +250,10 @@ class scattering(cyl):
     def Shat(self, m, n, v):
         # v is in cartesian coords
         return self.phihat(m-n, v)
-    
+    def modes(self, k, a):
+        ka = k*a
+        return int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
+
     def make_dist_matrix(self):
         self.dist_matrix = np.zeros((len(self.cyls), len(self.cyls)))
         for i in self.labels:
