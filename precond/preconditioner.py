@@ -51,6 +51,7 @@ class hbs(preconditioner):
             Y_i = Y_i.conj().T
             U[i] = U_i[:, :int(np.max(epsrank[i, :]))]
             Y[i] = Y_i[:, :int(np.max(epsrank[i, :]))]
+            print(B.shape, U_i.shape, X_i.shape, Y_i.shape)
 
         A_bH = [[None for i in range(rows)] for j in range(cols)]
 
