@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.linalg import svd, svdvals, block_diag, qr
+from scipy.linalg import svd, svdvals, block_diag, qr, diagsvd
 from scipy.sparse.linalg import svds
 
 class preconditioner():
@@ -13,7 +13,7 @@ class preconditioner():
         self.inv_mat = None
 
 class hbs(preconditioner):
-    def __init__(self, sc, tol = 1e-10, level = 1):
+    def __init__(self, sc, tol = 1e-8, level = 1):
         super().__init__(sc)
         self.mat_block = self.sc.make_scattering_blocks_blockform()
         self.dist_mat = sc.dist_matrix
@@ -33,26 +33,75 @@ class hbs(preconditioner):
                     epsrank[i, j] = len(svdvect[svdvect > tol])
                 else:
                     epsrank[i, j] = 0
-
+        epsrank = int(np.amax(epsrank))
         #print(epsrank)
 
         rows, cols = len(A_b), len(A_b[0])
 
-        U = np.array([None for n in range(rows)])
-        Y = np.array([None for n in range(rows)])
-        V = np.array([None for n in range(cols)])
+        U = [None for n in range(rows)]
+        AVblk = [None for n in range(rows)]
+        V = [None for n in range(cols)]
         for i in range(rows):
             colarr = np.arange(cols)
             colarr = np.delete(colarr, i)
             B = [A_b[i][c] for c in colarr]
             B = np.block(B)
+            m, n = B.shape
             #B = np.concatenate(np.array(A_b[i][colarr]), axis=1)
             U_i, X_i, Y_i = svd(B)#, k=epsrank)
-            Y_i = Y_i.conj().T
-            U[i] = U_i[:, :int(np.max(epsrank[i, :]))]
-            Y[i] = Y_i[:, :int(np.max(epsrank[i, :]))]
-            print(B.shape, U_i.shape, X_i.shape, Y_i.shape)
+            U[i] = U_i[:, :epsrank]
+            
+            X_i = diagsvd(X_i, m, n)
+            tmpmat = X_i @ Y_i
+            AVblk[i] = (X_i @ Y_i)
+        
+        AVblk = np.vstack(AVblk)
 
+        for j in range(cols):
+            rowarr = np.delete(np.arange(rows), j)
+            rlen, clen = A_b[j][j].shape
+            #compute V[j] via an SVD
+            if j == 0:
+                #compute V[0]
+                tmpmat = AVblk[rlen:, :clen]
+                Utmp, Stmp, Vtmp = svd(tmpmat)
+                V[0] = Vtmp.conj().T[:, :epsrank]
+            elif j == cols-1:
+                #compute V[-1] 
+                tmpmat = AVblk[:j*rlen, (j-1)*clen:]
+                Utmp, Stmp, Vtmp = svd(tmpmat)
+                V[-1] = Vtmp.conj().T[:, :epsrank]
+            else:
+                #compute V[j]
+                #note, this assumes all blocks are the same size
+                print(j)
+                tmpmat1 = AVblk[:(j-1)*rlen, (j-1)*clen:j*clen]
+                tmpmat2 = AVblk[(j+1)*rlen:, (j-1)*clen:j*clen]
+                Utmp, Stmp, Vtmp = svd(np.vstack((tmpmat1, tmpmat2)))
+                V[j] = Vtmp.conj().T[:, :epsrank]
+
+
+        '''
+            if i != rows-1:
+                blkrow, blkcol = A_b[i][i+1].shape
+                AV = np.hstack[]
+                AV = tmpmat[:, i*blkcol:(i+1)*blkcol]
+                Utmp, Stmp, Vtmp = svd(AV)
+                Vtmp = Vtmp.conjugate().T
+                V[i+1] = Vtmp[:, :epsrank]
+                print(blkcol, AV.shape)
+            else:
+                #compute V_0
+                blkrow, blkcol = A_b[i][0].shape
+                AV = tmpmat[:, :blkcol]
+                Utmp, Stmp, Vtmp = svd(AV)
+                Vtmp = Vtmp.conjugate().T
+                V[0] = Vtmp[:, :epsrank]
+        #print(V)
+            #print(B.shape, U_i.shape, Q_i.shape)
+        '''
+
+        '''
         A_bH = [[None for i in range(rows)] for j in range(cols)]
 
         for i in range(cols):
@@ -67,6 +116,7 @@ class hbs(preconditioner):
             V_i, X_i, Y_i = svd(B)#, k=epsrank)
             V[i] = V_i[:, :int(np.max(epsrank[:, i]))]
             #print(U[i] @ V[i].conj().T)
+        '''
 
         Atilde = [[None for i in range(cols)] for j in range(rows)]
         D = [None for i in range(cols)]
@@ -79,7 +129,8 @@ class hbs(preconditioner):
                     mo, m = V[j].shape
                     Atilde[i][j] = np.zeros((n, m))
                     D[i] = A_b[i][j]
-        #print(Atilde.shape)
+        #print(Atilde)
+
         return U, Atilde, V, D
 
     def construct_Aapprox_svd(self, A_b, tol):
@@ -92,9 +143,12 @@ class hbs(preconditioner):
 
     def construct_Ainv_matrices(self, U, V, D):
         Dinv = np.linalg.inv(D)
-        Dhat = np.linalg.inv(V.conj().T @ Dinv @ U)
+        #plt.spy(V.conj().T @ Dinv @ U)
+        #plt.show()
+        #Dhat = np.linalg.inv(V.conj().T @ Dinv @ U)
+        Dhat = U.conj().T @ D @ V
         E = Dinv @ U @ Dhat
-        F = (Dhat @ V.conj().T @ Dinv).conj().T
+        F = Dhat @ V.conj().T @ Dinv
         G = Dinv - (Dinv @ U @ Dhat @ V.conj().T @ Dinv)
         return E, F, Dhat, G
 
@@ -104,13 +158,15 @@ class hbs(preconditioner):
         
         U = block_diag(*U)
         V = block_diag(*V)
+        #print(np.allclose(V.conj().T @ V, np.eye((V.conj().T @ V).shape[0])))
+
         D = block_diag(*D)
 
         E, F, Dhat, G = self.construct_Ainv_matrices(U, V, D)
 
         if l == 1:
             Atilde = np.block(Atilde)
-            return E @ np.linalg.inv(Atilde + Dhat) @ F.conj().T + G
+            return E @ np.linalg.inv(Atilde + Dhat) @ F + G
 
         Atmp = np.array(self.reblock_blockform(Atilde))
         print(Atmp.shape)
@@ -124,7 +180,7 @@ class hbs(preconditioner):
 
         Dhatblock = np.array(Dhatblock)
 
-        return E @ self.construct_Ainv(Atmp + Dhatblock, tol, l-1) @ F.conj().T + G
+        return E @ self.construct_Ainv(Atmp + Dhatblock, tol, l-1) @ F + G
 
     def reblock_blockform(self, A_b):
         #works if A_b has an even number of blocks

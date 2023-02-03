@@ -9,7 +9,7 @@ try:
         print('dirichlet_x.npy not found')
     
     try:
-        mvp = np.load('data/mvps_vs_ka_dirichlet_y.npy')
+        mvp = np.load('data/newhbs_mvps_vs_ka_dirichlet_y.npy')
     except:
         print('dirichlet_y.npy not found')
     
@@ -28,7 +28,7 @@ try:
     plt.title('dirichlet bcs')
     plt.legend()
     plt.tight_layout()
-    plt.savefig('figs/mvp_vs_ka_dirichlet.png')
+    plt.savefig('figs/hbsnew_mvp_vs_ka_dirichlet.png')
     plt.clf()
     
     del ka

@@ -58,8 +58,11 @@ for tr in range(len(preconds)):
             
             sc.scattering_coeffs()
             mvp[tr, i] = sc.mvp_counter
-            print(mvp[tr, i], sc.mvp_counter)
-            np.save('data/mvps_vs_ka_dirichlet_y', mvp)
+            if preconds[tr] is not None:
+                print(preconds[tr].__name__, freqs[i], mvp[tr, i], sc.mvp_counter)
+            else:
+                print('none', freqs[i], mvp[tr, i], sc.mvp_counter)
+            np.save('data/newhbs_mvps_vs_ka_dirichlet_y', mvp)
 
 print('fig18_d done')
 

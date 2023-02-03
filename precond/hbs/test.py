@@ -10,17 +10,18 @@ from precond.preconditioner import hbs, antoine
 np.set_printoptions(linewidth=np.inf)
 np.random.seed(1234)
 
-cylnum = 3
-#cyls = example_setups.uniform_grid_NxN(cylnum, ['d' for n in range(cylnum)], 1, 5)
-cyls = example_setups.random_pos(-10, 10, -10, 10, 10, 'd', 1, 4)
+cylnum = 2
+#cyls = example_setups.uniform_grid_NxN(cylnum, ['d' for n in range(cylnum)], 1, 3)
+cyls = example_setups.random_pos(-15, 15, -15, 15, 60, 'd', 1, 3)
+print('cyls generated')
 #cyls = example_setups.fig17_pos('d', 1)
 cylnum = len(cyls)
-sc = scattering(cyls, freq = 20/(2*np.pi), precond_dist = 6)
+sc = scattering(cyls, gmres_tol = 1e-10, freq = 20/(2*np.pi), precond_dist = 6)
 
 tols = np.logspace(-20, -3, num=30)
 norms = np.zeros(len(tols))
 
-hbs(sc).inv_mat
+#hbs(sc).inv_mat
 
 A_b = sc.make_scattering_blocks_blockform()
 A = np.block(A_b)
