@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.random as rd
+import matplotlib.pyplot as plt
 from scipy.special import jv, jvp, hankel1, h1vp
 from scipy.signal import convolve
 from scipy.linalg import toeplitz
@@ -537,21 +538,36 @@ class scattering(cyl):
 
 class time_domain_scattering(scattering):
 
-    def __init__(self, cyls, input_signal, time_points, kwargs = {}):
+    def __init__(self, cyls, input_signal, end_time, fft_tol = 1e-6, kwargs = {}):
         super().__init__(cyls)
         self.cyls = cyls
-        print([c.sum_index for c in self.cyls])
+        #print([c.sum_index for c in self.cyls])
         self.input_signal = input_signal #function handle for input signal
-        self.times = time_points #assuming equally-spaced points in time
+        self.end_time = end_time
+        
+        #fft to get the cutoff frequency
+        timenum = 50
+        tmptimes = np.linspace(0, self.end_time, num = timenum)
+        sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes), norm='forward'))
+        while sig_fft[-1] > fft_tol:
+            timenum *= 2
+            tmptimes = np.linspace(0, self.end_time, num = timenum)
+            sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes), norm='forward'))
+            
+        idx = np.argwhere(sig_fft > fft_tol)[-1] + 1
+        timenum = int(np.ceil(idx*self.end_time))
+        print(timenum)
+        self.times = np.linspace(0, self.end_time, num=timenum) #assuming equally-spaced points in time
+
         dt = self.times[1] - self.times[0]
-        self.fft_freqs = rfftfreq(len(time_points), d=dt)
+        self.fft_freqs = rfftfreq(len(self.times), d=dt)
         self.sig_fft = ifft(self.input_signal(0, 0, self.times))
         self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
         self.kwargs = kwargs
         #print(self.fft_freqs, np.abs(hankel1(0, 2*np.pi*self.fft_freqs[0])))
 
     def make_time_harmonic_soln(self, x, y):
-        self.u_sc = 1j*np.zeros(x.shape)
+        self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         flen = range(len(self.fft_freqs))
         
         '''
@@ -575,7 +591,7 @@ class time_domain_scattering(scattering):
             #find frequencies in parallel
             sc = [scattering(copy.deepcopy(self.cyls), freq = f, **self.kwargs) for f in freq_block]
             q = np.array([Queue() for k in fbrange])
-            p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :, i+1], y[:, :, i+1], q[i])) for i in fbrange])
+            p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :], y[:, :], q[i])) for i in fbrange])
             [p[i].start() for i in fbrange]
 
             for i in fbrange:
@@ -599,10 +615,9 @@ class time_domain_scattering(scattering):
         return self.u_sc
 
     def make_U_sc(self, x, y):
-        U_sc = np.zeros(x.shape)
         self.make_time_harmonic_soln(x, y)
         U_sc = np.real(fft(self.u_sc))
-        return scattering.mask(self, x, y)*U_sc
+        return U_sc
 
     def make_U(self, x, y):
         return scattering.mask(self, x, y)*(self.make_U_sc(x,y) + self.input_signal(x, y, self.times))

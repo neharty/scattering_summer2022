@@ -10,14 +10,14 @@ from precond.preconditioner import hbs, antoine
 np.set_printoptions(linewidth=np.inf)
 np.random.seed(1234)
 
-cylnum = 2
-#cyls = example_setups.uniform_grid_NxN(cylnum, ['d' for n in range(cylnum)], 1, 3)
+cylnum = 5
+#cyls = example_setups.uniform_grid_NxN(cylnum, ['d' for n in range(cylnum)], 1, 5)
 cyls = example_setups.random_pos(-15, 15, -15, 15, 60, 'd', 1, 3)
 print('cyls generated')
 #cyls = example_setups.fig17_pos('d', 1)
 cylnum = len(cyls)
-sc = scattering(cyls, gmres_tol = 1e-10, freq = 20/(2*np.pi), precond_dist = 6)
-
+sc = scattering(cyls, gmres_tol = 1e-10, freq = 10/(2*np.pi), precond_dist = 6)
+restart = sc.scat_matrix_dim
 tols = np.logspace(-20, -3, num=30)
 norms = np.zeros(len(tols))
 
@@ -65,21 +65,38 @@ class gmres_counter(object):
 print('start no precond')
 counter=gmres_counter()
 b = sc.make_rhs_vector()
-x, info = gmres(A, b, callback = counter)
+x, info = gmres(
+    A, 
+    b, 
+    callback = counter, 
+    restart = restart
+    )
 plt.semilogy(counter.res[1:], label='no precond')
 del counter
 print('end no precond')
 
 print('start hbs')
 counter = gmres_counter()
-x, info = gmres(A, b, callback = counter, M=hbs(sc).inv_mat)
+x, info = gmres(
+    A, 
+    b, 
+    callback = counter, 
+    M=hbs(sc, level=3).inv_mat, 
+    restart = restart
+    )
 plt.semilogy(counter.res[1:], '--', label='HBS precond, tol=1e-6')
 del counter
 print('end hbs')
 
 print('start antoine')
 counter = gmres_counter()
-x, info = gmres(A, b, callback = counter, M=antoine(sc).inv_mat)
+x, info = gmres(
+    A, 
+    b, 
+    callback = counter, 
+    M=antoine(sc).inv_mat, 
+    restart = restart
+    )
 plt.semilogy(counter.res[1:], '-.', label='Antoine precond')
 del counter
 print('end antoine')
