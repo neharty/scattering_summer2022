@@ -5,31 +5,39 @@ from scipy.fft import rfftfreq
 from Ncyl.tds import cyl, scattering, time_domain_scattering
 from precond import preconditioner
 from utils import example_setups
+import os
 
 sigma = 0.5
 shift = 5
-gaussian_deriv = lambda x, y, t : np.sqrt(2/sigma)*(x+t-shift)*np.exp(0.5-((x+t-shift)**2)/sigma)
 
-cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
-#cyls = [cyl('d', [0, 1.5], 1), cyl('d', [0, -1.5], 1)]
+def bump(x, y, t):
+    z = x + t - shift
+    mask = z > -1 & z < 1
+    fn = np.exp(-1/(1 - (z*mask)**2))
+    return mask*fn
+
+def gaussian_deriv(x, y, t):
+    tmp = np.sqrt(2/sigma)*(x+t-shift)*np.exp(0.5-((x+t-shift)**2)/sigma)
+    cutoff = 1e-8
+    mask = np.abs(tmp) > cutoff
+    return mask*tmp
+
+#cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
+#cyls = [cyl('d', [0, 3], 1), cyl('d', [0, 0], 1), cyl('d', [0, -3], 1)]
+cyls = [cyl('d', [0, 3], 1), cyl('d', [0, 0], 1), cyl('d', [0, -3], 1), 
+        cyl('d', [-3, 3], 1), cyl('d', [-3, 0], 1), cyl('d', [-3, -3], 1)]
 #cyls = [cyl('d', [0, 0], 1)]
 T = 50
 x = np.arange(3, 30)
 y = [0]
 
-#x = np.linspace(-5, 5, num = 200)
-#y = np.copy(x)
 X, Y = np.meshgrid(x, y)
-
 td = time_domain_scattering(
         cyls,
         gaussian_deriv,
         T
         )
-#plt.plot(np.hstack(([0], td.fft_freqs)), np.abs(td.sig_fft))
-#plt.show()
-#plt.clf()
-#U_sc = td.make_U_sc(X, Y)
+
 U = td.make_U_sc(X, Y)
 print(U.shape)
 l = len(x)
@@ -40,7 +48,8 @@ for i in range(l):
     plt.xlabel('t')
     plt.ylabel('E')
     plt.title('pos:'+pos)
-    plt.savefig('deriv_of_gaussian/traces/'+pos+'_2x2_d.png')
+    #plt.show()
+    plt.savefig('deriv_of_gaussian/traces/3x2_d/'+pos+'.png')
     plt.clf()
 
 tt = np.zeros(l)
@@ -57,8 +66,7 @@ plt.loglog(tt, sigmax, 'o')
 plt.xlabel('t')
 plt.ylabel('amplitude peak')
 plt.loglog(x, 2/x, '--')
-plt.savefig('deriv_of_gaussian/decay/2x2_d_decay.png')
-
+plt.savefig('deriv_of_gaussian/decay/3x2_d/decay.png')
 
 '''
 M = U.max()
@@ -76,8 +84,7 @@ for t in range(len(times)):
     plt.colorbar()
     plt.clim(m, M)
     plt.savefig('deriv_of_gaussian/total_field/'+str(t)+'.png')
-'''
-'''
+
     plt.clf()
     plt.imshow(U_sc[:, :, t], origin='upper', extent=(x.min(), x.max(), y.min(), y.max()))
     plt.plot(circ[:, 0], circ[:, 1], 'r')

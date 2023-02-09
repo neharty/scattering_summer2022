@@ -13,18 +13,19 @@ gaussian_deriv = lambda x, y, t : np.sqrt(2/sigma)*(x+t-shift)*np.exp(0.5-((x+t-
 cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
 #cyls = [cyl('d', [0, 1.5], 1), cyl('d', [0, -1.5], 1)]
 #cyls = [cyl('d', [0, 0], 1)]
-times = np.linspace(0, 15, num=100)
+#times = np.linspace(0, 15, num=100)
 #x = [-5, 0, 5]
 #y = [-5, 0, 5]
 
 x = np.linspace(-5, 5, num = 200)
 y = np.copy(x)
-X, Y, T = np.meshgrid(x, y, times)
+T = 15
+X, Y = np.meshgrid(x, y)
 
 td = time_domain_scattering(
         cyls, 
         gaussian_deriv, 
-        times
+        T
         )
 #plt.plot(np.hstack(([0], td.fft_freqs)), np.abs(td.sig_fft))
 #plt.show()
@@ -50,7 +51,12 @@ circ = np.array([[np.cos(ang), np.sin(ang)] for ang in angs])
 for t in range(len(times)):
     plt.clf()
     plt.imshow(U[:, :, t], origin='upper', extent=(x.min(), x.max(), y.min(), y.max()))
-    plt.plot(circ[:, 0], circ[:, 1], 'r')
+    
+    for c in range(len(cyls)):
+        orig = cyls[c].pos
+        circ = lambda s: [orig[0] + np.cos(s), orig[1] + np.sin(s)]
+        plt.plot(*circ(angs), 'r')
+    
     plt.title('t = ' + str(times[t]))
     plt.tight_layout()
     plt.colorbar()
