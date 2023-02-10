@@ -538,7 +538,7 @@ class scattering(cyl):
 
 class time_domain_scattering(scattering):
 
-    def __init__(self, cyls, input_signal, end_time, fft_tol = 1e-10, kwargs = {}):
+    def __init__(self, cyls, input_signal, end_time, fft_tol = 1e-8, kwargs = {}):
         super().__init__(cyls)
         self.cyls = cyls
         #print([c.sum_index for c in self.cyls])
@@ -549,15 +549,16 @@ class time_domain_scattering(scattering):
         timenum = 32
         tmptimes = np.linspace(0, self.end_time, num = timenum)
         
-        sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes), norm='forward'))
+        sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes)))
         while sig_fft[-1] > fft_tol:
+            print(sig_fft[-1])
             timenum *= 2
             tmptimes = np.linspace(0, self.end_time, num = timenum)
-            sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes), norm='forward'))
+            sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes)))
             
         idx = np.argwhere(sig_fft > fft_tol)[-1] + 1
         #changed to 10x 
-        timenum = int(np.ceil(4*idx))
+        timenum = int(np.ceil(2*idx))
         print(timenum)
         
         #timenum = 100
@@ -567,7 +568,7 @@ class time_domain_scattering(scattering):
         self.fft_freqs = rfftfreq(len(self.times), d=dt)
         self.sig_fft = ifft(self.input_signal(0, 0, self.times))
         self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
-        print(self.fft_freqs * np.pi*2)
+        print(self.fft_freqs)
         self.kwargs = kwargs
         #print(self.fft_freqs, np.abs(hankel1(0, 2*np.pi*self.fft_freqs[0])))
 

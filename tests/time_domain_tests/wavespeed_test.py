@@ -7,7 +7,6 @@ from precond import preconditioner
 from utils import example_setups
 import os
 
-sigma = 0.5
 shift = 5
 
 def bump(x, y, t):
@@ -17,10 +16,22 @@ def bump(x, y, t):
     return mask*fn
 
 def gaussian_deriv(x, y, t):
-    tmp = np.sqrt(2/sigma)*(x+t-shift)*np.exp(0.5-((x+t-shift)**2)/sigma)
+    sigma = 0.5
+    z = x+t-shift
+    tmp = np.sqrt(2/sigma)*z*np.exp(0.5-(z**2)/sigma)
     cutoff = 1e-8
-    mask = np.abs(tmp) > cutoff
+    mask1 = z < -sigma/2
+    mask2 = np.abs(tmp[mask1]) > cutoff
+    mask = np.ones(len(tmp))
+    mask[:len(mask2)] = mask2[:]
     return mask*tmp
+
+'''
+x= np.linspace(0, 10, num=1000)
+plt.plot(x, gaussian_deriv(x, 0, 0))
+plt.show()
+plt.clf()
+'''
 
 #cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
 #cyls = [cyl('d', [0, 3], 1), cyl('d', [0, 0], 1), cyl('d', [0, -3], 1)]
