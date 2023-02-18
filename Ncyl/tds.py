@@ -6,7 +6,8 @@ from scipy.signal import convolve
 from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
-from scipy.fft import fft, ifft, rfft, irfft, rfftfreq, fftn, fftshift
+from scipy.fft import fft, ifft, fftfreq, rfft, irfft, rfftfreq, fftn, fftshift
+#from scipy.ndimage import convolve
 from multiprocessing import Process, Queue, cpu_count
 import copy
 
@@ -127,7 +128,7 @@ class scattering(cyl):
 
         self.labels = np.array([int(self.cyls[i].get_label()) for i in range(len(self.cyls))])
         self.sum_tol = sum_tol
-        self.freq = np.abs(freq)
+        self.freq = freq #changed from abs(freq)
         self.wavespeed = wavespeed
         self.k = 2*np.pi*self.freq/self.wavespeed
         self.wavelength = self.wavespeed/freq
@@ -538,42 +539,50 @@ class scattering(cyl):
 
 class time_domain_scattering(scattering):
 
-    def __init__(self, cyls, input_signal, end_time, fft_tol = 1e-8, kwargs = {}):
+    def __init__(self,
+                 cyls,
+                 waveform,
+                 end_time,
+                 fft_tol = 1e-6,
+                 wvargs={},
+                 scargs = {}
+                 ):
+
         super().__init__(cyls)
         self.cyls = cyls
-        #print([c.sum_index for c in self.cyls])
-        self.input_signal = input_signal #function handle for input signal
+        self.waveform = waveform
+        self.wvp = self.waveform.profile
         self.end_time = end_time
         
         #fft to get the cutoff frequency
-        timenum = 32
-        tmptimes = np.linspace(0, self.end_time, num = timenum)
+        sampnum = 32
+        tmpsig = self.wvp(np.linspace(-end_time, end_time, num=2*sampnum))
         
-        sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes)))
+        sig_fft = np.abs(rfft(tmpsig))
         while sig_fft[-1] > fft_tol:
             print(sig_fft[-1])
-            timenum *= 2
-            tmptimes = np.linspace(0, self.end_time, num = timenum)
-            sig_fft = np.abs(rfft(self.input_signal(0, 0, tmptimes)))
-            
-        idx = np.argwhere(sig_fft > fft_tol)[-1] + 1
-        #changed to 10x 
-        timenum = int(np.ceil(2*idx))
-        print(timenum)
+            sampnum *= 2
+            tmpsig = self.wvp(np.linspace(-end_time, end_time, num=2*sampnum))
+            sig_fft = np.abs(rfft(tmpsig))
         
-        #timenum = 100
-        self.times = np.linspace(0, self.end_time, num=timenum) #assuming equally-spaced points in time
-
-        dt = self.times[1] - self.times[0]
-        self.fft_freqs = rfftfreq(len(self.times), d=dt)
-        self.sig_fft = ifft(self.input_signal(0, 0, self.times))
-        self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
-        print(self.fft_freqs)
-        self.kwargs = kwargs
-        #print(self.fft_freqs, np.abs(hankel1(0, 2*np.pi*self.fft_freqs[0])))
+        #assuming equally-spaced points in time
+        self.timefactor = 5
+        self.comp_times = np.linspace(
+                                 0,
+                                 self.timefactor*self.end_time,
+                                 num=self.timefactor*sampnum
+                                )
+        self.times = np.linspace(0, self.end_time, num=sampnum)
+        tmpsig = waveform.td_wave(0, 0, self.comp_times)
+        self.sig_fft = ifft(tmpsig)
+        self.fft_freqs = fftfreq(len(self.sig_fft), d=self.timefactor*self.end_time/len(self.comp_times))
+        print(len(self.sig_fft), len(self.times))
+        self.fft_freqs = self.fft_freqs[1:]
+        print(np.max(self.fft_freqs), len(self.fft_freqs)/2/self.end_time)
+        self.scargs = scargs
 
     def make_time_harmonic_soln(self, x, y):
-        self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
+        self.u_sc = 1j*np.zeros((*x.shape, len(self.sig_fft)))
         flen = range(len(self.fft_freqs))
         
         '''
@@ -595,36 +604,53 @@ class time_domain_scattering(scattering):
                 c.sum_index = None
 
             #find frequencies in parallel
-            sc = [scattering(copy.deepcopy(self.cyls), freq = f, **self.kwargs) for f in freq_block]
-            q = np.array([Queue() for k in fbrange])
+            sc = [scattering(copy.deepcopy(self.cyls), freq = f, **self.scargs) for f in freq_block]
+            q = np.array([Queue() for i in fbrange])
             p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :], y[:, :], q[i])) for i in fbrange])
             [p[i].start() for i in fbrange]
-
             for i in fbrange:
-                self.u_sc[:, :, a+i+1] = 2*self.sig_fft[a+i+1]*q[i].get()
-
+                self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
             [p[i].join() for i in fbrange]
 
         blocks = int(len(flen)/cpu_count())
-        #print(len(flen), blocks, cpu_count())
+        
         for b in range(blocks):
             freq_block = self.fft_freqs[b*cpu_count(): (b+1)*cpu_count()]
             compute_block(b*cpu_count(), (b+1)*cpu_count())
 
-        #finish remainder blocks
+        #finish remaining blocks
         b = blocks*cpu_count()
         compute_block(b)
 
-        #flip the time-axis
-        #self.u_sc = np.flip(self.u_sc, axis=-1)
-        #print(np.amax(self.u_sc))
         return self.u_sc
 
     def make_U_sc(self, x, y):
         self.make_time_harmonic_soln(x, y)
-        U_sc = np.real(fft(self.u_sc))
-        return U_sc
+
+        #zero pad the solution to reduce aliasing
+        a, b, c = self.u_sc.shape
+        u_sc_padded = 1j*np.zeros((a, b, 2*c))
+        u_sc_padded[:, :, :c] = self.u_sc[:, :, :]
+        u_sc_padded[:, :, c//2 + c:] = self.u_sc[:, :, c//2:]
+
+        freqs = np.append([0], self.fft_freqs)
+        convfn = self.end_time*np.sinc(freqs*self.end_time)*np.exp(1j*np.pi*freqs*self.end_time)
+        
+        '''
+        freqsoln = np.apply_along_axis(
+            lambda a: convolve(a, convfn, mode='same'),
+            axis = -1,
+            arr = u_sc_padded
+            )
+        '''
+        self.U_sc = np.real(fft(self.u_sc))[:, :, :len(self.times)]
+
+        return self.U_sc
 
     def make_U(self, x, y):
-        return self.make_U_sc(x,y) + (scattering.mask(self, x, y)*self.input_signal(x, y, self.times))
+        self.make_U_sc(x, y)
+        self.U = np.zeros(self.U_sc.shape)
+        for i in range(len(self.times)):
+            self.U[:, :, i] = self.U_sc[:, :, i] + (scattering.mask(self, x, y)*self.waveform.td_wave(x, y, self.times[i]))
 
+        return self.U
