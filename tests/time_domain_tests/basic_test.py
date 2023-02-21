@@ -38,8 +38,7 @@ for t in range(len(td.times)):
     plt.imshow(
                U[:, :, t],
                origin='upper',
-               extent=(x.min(), x.max(), y.min(), y.max()), 
-               cmap='jet'
+               extent=(x.min(), x.max(), y.min(), y.max())
                )
     
     for c in range(len(cyls)):

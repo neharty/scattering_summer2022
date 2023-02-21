@@ -13,26 +13,18 @@ cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
 #cyls = [cyl('d', [0, 3], 1), cyl('d', [0, 0], 1), cyl('d', [0, -3], 1), 
 #        cyl('d', [-3, 3], 1), cyl('d', [-3, 0], 1), cyl('d', [-3, -3], 1)]
 #cyls = [cyl('d', [0, 0], 1)]
-T = 50
+T = 60
 x = np.arange(-10, 11)
 y = [0]
 
-wv = gaussian_deriv(time_shift=10)
-'''
-plt.plot(
-         np.linspace(-10, 10, num=1000),
-         wv.profile(np.linspace(-10, 10, num=1000))
-        )
-plt.show()
-plt.clf()
-'''
+wv = gaussian_deriv(time_shift=20, cutoff=1e-12)
+#wv = sine_pulse(time_shift=5, width=6, cycles = 1)
 
 X, Y = np.meshgrid(x, y)
 td = time_domain_scattering(
         cyls,
         wv,
-        T,
-        scargs={'method':'explicit'}
+        T
         )
 
 U = td.make_U_sc(X, Y)
@@ -40,7 +32,7 @@ print(U.shape)
 l = len(x)
 
 for i in range(l):
-    plt.plot(U[0, i, :])
+    plt.plot(td.times, U[0, i, :])
     pos = str((x[i], y[0]))
     plt.xlabel('t')
     plt.ylabel('E')

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import rfft, irfft, fft, ifft, fftfreq, rfftfreq
 
+from waveforms.waveforms import gaussian_deriv
 from Ncyl.tds import cyl, scattering, time_domain_scattering
 from precond import preconditioner
 from utils import example_setups
@@ -14,26 +15,15 @@ def bump(x, y, t):
     fn = np.exp(-1/(1 - (z*mask)**2))
     return mask*fn
 
-sigma = 0.5
-def gaussian_deriv(x, y, t):
-    z = x+t-shift
-    tmp = np.sqrt(2/sigma)*z*np.exp(0.5-(z**2)/sigma)
-    cutoff = 1e-8
-    mask1 = z < -sigma/2
-    mask2 = np.abs(tmp[mask1]) > cutoff
-    mask = np.ones(len(tmp))
-    mask[:len(mask2)] = mask2[:]
-    return mask*tmp
-
 dist = 3
 cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, dist)
 
 T = 50
-x = np.arange(5, 30)
+x = [-1.5, 0, 1.5]
 y = [0]
 
 X, Y = np.meshgrid(x, y)
-td = time_domain_scattering(cyls, gaussian_deriv, T)
+td = time_domain_scattering(cyls, gaussian_deriv(time_shift=10), T)
 
 U = td.make_U_sc(X, Y)
 print(U.shape)
@@ -49,17 +39,6 @@ dt = td.times[1]
 fmax = rfftfreq(len(ring), d=dt)[idx]
 print(fmax)
 
-#plt.figure()
-#plt.stem(rfftfreq(len(ring), d=dt), fftvals)
-#plt.axvline(1/(2*np.sqrt(2)))
-
-
-#find the best fit cosine for the data
-#from scipy.optimize import minimize
-#data = U[0, 0, tstart:]
-#objfn = lambda x : np.sum(np.abs(x[0]*np.cos(2*np.pi*fmax*td.times[tstart:] + x[1]) - data))
-#xopt = minimize(objfn, [-0.05, 0]).x
-
 plt.figure()
 print(len(td.times), len(U[0, 0, :]))
 plt.plot(td.times, U[0, 0, :], label='full trace')
@@ -68,7 +47,7 @@ plt.plot(td.times, U[0, 0, :], label='full trace')
 plt.legend()
 plt.xlabel('t')
 plt.ylabel('E_z')
-plt.title('(x, y) = ('+str(x[0])+', 0), sig = '+str(sigma) +', dist = ' +str(dist))
+#plt.title('(x, y) = ('+str(x[0])+', 0), sig = '+str(sigma) +', dist = ' +str(dist))
 
 plt.show()
 

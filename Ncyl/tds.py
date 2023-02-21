@@ -543,7 +543,7 @@ class time_domain_scattering(scattering):
                  cyls,
                  waveform,
                  end_time,
-                 fft_tol = 1e-6,
+                 fft_tol = 1e-10,
                  wvargs={},
                  scargs = {}
                  ):
@@ -556,29 +556,36 @@ class time_domain_scattering(scattering):
         
         #fft to get the cutoff frequency
         sampnum = 32
-        tmpsig = self.wvp(np.linspace(-end_time, end_time, num=2*sampnum))
-        
+        tmpsig = self.wvp(np.linspace(-end_time, end_time, num=sampnum))
         sig_fft = np.abs(rfft(tmpsig))
         while sig_fft[-1] > fft_tol:
             print(sig_fft[-1])
             sampnum *= 2
-            tmpsig = self.wvp(np.linspace(-end_time, end_time, num=2*sampnum))
+            tmpsig = self.wvp(np.linspace(-end_time, end_time, num=sampnum))
             sig_fft = np.abs(rfft(tmpsig))
+        print(sig_fft[-1])
         
         #assuming equally-spaced points in time
-        self.timefactor = 5
+        print(rfftfreq(len(sig_fft), d=2*self.end_time/len(tmpsig))[-1], sampnum/self.end_time)
+        self.timefactor = 2
         self.comp_times = np.linspace(
                                  0,
                                  self.timefactor*self.end_time,
                                  num=self.timefactor*sampnum
                                 )
+        dt = self.comp_times[1]
         self.times = np.linspace(0, self.end_time, num=sampnum)
         tmpsig = waveform.td_wave(0, 0, self.comp_times)
+        coeffarr = np.array([(-1)**n for n in range(len(self.comp_times))])
+        #self.sig_fft = 2*np.pi*coeffarr*ifft(tmpsig)/dt
         self.sig_fft = ifft(tmpsig)
-        self.fft_freqs = fftfreq(len(self.sig_fft), d=self.timefactor*self.end_time/len(self.comp_times))
+        #sigmask = np.abs(self.sig_fft) > fft_tol
+        #self.sig_fft *= sigmask
+        
+        self.fft_freqs = fftfreq(len(self.sig_fft), d=dt)
         print(len(self.sig_fft), len(self.times))
         self.fft_freqs = self.fft_freqs[1:]
-        print(np.max(self.fft_freqs), len(self.fft_freqs)/2/self.end_time)
+        print(np.max(self.fft_freqs))
         self.scargs = scargs
 
     def make_time_harmonic_soln(self, x, y):
@@ -626,16 +633,17 @@ class time_domain_scattering(scattering):
 
     def make_U_sc(self, x, y):
         self.make_time_harmonic_soln(x, y)
-
+        
         #zero pad the solution to reduce aliasing
         a, b, c = self.u_sc.shape
         u_sc_padded = 1j*np.zeros((a, b, 2*c))
-        u_sc_padded[:, :, :c] = self.u_sc[:, :, :]
+        u_sc_padded[:, :, :c//2] = self.u_sc[:, :, :c//2]
         u_sc_padded[:, :, c//2 + c:] = self.u_sc[:, :, c//2:]
 
-        freqs = np.append([0], self.fft_freqs)
-        convfn = self.end_time*np.sinc(freqs*self.end_time)*np.exp(1j*np.pi*freqs*self.end_time)
-        
+        freqs = fftfreq(2*c, d=self.end_time/(2*c))
+        #convfn = self.end_time*np.sinc(freqs*self.end_time)*np.exp(1j*np.pi*freqs*self.end_time) 
+        #plt.plot(fftshift(freqs), np.abs(fftshift(convfn)))
+        #plt.show()
         '''
         freqsoln = np.apply_along_axis(
             lambda a: convolve(a, convfn, mode='same'),
@@ -643,7 +651,16 @@ class time_domain_scattering(scattering):
             arr = u_sc_padded
             )
         '''
-        self.U_sc = np.real(fft(self.u_sc))[:, :, :len(self.times)]
+        lowpass = 1/(1 + 1j*freqs/0.2)
+        bandstop = -(freqs**2 + 0.3**2)/(freqs**2 + 1j*0.1*freqs + 0.3**2)
+        om = np.max(freqs)
+        gaussian = np.exp(-(freqs/om)**2)
+        self.times = np.linspace(0, self.end_time, num=2*c)
+        df = freqs[1]
+        #coeffarr = np.array([(-1)**n for n in range(len(self.times))])
+        #u_sc_padded = df*u_sc_padded
+        self.U_sc = np.real(fft(u_sc_padded*bandstop))[:, :, :2*c]/(2*c)
+        #self.U_sc *= coeffarr
 
         return self.U_sc
 
