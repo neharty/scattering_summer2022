@@ -6,7 +6,7 @@ from scipy.signal import convolve
 from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres, lgmres
 from scipy.sparse.linalg import LinearOperator
-from scipy.fft import fft, ifft, fftfreq, rfft, irfft, rfftfreq, fftn, fftshift
+from scipy.fft import fft, ifft, fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
 #from scipy.ndimage import convolve
 from multiprocessing import Process, Queue, cpu_count
 import copy
@@ -514,7 +514,7 @@ class scattering(cyl):
 
     def make_u(self, x, y):
         r, theta = self.cart_to_polar([x,y])
-        u_inc = np.exp(1j*self.k*r*np.cos(theta - self.inc_angle))        
+        u_inc = np.exp(1j*self.k*r*np.cos(theta - self.inc_angle))
         return (u_inc+self.make_u_sc(x, y))*self.mask(x,y)
     
     def mask(self, x, y):
@@ -524,8 +524,7 @@ class scattering(cyl):
         for i in self.labels[1:]:
             Oi = self.cyls[i].pos
             radius = self.cyls[i].radius
-            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2)) 
-        
+            mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         return mask
 
     def get_scattering_coeffs(self):
@@ -538,7 +537,6 @@ class scattering(cyl):
             self.u = make_u(x, y)
 
 class time_domain_scattering(scattering):
-
     def __init__(self,
                  cyls,
                  waveform,
@@ -553,42 +551,45 @@ class time_domain_scattering(scattering):
         self.waveform = waveform
         self.wvp = self.waveform.profile
         self.end_time = end_time
-        
+        self.fft_tol = fft_tol
+        self.scargs = scargs
+
+    def ft_coeffs(self):
         #fft to get the cutoff frequency
         sampnum = 32
-        tmpsig = self.wvp(np.linspace(-end_time, end_time, num=sampnum))
+        tmpsig = self.wvp(np.linspace(-self.end_time, self.end_time, num=sampnum))
         sig_fft = np.abs(rfft(tmpsig))
-        while sig_fft[-1] > fft_tol:
+        while sig_fft[-1] > self.fft_tol:
             print(sig_fft[-1])
             sampnum *= 2
-            tmpsig = self.wvp(np.linspace(-end_time, end_time, num=sampnum))
+            tmpsig = self.wvp(np.linspace(-self.end_time, self.end_time, num=sampnum))
             sig_fft = np.abs(rfft(tmpsig))
         print(sig_fft[-1])
         
-        #assuming equally-spaced points in time
-        print(rfftfreq(len(sig_fft), d=2*self.end_time/len(tmpsig))[-1], sampnum/self.end_time)
-        self.timefactor = 2
-        self.comp_times = np.linspace(
-                                 0,
-                                 self.timefactor*self.end_time,
-                                 num=self.timefactor*sampnum
-                                )
-        dt = self.comp_times[1]
-        self.times = np.linspace(0, self.end_time, num=sampnum)
-        tmpsig = waveform.td_wave(0, 0, self.comp_times)
-        coeffarr = np.array([(-1)**n for n in range(len(self.comp_times))])
-        #self.sig_fft = 2*np.pi*coeffarr*ifft(tmpsig)/dt
-        self.sig_fft = ifft(tmpsig)
-        #sigmask = np.abs(self.sig_fft) > fft_tol
-        #self.sig_fft *= sigmask
+        #compute the coefficients for the fourier transform
+        self.N = len(tmpsig)
+        self.dt = 2*self.end_time/self.N
+        ks = fftfreq(self.N, d=1/self.N)
+        coeffs = np.exp(1j*np.pi*self.N/2)*np.array([(-1)**n for n in range(self.N)])
+        self.sig_fft = np.array([(-1)**k for k in ks])*self.dt*len(tmpsig)*ifft(coeffs*tmpsig)
         
-        self.fft_freqs = fftfreq(len(self.sig_fft), d=dt)
-        print(len(self.sig_fft), len(self.times))
-        self.fft_freqs = self.fft_freqs[1:]
-        print(np.max(self.fft_freqs))
-        self.scargs = scargs
+        #shift the coefficients to the right start time
+        tshift = self.waveform.time_shift
+        self.sig_fft *= np.exp(1j*2*np.pi*ks*tshift/(self.N*self.dt))
 
+        #zero out component with no conjugate
+        self.sig_fft[self.N//2] = 0
+        
+        #set freqs for computation
+        self.fft_freqs = fftfreq(len(self.sig_fft), d=self.dt)
+        self.fft_freqs = self.fft_freqs[1:]
+
+    def ft_freqs(self):
+        pass
+        
     def make_time_harmonic_soln(self, x, y):
+        self.ft_coeffs()
+        #self.ft_freqs()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.sig_fft)))
         flen = range(len(self.fft_freqs))
         
@@ -633,34 +634,21 @@ class time_domain_scattering(scattering):
 
     def make_U_sc(self, x, y):
         self.make_time_harmonic_soln(x, y)
-        
+        self.u_sc = fftshift(self.u_sc, axes=-1)
+
         #zero pad the solution to reduce aliasing
         a, b, c = self.u_sc.shape
         u_sc_padded = 1j*np.zeros((a, b, 2*c))
-        u_sc_padded[:, :, :c//2] = self.u_sc[:, :, :c//2]
-        u_sc_padded[:, :, c//2 + c:] = self.u_sc[:, :, c//2:]
+        u_sc_padded[:, :, c//2:3*(c//2)] = self.u_sc[:, :, :]
+        #u_sc_padded[:, :, c//2 + c:] = self.u_sc[:, :, c//2:]
 
-        freqs = fftfreq(2*c, d=self.end_time/(2*c))
-        #convfn = self.end_time*np.sinc(freqs*self.end_time)*np.exp(1j*np.pi*freqs*self.end_time) 
-        #plt.plot(fftshift(freqs), np.abs(fftshift(convfn)))
-        #plt.show()
-        '''
-        freqsoln = np.apply_along_axis(
-            lambda a: convolve(a, convfn, mode='same'),
-            axis = -1,
-            arr = u_sc_padded
-            )
-        '''
-        lowpass = 1/(1 + 1j*freqs/0.2)
-        bandstop = -(freqs**2 + 0.3**2)/(freqs**2 + 1j*0.1*freqs + 0.3**2)
-        om = np.max(freqs)
-        gaussian = np.exp(-(freqs/om)**2)
-        self.times = np.linspace(0, self.end_time, num=2*c)
-        df = freqs[1]
-        #coeffarr = np.array([(-1)**n for n in range(len(self.times))])
-        #u_sc_padded = df*u_sc_padded
-        self.U_sc = np.real(fft(u_sc_padded*bandstop))[:, :, :2*c]/(2*c)
-        #self.U_sc *= coeffarr
+        self.df = 1/(2*self.end_time)
+        coeffs = np.exp(-1j*np.pi*self.N/2)*np.array([(-1)**k for k in range(self.N)])
+
+        self.U_sc = np.array([(-1)**n for n in range(self.N)])*self.df*fft(ifftshift(coeffs*self.u_sc, axes=-1))
+        # truncate from 0 to T
+        self.U_sc = self.U_sc.real[:, :, c//2:]
+        self.times = np.linspace(0, self.end_time, num=c//2)
 
         return self.U_sc
 
