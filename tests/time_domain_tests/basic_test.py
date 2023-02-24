@@ -16,12 +16,12 @@ cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
 
 x = np.linspace(-5, 5, num = 100)
 y = np.copy(x)
-T = 15
+T = 50
 X, Y = np.meshgrid(x, y)
 
 td = time_domain_scattering(
         cyls,
-        gaussian_deriv(time_shift=5),
+        gaussian_deriv(time_shift=15),
         T
         )
 

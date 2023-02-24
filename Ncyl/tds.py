@@ -99,8 +99,8 @@ class scattering(cyl):
     
     def __init__(self, cyls, 
             sum_index = None, 
-            sum_tol = 1e-8, 
-            gmres_tol = 1e-8, 
+            sum_tol = 1e-10, 
+            gmres_tol = 1e-10, 
             freq = 1, 
             wavespeed = 1,
             inc_angle = np.pi, 
@@ -541,7 +541,7 @@ class time_domain_scattering(scattering):
                  cyls,
                  waveform,
                  end_time,
-                 fft_tol = 1e-10,
+                 fft_tol = 1e-6,
                  wvargs={},
                  scargs = {}
                  ):
@@ -556,6 +556,7 @@ class time_domain_scattering(scattering):
 
     def ft_coeffs(self):
         #fft to get the cutoff frequency
+        
         sampnum = 32
         tmpsig = self.wvp(np.linspace(-self.end_time, self.end_time, num=sampnum))
         sig_fft = np.abs(rfft(tmpsig))
@@ -566,30 +567,31 @@ class time_domain_scattering(scattering):
             sig_fft = np.abs(rfft(tmpsig))
         print(sig_fft[-1])
         
+        #sampnum = 2000
+        tmpsig = self.wvp(np.linspace(-self.end_time, self.end_time, num=sampnum))
+
         #compute the coefficients for the fourier transform
         self.N = len(tmpsig)
         self.dt = 2*self.end_time/self.N
-        ks = fftfreq(self.N, d=1/self.N)
-        coeffs = np.exp(1j*np.pi*self.N/2)*np.array([(-1)**n for n in range(self.N)])
-        self.sig_fft = np.array([(-1)**k for k in ks])*self.dt*len(tmpsig)*ifft(coeffs*tmpsig)
         
+        coeffs = np.array([(-1)**n for n in range(self.N)])
+        tmpsig *= coeffs
+        self.sig_fft = self.dt*self.N*ifft(tmpsig)
+        #self.sig_fft = fftshift((-1)**np.arange(self.N))*self.sig_fft
+
         #shift the coefficients to the right start time
         tshift = self.waveform.time_shift
-        self.sig_fft *= np.exp(1j*2*np.pi*ks*tshift/(self.N*self.dt))
+        self.sig_fft *= np.exp(1j*2*np.pi*np.arange(self.N)*tshift/(self.N*self.dt))
 
         #zero out component with no conjugate
-        self.sig_fft[self.N//2] = 0
+        #self.sig_fft[-1] = 0
         
         #set freqs for computation
-        self.fft_freqs = fftfreq(len(self.sig_fft), d=self.dt)
+        self.fft_freqs = fftfreq(self.N, d=self.dt)
         self.fft_freqs = self.fft_freqs[1:]
 
-    def ft_freqs(self):
-        pass
-        
     def make_time_harmonic_soln(self, x, y):
         self.ft_coeffs()
-        #self.ft_freqs()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.sig_fft)))
         flen = range(len(self.fft_freqs))
         
@@ -634,21 +636,19 @@ class time_domain_scattering(scattering):
 
     def make_U_sc(self, x, y):
         self.make_time_harmonic_soln(x, y)
-        self.u_sc = fftshift(self.u_sc, axes=-1)
+        
+        ks = fftfreq(self.N, d=1/self.N)
+        coeffs = np.array([(-1)**k for k in ks])
 
-        #zero pad the solution to reduce aliasing
-        a, b, c = self.u_sc.shape
-        u_sc_padded = 1j*np.zeros((a, b, 2*c))
-        u_sc_padded[:, :, c//2:3*(c//2)] = self.u_sc[:, :, :]
-        #u_sc_padded[:, :, c//2 + c:] = self.u_sc[:, :, c//2:]
+        #apply coefficients for FT
+        #self.u_sc *= fftshift((-1)**np.arange(self.N))
 
+        #shift back for fft
         self.df = 1/(2*self.end_time)
-        coeffs = np.exp(-1j*np.pi*self.N/2)*np.array([(-1)**k for k in range(self.N)])
-
-        self.U_sc = np.array([(-1)**n for n in range(self.N)])*self.df*fft(ifftshift(coeffs*self.u_sc, axes=-1))
+        self.U_sc = ((-1)**np.arange(self.N))*self.df*fft(self.u_sc)
         # truncate from 0 to T
-        self.U_sc = self.U_sc.real[:, :, c//2:]
-        self.times = np.linspace(0, self.end_time, num=c//2)
+        self.U_sc = self.U_sc.real[:, :, self.N//2:]
+        self.times = np.linspace(0, self.end_time, num=self.N//2)
 
         return self.U_sc
 
@@ -657,5 +657,4 @@ class time_domain_scattering(scattering):
         self.U = np.zeros(self.U_sc.shape)
         for i in range(len(self.times)):
             self.U[:, :, i] = self.U_sc[:, :, i] + (scattering.mask(self, x, y)*self.waveform.td_wave(x, y, self.times[i]))
-
         return self.U

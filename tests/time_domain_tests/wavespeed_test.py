@@ -14,11 +14,11 @@ cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
 #        cyl('d', [-3, 3], 1), cyl('d', [-3, 0], 1), cyl('d', [-3, -3], 1)]
 #cyls = [cyl('d', [0, 0], 1)]
 T = 50
-x = np.arange(-30, 31)
+x = np.arange(-20, 21)
 y = [0]
 
-wv = gaussian_deriv(time_shift=15, cutoff=1e-12)
-#wv = sine_pulse(time_shift=5, width=6, cycles = 1)
+wv = gaussian_deriv(time_shift=15, cutoff=1e-8)
+#wv = sine_pulse(time_shift=5, width=6, cycles=2)
 
 X, Y = np.meshgrid(x, y)
 td = time_domain_scattering(
@@ -37,6 +37,7 @@ for i in range(l):
     plt.xlabel('t')
     plt.ylabel('E')
     plt.title('pos:'+pos)
+    #plt.ylim([-1, 1])
     #plt.show()
     plt.savefig('deriv_of_gaussian/traces/2x2_d/'+pos+'.png')
     plt.clf()
