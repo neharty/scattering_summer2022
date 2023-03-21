@@ -1,0 +1,5 @@
+solve on a [-10, 10]^2 grid
+
+5x5 dirichlet circles of radius 1
+
+freq = 1 (k = 2*pi)

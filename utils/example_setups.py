@@ -78,7 +78,7 @@ def uniform_grating(N, bcs, radius, spacing, sum_num = None, impedance = None):
     for i in range(N):
         cyls[i] = cyl(bcs[i], origins[i], radius, sum_index=sum_num, impedance = impedance)
 
-    return cyls    
+    return cyls
 
 def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None):
     cyls = [None for i in range(Nx*Ny)]
@@ -106,6 +106,7 @@ def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impeda
     return cyls_main + cyls_off
 
 def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, impedance=None):
+    #fully random position placer
     allowed_domain_x = (Lxmin+radius, Lxmax-radius)
     allowed_domain_y = (Lymin+radius, Lymax-radius)
 
@@ -137,11 +138,71 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 
     return cyls
 
-def vol_frac(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxtries=10, sum_num = None, impedance = None):
+def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None):
+
+    #compute the initial grid to perturb
+    #TODO: algorithm to find max num Nx and Ny
+    ctemp = triangular_lattice(N, N, [bc for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None)
+    
+    cnum = len(ctemp)
+    pos = np.array([c.pos for c in ctemp])
+    xpos = pos[:, 0]
+    ypos = pos[:, 1]
+   
+    paverage = np.inf
+    pvariance = np.inf
+    
+    caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
+    cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
+    print(caverage, cvariance)
+
+    for i in range(cnum):
+        paverage, pvariance = caverage, cvariance
+        
+        #generate a perturbation of the ith point
+        r = np.random.uniform(0, dist-radius)
+        theta = np.random.uniform(0, 2*np.pi)
+        ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
+
+        #test new point against all other points
+        idx = np.delete(np.arange(cnum), i)
+        z = xpos[idx] + 1j*ypos[idx]
+        allpoints = np.all(np.abs(z - ztest) > dist)
+        while not allpoints:
+            #if the new point doesnt work, retry until it does
+            r = np.random.uniform(0, dist - radius)
+            theta = np.random.uniform(0, 2*np.pi)
+            ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
+            allpoints = np.all(np.abs(z - ztest) > dist)
+        
+        #set the ith point
+        xpos[i], ypos[i] = ztest.real, ztest.imag
+        
+        #compute the new average and variance
+        caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
+        cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
+        
+        #check if sufficiently uniform
+        #print(np.abs(paverage - caverage), np.abs(pvariance - cvariance))
+        if np.abs(paverage - caverage) < 1e-4 and np.abs(pvariance - cvariance) < 1e-4:
+            break
+
+    origins = np.array([[xpos[i], ypos[i]] for i in range(cnum)])
+
+    cyls = [None for i in range(cnum)]
+    for i in range(cnum):
+        cyls[i] = cyl(bc, origins[i], radius, sum_index=sum_num, impedance = impedance)
+
+    return cyls
+
+def vol_frac_allrandom(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxtries=10, sum_num = None, impedance = None):
     Vbox = (Lxmax-Lxmin)*(Lymax - Lymin)
     N = int(np.floor(Vfrac*Vbox/(radius**2*np.pi)))
     print(N, 'volume fraction is ' + str(N*radius**2*np.pi/Vbox))
     return random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num = None, impedance = None)
+
+def vol_frac_hexagon():
+    pass
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')

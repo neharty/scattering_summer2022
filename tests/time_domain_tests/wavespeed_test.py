@@ -8,7 +8,7 @@ from precond import preconditioner
 from utils import example_setups
 import os
 
-cyls = example_setups.uniform_grid_NxN(2, ['d', 'd', 'd', 'd'], 1, 3)
+cyls = example_setups.uniform_grid_NxN(2, ['n', 'n', 'n', 'n'], 1, 3)
 #cyls = [cyl('d', [0, 3], 1), cyl('d', [0, 0], 1), cyl('d', [0, -3], 1)]
 #cyls = [cyl('d', [0, 3], 1), cyl('d', [0, 0], 1), cyl('d', [0, -3], 1), 
 #        cyl('d', [-3, 3], 1), cyl('d', [-3, 0], 1), cyl('d', [-3, -3], 1)]
@@ -21,6 +21,8 @@ wv = gaussian_deriv(time_shift=15, cutoff=1e-8)
 #wv = sine_pulse(time_shift=5, width=6, cycles=2)
 
 X, Y = np.meshgrid(x, y)
+print(X.shape)
+print(Y.shape)
 td = time_domain_scattering(
         cyls,
         wv,
@@ -32,7 +34,7 @@ print(U.shape)
 l = len(x)
 
 for i in range(l):
-    plt.plot(td.times, U[0, i, :])
+    plt.plot(U[0, i, :])
     pos = str((x[i], y[0]))
     plt.xlabel('t')
     plt.ylabel('E')
