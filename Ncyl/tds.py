@@ -184,7 +184,8 @@ class scattering(cyl):
             self.lengths[i+1] = 2*self.cyls[i].sum_index + 1 + self.lengths[i]
 
         self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index + 1 for l in self.labels]))
-        
+       
+        # default gmres to unrestarted (restart = dim of matrix)
         if self.gmres_restart is None:
             self.gmres_restart = self.scat_matrix_dim
         
@@ -395,7 +396,7 @@ class scattering(cyl):
             self.res = np.array([0])
         def __call__(self, rk=None):
             self.niter += 1
-            #self.res = np.append(self.res, rk)
+            self.res = np.append(self.res, rk)
             if self._disp:
                 print('iter %3i\trk = %s' % (self.niter, str(rk)))
     
@@ -462,7 +463,8 @@ class scattering(cyl):
                             restart = self.gmres_restart, 
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
-            else:    
+            else:
+                print(self.gmres_restart)
                 outp = gmres(linearop, 
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
@@ -472,7 +474,7 @@ class scattering(cyl):
                             maxiter = self.gmres_maxiter)
             
             self.gmres_iter = counter.niter
-            self.gmres_res = counter.res*np.linalg.norm(rhs)
+            self.gmres_res = counter.res
             return outp
 
         elif self.method == 'explicit':
