@@ -5,6 +5,7 @@ from scipy.special import jv, jvp, hankel1, h1vp
 from scipy.signal import convolve
 from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres, lgmres
+#from jax.scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
 from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
@@ -260,7 +261,7 @@ class scattering(cyl):
     def Shat(self, m, n, v):
         # v is in cartesian coords
         return self.phihat(m-n, v)
-    
+
     def modes(self, k, a):
         ka = k*a
         return int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
@@ -276,9 +277,9 @@ class scattering(cyl):
     def make_root_vect_1cyl(self, cyl_i, cyl_sc):
         b = cyl_i.pos - cyl_sc.pos
         idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
-        idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index + 1)[::-1] 
+        idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index + 1)[::-1]
         return np.hstack(([self.S(n, idxa_p[0], b) for n in idxd_q], [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]))
-    
+
     def make_root_matrix(self):
         if self.ST is None:
             self.ST = np.array([[self.make_root_vect_1cyl(self.cyls[p], self.cyls[q]) for q in self.labels] for p in self.labels], dtype=object)
@@ -286,7 +287,7 @@ class scattering(cyl):
 
     def make_direct_scattering_block(self, cyl):
         return np.eye(2*cyl.sum_index + 1)
-    
+
     def make_mul_scattering_block(self, cyl_i, cyl_sc):
 
         # makes 1 block, 
@@ -399,7 +400,7 @@ class scattering(cyl):
             self.res = np.append(self.res, rk)
             if self._disp:
                 print('iter %3i\trk = %s' % (self.niter, str(rk)))
-    
+
     def make_jh(self):
         if self.jh is None:
             self.jh = [None for p in self.labels]
@@ -440,6 +441,10 @@ class scattering(cyl):
         self.mvp_counter += 1
         return np.hstack(xs)
     
+    def gmres_callback(self, nrm):
+        self.gmres_res[self.iter] = nrm
+        self.iter += 1
+
     def scattering_coeffs(self):
         if self.method == 'gmres':
             self.ST = self.make_root_matrix()
@@ -453,28 +458,39 @@ class scattering(cyl):
                 linearop = LinearOperator((dim, dim), matvec = self.mvp)
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
+
+            reslength = 0.
+            if self.gmres_maxiter is None:
+                reslength = self.gmres_restart*len(rhs)*10
+            else:
+                reslength = self.gmres_restart*self.gmres_maxiter
+            self.gmres_res = np.zeros(reslength)
+            self.iter = 0
             if self.precond is not None:
                 precond_mat = self.precond(self).inv_mat
 
                 outp = gmres(linearop,
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
+                            atol = 'legacy',
                             M = precond_mat, 
                             restart = self.gmres_restart, 
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
             else:
-                print(self.gmres_restart)
+                print(self.gmres_restart, self.gmres_tol)
                 outp = gmres(linearop, 
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
+                            atol = 'legacy',
                             M=None, 
                             restart=self.gmres_restart, 
-                            callback = counter, 
+                            callback = self.gmres_callback, 
+                            callback_type = 'pr_norm',
                             maxiter = self.gmres_maxiter)
             
-            self.gmres_iter = counter.niter
-            self.gmres_res = counter.res
+            #self.gmres_iter = counter.niter
+            #self.gmres_res = counter.res
             return outp
 
         elif self.method == 'explicit':

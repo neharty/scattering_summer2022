@@ -1,9 +1,7 @@
 import numpy as np
 from scipy.sparse.linalg import gmres
 import sys
-#print(sys.path)
-#sys.path.append('/home/nick/scattering/tests/cpp_tests/gmres')
-from wrapper import my_gmres 
+from tests.cpp_tests.gmres.wrapper import my_gmres
 from Ncyl.tds import scattering as sc
 from utils import example_setups
 from time import process_time

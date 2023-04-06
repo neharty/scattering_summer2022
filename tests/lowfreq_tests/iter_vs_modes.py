@@ -19,7 +19,7 @@ for f in range(len(freqs)):
     for i in range(len(idxs)):
         print(idxs[i])
         freq = freqs[f]
-        cyls = example_setups.uniform_grid_NxN(N, ['i' for i in range(N)], 1, 3, impedance=1+1j)
+        cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)#, impedance=1+1j)
         sc = scattering(cyls, freq=freq, sum_index=idxs[i])
         sc.scattering_coeffs()
         iters[i] = sc.gmres_iter
@@ -28,7 +28,7 @@ plt.legend()
 plt.title('fixed spacing = 3')
 plt.xlabel('sum index')
 plt.ylabel('gmres iterations')
-plt.savefig('figs/modes/impedance/iter_vs_modes_fixed_dist.png')
+plt.savefig('figs/modes/dirichlet/unrestarted/iter_vs_modes_fixed_dist.png')
 plt.clf()
 
 #sweep over sum index
@@ -41,8 +41,8 @@ for b in range(len(bs)):
     print('spacing', bs[b])
     for i in range(len(idxs)):
         print(idxs[i])
-        cyls = example_setups.uniform_grid_NxN(N, ['i' for i in range(N)], 1, bs[b], impedance=1+1j)
-        sc = scattering(cyls, freq=freq, sum_index=idxs[i])
+        cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, bs[b])#, impedance=1+1j)
+        sc = scattering(cyls, freq=freq, sum_index=idxs[i], gmres_restart=50)
         sc.scattering_coeffs()
         iters[i] = sc.gmres_iter
     plt.plot(idxs, iters, '.-', label='b='+str(bs[b]))
@@ -50,7 +50,7 @@ plt.legend()
 plt.title('fixed freq = 0.1')
 plt.xlabel('sum index')
 plt.ylabel('gmres iterations')
-plt.savefig('figs/modes/impedance/iter_vs_modes_fixed_freq.png')
+plt.savefig('figs/modes/dirichlet/unrestarted/iter_vs_modes_fixed_freq.png')
 plt.clf()
 
 

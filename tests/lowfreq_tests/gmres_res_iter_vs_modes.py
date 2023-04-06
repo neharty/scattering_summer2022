@@ -15,18 +15,18 @@ N = 5
 iters = np.zeros(len(idxs))
 
 freq = 0.001
-cyls = example_setups.uniform_grid_NxN(N, ['i' for i in range(N)], 1, 3, impedance=1+1j)
+cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)#, impedance=1+1j)
 sc = scattering(cyls, freq=freq, sum_index=3)
-
 sc.scattering_coeffs()
+print(np.linalg.norm(sc.rhs))
 plt.semilogy(sc.gmres_res/np.linalg.norm(sc.rhs), '.-', label='f=0.001')
 plt.legend()
 plt.title('fixed spacing = 3')
 plt.xlabel('iter num')
 plt.ylabel('gmres iterations')
-plt.savefig('figs/modes/impedance/gmres_res_example.png')
+plt.savefig('figs/modes/dirichlet/unrestarted/gmres_res_example.png')
 plt.clf()
-
+'''
 A = sc.make_scattering_blocks()
 from scipy.linalg import eigvals, svdvals
 evals = eigvals(A)
@@ -34,10 +34,11 @@ print(np.min(np.abs(evals)))
 plt.plot(evals.real, evals.imag, '.')
 plt.xlabel('real')
 plt.ylabel('imag')
-plt.savefig('figs/modes/impedance/eigenvals.png')
+plt.savefig('figs/modes/impedance/restarted/eigenvals.png')
 plt.clf()
 
 plt.semilogy(svdvals(A))
 plt.ylabel('sigma')
 plt.savefig('figs/modes/impedance/singularvals.png')
 plt.clf()
+'''
