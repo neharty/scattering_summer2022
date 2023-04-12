@@ -52,7 +52,7 @@ class cyl:
         self.pos = np.array(pos)
         self.radius = radius
         self.bc = bc
-        self.impedance = impedance
+        self.impedance = impedance #impedance is the impedance parameter xi, lambda = k/xi
         if self.bc == 'i' and impedance == None:
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
@@ -298,8 +298,7 @@ class scattering(cyl):
         bc = cyl_i.bc
         radius = cyl_i.radius
         b = cyl_i.pos - cyl_sc.pos
-        lam = cyl_i.impedance
-
+        
         idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
         idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index + 1)
         
@@ -311,6 +310,7 @@ class scattering(cyl):
                 elif bc == 'n':
                     scm[i,j] = jvp(m, self.k*radius)*self.S(n, m, b)/h1vp(m, self.k*radius)
                 elif bc == 'i':
+                    lam = self.k/cyl_i.impedance
                     scm[i,j] = (self.k*jvp(m, self.k*radius) + lam*jv(m, self.k*radius))*self.S(n, m, b)/(self.k*h1vp(m, self.k*radius) + lam*hankel1(m, self.k*radius))
                 else:
                     print('invalid bc')
@@ -329,7 +329,6 @@ class scattering(cyl):
         radius = cyl_i.radius
         b = cyl_i.pos - cyl_sc.pos
         k = self.k
-        lam = cyl_i.impedance
 
         idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
         if bc == 'd':
@@ -337,10 +336,11 @@ class scattering(cyl):
         elif bc == 'n':
             D = np.diag(jvp(idxa_i, k*radius)/h1vp(idxa_i, k*radius))
         elif bc == 'i':
+            lam = self.k/cyl_i.impedance
             D = np.diag((k*jvp(idxa_i, k*radius) + lam*jv(idxa_i, k*radius))/(k*h1vp(idxa_i, k*radius) + lam*hankel1(idxa_i, k*radius)))
         else:
             print('invalid bc')
-    
+
         return D @ S
 
     def make_scattering_blocks_blockform(self):
@@ -372,13 +372,13 @@ class scattering(cyl):
         idxa = np.arange(-self.cyls[label].sum_index, self.cyls[label].sum_index + 1)
         jvect = 1j*np.zeros(2*self.cyls[label].sum_index + 1)
         bc = self.cyls[label].bc
-        lam = self.cyls[label].impedance
         radius  = self.cyls[label].radius
         if bc == 'd':
             jvect = jv(idxa, self.k*radius)/hankel1(idxa, self.k*radius)
         elif bc == 'n':
             jvect = jvp(idxa, self.k*radius)/h1vp(idxa, self.k*radius)
         elif bc == 'i':
+            lam = self.k/self.cyls[label].impedance
             jvect = (self.k*jvp(idxa, self.k*radius) + lam*jv(idxa, self.k*radius))/(self.k*h1vp(idxa, self.k*radius) + lam*hankel1(idxa, self.k*radius))
         else:
             print('invalid bc')
@@ -478,15 +478,15 @@ class scattering(cyl):
                             callback = counter, 
                             maxiter = self.gmres_maxiter)
             else:
-                print(self.gmres_restart, self.gmres_tol)
+                print(self.freq, self.gmres_restart, self.gmres_tol)
                 outp = gmres(linearop, 
                             self.make_rhs_vector(), 
                             tol = self.gmres_tol, 
-                            atol = 'legacy',
+                            #atol = 'legacy',
                             M=None, 
                             restart=self.gmres_restart, 
                             callback = self.gmres_callback, 
-                            callback_type = 'pr_norm',
+                            #callback_type = 'pr_norm',
                             maxiter = self.gmres_maxiter)
             
             #self.gmres_iter = counter.niter

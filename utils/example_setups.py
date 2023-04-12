@@ -30,23 +30,30 @@ def uniform_grid_5x5(radius, spacing):
         elif i%5 == 2:
             bcs[i] = 'i'
         else:
-            None 
+            None
 
     return uniform_grid_NxN(5, bcs, radius, spacing)
 
 def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None, impedance=None):
     cyls = [None for i in range(N*N)]
-    
     if N%2 == 1:
         coeffs = np.arange(-(N-1)/2, (N-1)/2 + 1)
     else:
         coeffs = np.arange(-N/2, N/2 + 1) + 0.5
-
     origins = np.array([[coeffs[i], coeffs[j]] for i in range(N) for j in range(N)])*spacing
-    
     for i in range(N*N):
         cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_index = sum_num, impedance = impedance)
 
+    return cyls
+
+def uniform_grid_random_bc(N, bcs, radius, spacing, sum_num=None, impedance=None):
+    cyls = uniform_grid_NxN(N, ['d' for n in range(N)], radius, spacing, sum_num = sum_num) #placeholder to change bcs
+    bcs = np.random.choice(bcs, size=len(cyls))
+    for c in range(len(cyls)):
+        cyls[c].bc = bcs[c]
+        print(cyls[c].bc)
+        if bcs[c] == 'i':
+            cyls[c].impedance = impedance
     return cyls
 
 def uniform_pentagon(penta_radius, cyl_radius, ang_shift):
@@ -160,7 +167,7 @@ def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None):
         paverage, pvariance = caverage, cvariance
         
         #generate a perturbation of the ith point
-        r = np.random.uniform(0, dist-radius)
+        r = np.random.uniform(0, np.sqrt(2)*dist-(radius/2))
         theta = np.random.uniform(0, 2*np.pi)
         ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
 
@@ -193,6 +200,15 @@ def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None):
     for i in range(cnum):
         cyls[i] = cyl(bc, origins[i], radius, sum_index=sum_num, impedance = impedance)
 
+    return cyls
+
+def all_random_hexagon(N, bcs, radius, dist, sum_num = None, impedance = None):
+    cyls = random_hexagon(N, 'd', radius, dist, sum_num = sum_num) #placeholder to change bcs
+    bcs = np.random.choice(bcs, size=len(cyls))
+    for c in range(len(cyls)):
+        cyls[c].bc = bcs[c]
+        if bcs[c] == 'i':
+            cyls[c].impedance = impedance
     return cyls
 
 def vol_frac_allrandom(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxtries=10, sum_num = None, impedance = None):
