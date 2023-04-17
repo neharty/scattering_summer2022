@@ -26,6 +26,7 @@ plt.xlabel('iter num')
 plt.ylabel('gmres iterations')
 plt.savefig('figs/modes/dirichlet/unrestarted/gmres_res_example.png')
 plt.clf()
+
 '''
 A = sc.make_scattering_blocks()
 from scipy.linalg import eigvals, svdvals

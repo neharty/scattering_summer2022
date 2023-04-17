@@ -7,7 +7,7 @@ from utils import example_setups
 N = 5
 freq = 0.001
 cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
-sc = scattering(cyls, freq=freq, sum_index=2, gmres_tol=1e-8)
+sc = scattering(cyls, freq=freq, sum_index=10, gmres_tol=1e-8)
 print(cyls[0].sum_index)
 cs, ecode = sc.scattering_coeffs()
 print(ecode)
