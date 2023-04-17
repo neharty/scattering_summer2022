@@ -119,7 +119,7 @@ class scattering(cyl):
             use_mat = False,
             method = 'gmres',
             gmres_restart = None,
-            gmres_maxiter = 2,
+            gmres_maxiter = None,
             fast_matrix_build = True
             ):
  
@@ -189,6 +189,10 @@ class scattering(cyl):
         if self.gmres_restart is None:
             self.gmres_restart = self.scat_matrix_dim
         
+        #default maxiter to 3 restart cycles
+        if self.gmres_maxiter is None:
+            self.gmres_maxiter = 3*self.gmres_restart
+
         self.dist_matrix = self.make_dist_matrix()
 
         if make_scat_matrix:
