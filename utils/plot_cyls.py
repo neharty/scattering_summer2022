@@ -1,23 +1,43 @@
 import numpy as np
+from collections import OrderedDict
 from utils import example_setups
 import matplotlib.pyplot as plt
 from Ncyl.tds import cyl, scattering
 
-N = 10
-cyls = example_setups.all_random_hexagon(N, ['d', 'n', 'i'], 1, 3, impedance = 1+1j)
-pos = np.array([cyls[i].get_pos() for i in range(len(cyls))])
+def plot_cyls(cyls, fname = None):
+    fig, ax = plt.subplots()
+    pos = np.array([cyls[i].get_pos() for i in range(len(cyls))])
+    angs = np.linspace(0, 2*np.pi, num = 20)
+    for n in range(len(cyls)):
+        r = cyls[n].radius
+        c = None
+        bc = cyls[n].bc
+        if bc == 'd':
+            c = 'b'
+        elif bc == 'n':
+            c = 'r'
+        elif bc =='i':
+            c = 'g'
+        ax.plot(*(pos[n, 0] + r*np.sin(angs), pos[n, 1] + r*np.cos(angs)), c, label = 'bc='+bc)
+    
+    handles, labels = ax.get_legend_handles_labels()
+    handle_list, label_list = [], []
+    for handle, label in zip(handles, labels):
+        if label not in label_list:
+            handle_list.append(handle)
+            label_list.append(label)
+    
+    plt.legend(handle_list, label_list)
+    plt.title('cylinder positions and boundary conditions')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.tight_layout()
+    if fname is None:
+        plt.show()
+    else:
+        plt.savefig(fname)
 
-angs = np.linspace(0, 2*np.pi, num = 20)
-for n in range(len(cyls)):
-    r = np.linalg.norm(pos[n])
-    c = None
-    bc = cyls[n].bc
-    if bc == 'd':
-        c = 'b'
-    elif bc == 'n':
-        c = 'r'
-    elif bc =='i':
-        c = 'g'
-    plt.plot(*(pos[n, 0] + np.sin(angs), pos[n, 1] + np.cos(angs)), c)
+cyls = example_setups.all_random_hexagon(10, ['d', 'n', 'i'], 1, 3, impedance=1)
+plot_cyls(cyls, 'testplot.png')
 
-plt.show()
+

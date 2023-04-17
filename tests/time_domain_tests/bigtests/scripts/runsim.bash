@@ -6,15 +6,21 @@ for WVF in g dg ; do
                     echo "${WVF}, ${SIZE}, ${ORDER}, ${SPACING}, ${BC}"
                     export WVF SIZE ORDER SPACING BC 
                     #
-                    sbatch -o/home/n/nh287/scattering/tests/time_domain_tests/bigtests/logs/out_wvf${WVF}_s${SIZE}_o${ORDER}_sp${SPACING}_bc${BC}.out \
-                    -e/home/n/nh287/scattering/tests/time_domain_tests/bigtests/logs/out_wvf${WVF}_s${SIZE}_o${ORDER}_sp${SPACING}_bc${BC}.err \
-                    --job-name=tds_sim_wvf${WVF}_s${SIZE}_o${ORDER}_sp${SPACING}_bc${BC} \
+                    sbatch --job-name=tds_sim_wvf${WVF}_s${SIZE}_o${ORDER}_sp${SPACING}_bc${BC} \
                     runsim.slurm
                     #
-                    sleep 1
                 done
             done
         done
     done
 done
+
+#WVF=dg
+#SIZE=0.2
+#ORDER=o
+#SPACING=3
+#BC=d
+#echo "${WVF}, ${SIZE}, ${ORDER}, ${SPACING}, ${BC}"
+#export WVF SIZE ORDER SPACING BC
+#sbatch --job-name=tds_sim_wvf${WVF}_s${SIZE}_o${ORDER}_sp${SPACING}_bc${BC} runsim.slurm
 

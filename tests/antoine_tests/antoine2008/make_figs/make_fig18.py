@@ -51,6 +51,54 @@ try:
 except:
     pass
 
+#make dirichlet tds fig
+try:
+    try:
+        ka = np.load(dirname+'fig18_dirichlet_x_tds.npy')
+    except:
+        print('fig18_dirichlet_x_tds.npy not found')
+    
+    try:
+        mvp = np.load(dirname+'fig18_dirichlet_y_tds.npy')
+    except:
+        print('fig18_dirichlet_y_tds.npy not found')
+    
+    for i in range(2):            
+        if i == 0:
+            plt.plot(ka, mvp[i,:], '-', label='no precond')
+        if i == 1:
+            plt.plot(ka, mvp[i,:], '-*', label='with precond') 
+
+    plt.xlabel('ka')
+    plt.ylabel('MVP')
+    plt.title('dirichlet bcs')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig18/fig18_dirichlet_tds.png')
+    plt.clf()
+   
+    print('here!')
+    for i in range(2):            
+        if i == 0:
+            plt.plot(ka[2:], mvp[i,2:], '-', label='no precond')
+        if i == 1:
+            plt.plot(ka[2:], mvp[i,2:], '-*', label='with precond') 
+
+    plt.xlabel('ka')
+    plt.ylabel('MVP')
+    plt.title('dirichlet bcs')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('/home/n/nh287/AFS_HOME/antoine_tests/antoine2008/figs/fig18/fig18_dirichlet_reduced_tds.png')
+    plt.clf() 
+    
+    print('Here!')
+
+    del ka
+    del mvp
+except:
+    pass
+
 #make neumann fig
 try:
     try:

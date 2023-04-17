@@ -1,15 +1,11 @@
 import numpy as np
-import numpy.random as rd
-#import matplotlib.pyplot as plt
 from scipy.special import jv, jvp, hankel1, h1vp
 from scipy.signal import convolve
 from scipy.linalg import toeplitz
-from scipy.sparse.linalg import gmres, lgmres
-#from jax.scipy.sparse.linalg import gmres
+from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
 from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
-#from scipy.ndimage import convolve
 from multiprocessing import Process, Queue, cpu_count
 import copy
 
@@ -123,7 +119,7 @@ class scattering(cyl):
             use_mat = False,
             method = 'gmres',
             gmres_restart = None,
-            gmres_maxiter = None,
+            gmres_maxiter = 2,
             fast_matrix_build = True
             ):
  
@@ -165,8 +161,11 @@ class scattering(cyl):
                 if self.cyls[l].sum_index == None:
                     ka = self.k*self.cyls[l].radius
                     try:
-                        if ka < 0.5:
-                            self.cyls[l].sum_index = 2
+                        if ka < 1:
+                            self.cyls[l].sum_index = min(self.lowfreq_modes(self.k, self.cyls[l].radius),
+                                                         self.modes(self.k, self.cyls[l].radius))
+                            #force use explicit solver, not gmres
+                            self.method = 'explicit'
                         else:
                             self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)
                     except:
@@ -265,6 +264,10 @@ class scattering(cyl):
     def modes(self, k, a):
         ka = k*a
         return int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
+
+    def lowfreq_modes(self, k, a):
+        ka = k*a
+        return int(np.floor(np.log(self.sum_tol/np.pi)/np.log(ka/2) +1))
 
     def make_dist_matrix(self):
         self.dist_matrix = np.zeros((len(self.cyls), len(self.cyls)))
@@ -513,10 +516,7 @@ class scattering(cyl):
 
         if self.method == 'gmres':
             cs, ecode = self.scattering_coeffs()
-            #for l in self.labels:
-                #print(self.cyls[l].sum_index)
 
-            #print(ecode, self.freq, np.amax(np.abs(cs)))
             if ecode > 0:
                 #self.gmres_tol = self.gmres_tol*10
                 print('GMRES failed, switching to explicit')
@@ -526,8 +526,6 @@ class scattering(cyl):
         elif self.method == 'explicit':
             cs = self.scattering_coeffs()
         
-        #print(self.freq, np.amax(np.abs(cs)))
-
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
             for j in range(2*self.cyls[l].sum_index + 1):

@@ -160,6 +160,6 @@ cython_debug/
 #.idea/
 
 #Data and log output
-.out
-.err
-.npy
+*.out
+*.err
+*.npy

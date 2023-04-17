@@ -149,7 +149,7 @@ def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None):
 
     #compute the initial grid to perturb
     #TODO: algorithm to find max num Nx and Ny
-    ctemp = triangular_lattice(N, N, [bc for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None)
+    ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None)
     
     cnum = len(ctemp)
     pos = np.array([c.pos for c in ctemp])
