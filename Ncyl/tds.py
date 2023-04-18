@@ -191,7 +191,7 @@ class scattering(cyl):
         
         #default maxiter to 3 restart cycles
         if self.gmres_maxiter is None:
-            self.gmres_maxiter = 3*self.gmres_restart
+            self.gmres_maxiter = 3#*self.gmres_restart
 
         self.dist_matrix = self.make_dist_matrix()
 
@@ -454,6 +454,7 @@ class scattering(cyl):
 
     def scattering_coeffs(self):
         if self.method == 'gmres':
+            #set the vectors for fast matrix multiplication
             self.ST = self.make_root_matrix()
             self.jh = self.make_jh()
             self.gmres_iter = 0
@@ -463,39 +464,39 @@ class scattering(cyl):
                 linearop = self.make_scattering_blocks()
             else:
                 linearop = LinearOperator((dim, dim), matvec = self.mvp)
+
             rhs = self.make_rhs_vector()
             counter = self.gmres_counter()
 
+            #initialize the residual vector
             reslength = 0.
             if self.gmres_maxiter is None:
                 reslength = self.gmres_restart*len(rhs)*10
             else:
                 reslength = self.gmres_restart*self.gmres_maxiter
+
             self.gmres_res = np.zeros(reslength)
             self.iter = 0
+
+            #set the preconditioner, if any
             if self.precond is not None:
                 precond_mat = self.precond(self).inv_mat
-
-                outp = gmres(linearop,
-                            self.make_rhs_vector(), 
-                            tol = self.gmres_tol, 
-                            atol = 'legacy',
-                            M = precond_mat, 
-                            restart = self.gmres_restart, 
-                            callback = counter, 
-                            maxiter = self.gmres_maxiter)
             else:
-                print(self.freq, self.gmres_restart, self.gmres_tol)
-                outp = gmres(linearop, 
-                            self.make_rhs_vector(), 
-                            tol = self.gmres_tol, 
-                            #atol = 'legacy',
-                            M=None, 
-                            restart=self.gmres_restart, 
-                            callback = self.gmres_callback, 
-                            #callback_type = 'pr_norm',
-                            maxiter = self.gmres_maxiter)
-            
+                precond_mat = None
+
+            print(self.freq, self.gmres_restart, self.gmres_tol)
+
+            #NOTE: outp will contain the solution vector AND an error code
+            outp = gmres(linearop, 
+                        self.make_rhs_vector(), 
+                        tol = self.gmres_tol, 
+                        atol = 'legacy',
+                        M=precond_mat, 
+                        restart=self.gmres_restart, 
+                        callback = self.gmres_callback, 
+                        callback_type = 'pr_norm',
+                        maxiter = self.gmres_maxiter)
+
             #self.gmres_iter = counter.niter
             #self.gmres_res = counter.res
             return outp
@@ -503,7 +504,7 @@ class scattering(cyl):
         elif self.method == 'explicit':
             if self.scat_mat is None:
                 self.scat_mat = self.make_scattering_blocks()
-           
+
             sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
             rhs = np.array(self.make_rhs_vector(), dtype=np.complex128)
             if self.precond:
@@ -520,16 +521,14 @@ class scattering(cyl):
 
         if self.method == 'gmres':
             cs, ecode = self.scattering_coeffs()
-
-            if ecode > 0:
-                #self.gmres_tol = self.gmres_tol*10
+            if ecode != 0:
                 print('GMRES failed, switching to explicit')
                 self.method = 'explicit'
                 cs = self.scattering_coeffs()
 
         elif self.method == 'explicit':
             cs = self.scattering_coeffs()
-        
+
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
             for j in range(2*self.cyls[l].sum_index + 1):
