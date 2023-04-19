@@ -10,7 +10,7 @@ from precond.preconditioner import hbs
 N = 5
 freq = 0.001
 cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
-sc = scattering(cyls, freq=freq, sum_index=5, gmres_tol=1e-8, precond=hbs)
+sc = scattering(cyls, freq=freq, sum_index=5, gmres_tol=1e-8)#, precond=hbs)
 
 A = sc.make_scattering_blocks()
 b = sc.make_rhs_vector()

@@ -1,3 +1,5 @@
+clear;
+clc;
 A = load('A.mat');
 A = A.data;
 S = svd(A);
@@ -11,6 +13,6 @@ flag
 iter
 format long
 matlab_res
-semilogy(scipy_res(1:75), '.-');
+semilogy(scipy_res, '.-');
 hold on;
 semilogy(matlab_res, '.-');

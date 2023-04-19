@@ -148,7 +148,7 @@ class scattering(cyl):
         self.precond_matrix = precond_matrix
 
         self.ST = None
-        self.jh = None
+        self.jhm = None
         self.u = None
         self.gmres_iter = 0
         self.gmres_res = np.array([])
@@ -265,6 +265,24 @@ class scattering(cyl):
         # v is in cartesian coords
         return self.phihat(m-n, v)
 
+    def jh(self, cyl, m):
+        #cyl = incident circle
+        bc = cyl.bc
+        radius = cyl.radius
+        if bc == 'd':
+            return jv(m, self.k*radius)/hankel1(m, self.k*radius)
+        elif bc == 'n':
+            return jvp(m, self.k*radius)/h1vp(m, self.k*radius)
+        elif bc == 'i':
+            lam = self.k/cyl.impedance
+            return(self.k*jvp(m, self.k*radius) + lam*jv(m, self.k*radius))/(self.k*h1vp(m, self.k*radius) + lam*hankel1(m, self.k*radius))
+        else:
+            print('invalid bc')
+    
+    def mulscat_term(self, cyl, n, m, b):
+        #cyl = incident circle
+        return self.jh(cyl, m)*self.S(n, m, b)
+    
     def modes(self, k, a):
         ka = k*a
         return int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
@@ -278,79 +296,64 @@ class scattering(cyl):
         for i in self.labels:
             for j in self.labels:
                 self.dist_matrix[i, j] = np.linalg.norm(self.cyls[i].pos - self.cyls[j].pos)
-
         return self.dist_matrix
 
-    def make_root_vect_1cyl(self, cyl_i, cyl_sc):
-        b = cyl_i.pos - cyl_sc.pos
-        idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
-        idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index + 1)[::-1]
-        return np.hstack(([self.S(n, idxa_p[0], b) for n in idxd_q], [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]))
+    def make_root_vect_1cyl(self, i, sc):
+        # i = incident circle label
+        # sc = scatterer circle label
+        if i == sc:
+            n = self.cyls[i].sum_index
+            delta = 1j*np.zeros(4*n + 1)
+            delta[2*n] = 1
+            return delta
+        else:
+            cyl_i = self.cyls[i]
+            cyl_sc = self.cyls[sc]
+            b = cyl_i.pos - cyl_sc.pos
+            idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
+            idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index + 1)[::-1]
+            jS1 = [self.S(n, idxa_p[0], b) for n in idxd_q]
+            jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
+            return np.hstack((jS1, jS2))
 
     def make_root_matrix(self):
+        self.make_jhm()
         if self.ST is None:
-            self.ST = np.array([[self.make_root_vect_1cyl(self.cyls[p], self.cyls[q]) for q in self.labels] for p in self.labels], dtype=object)
+            self.ST = np.array([[self.make_root_vect_1cyl(p, q) for q in self.labels] for p in self.labels], dtype=object)
         return self.ST
 
     def make_direct_scattering_block(self, cyl):
         return np.eye(2*cyl.sum_index + 1)
 
     def make_mul_scattering_block(self, cyl_i, cyl_sc):
-
-        # makes 1 block, 
+        # makes 1 off-diagonal block, 
         # cyl_i = incident cylinder, 
         # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
 
         scm = 1j*np.zeros((2*cyl_i.sum_index + 1, 2*cyl_sc.sum_index + 1))
-        bc = cyl_i.bc
-        radius = cyl_i.radius
-        b = cyl_i.pos - cyl_sc.pos
         
+        b = cyl_i.pos - cyl_sc.pos
         idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
         idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index + 1)
-        
+
         for i in range(len(idxa_i)):
             for j in range(len(idxa_sc)):
                 m, n = idxa_i[i], idxa_sc[j]
-                if bc == 'd':
-                    scm[i,j] = jv(m, self.k*radius)*self.S(n, m, b)/hankel1(m, self.k*radius)
-                elif bc == 'n':
-                    scm[i,j] = jvp(m, self.k*radius)*self.S(n, m, b)/h1vp(m, self.k*radius)
-                elif bc == 'i':
-                    lam = self.k/cyl_i.impedance
-                    scm[i,j] = (self.k*jvp(m, self.k*radius) + lam*jv(m, self.k*radius))*self.S(n, m, b)/(self.k*h1vp(m, self.k*radius) + lam*hankel1(m, self.k*radius))
-                else:
-                    print('invalid bc')
-                    break
+                scm[i,j] = self.mulscat_term(cyl_i, n, m, b)
         return scm
     
     def make_mul_scattering_block_root(self, cyl_i, cyl_sc):
-        rv = self.make_root_vect_1cyl(cyl_i, cyl_sc)
+        rv = self.make_root_vect_1cyl(cyl_i.label, cyl_sc.label)
         Nq = cyl_sc.sum_index
         Np = cyl_i.sum_index
         col = np.flip(rv[:2*Nq+1])
         row = rv[2*Nq:]
         S = toeplitz(row, col)
-
-        bc = cyl_i.bc
-        radius = cyl_i.radius
-        b = cyl_i.pos - cyl_sc.pos
-        k = self.k
-
-        idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index + 1)
-        if bc == 'd':
-            D = np.diag(jv(idxa_i, k*radius)/hankel1(idxa_i, k*radius))
-        elif bc == 'n':
-            D = np.diag(jvp(idxa_i, k*radius)/h1vp(idxa_i, k*radius))
-        elif bc == 'i':
-            lam = self.k/cyl_i.impedance
-            D = np.diag((k*jvp(idxa_i, k*radius) + lam*jv(idxa_i, k*radius))/(k*h1vp(idxa_i, k*radius) + lam*hankel1(idxa_i, k*radius)))
-        else:
-            print('invalid bc')
-
+        D = np.diag(self.jhm[cyl_i.label])
         return D @ S
 
     def make_scattering_blocks_blockform(self):
+        self.make_jhm()
         scat_mat = [[None for i in self.labels] for j in self.labels]
         for i in self.labels:
             for j in self.labels:
@@ -372,82 +375,56 @@ class scattering(cyl):
         sum_index = self.cyls[label].sum_index
         bc = self.cyls[label].bc
         radius = self.cyls[label].radius
-    
         return np.array([1j**n*np.exp(-1j*n*self.inc_angle)*np.exp(1j*self.k*b*np.cos(theta-self.inc_angle)) for n in np.arange(-sum_index, sum_index + 1)])
 
     def make_rhs_vector_1cyl(self, label):
         idxa = np.arange(-self.cyls[label].sum_index, self.cyls[label].sum_index + 1)
-        jvect = 1j*np.zeros(2*self.cyls[label].sum_index + 1)
-        bc = self.cyls[label].bc
-        radius  = self.cyls[label].radius
-        if bc == 'd':
-            jvect = jv(idxa, self.k*radius)/hankel1(idxa, self.k*radius)
-        elif bc == 'n':
-            jvect = jvp(idxa, self.k*radius)/h1vp(idxa, self.k*radius)
-        elif bc == 'i':
-            lam = self.k/self.cyls[label].impedance
-            jvect = (self.k*jvp(idxa, self.k*radius) + lam*jv(idxa, self.k*radius))/(self.k*h1vp(idxa, self.k*radius) + lam*hankel1(idxa, self.k*radius))
-        else:
-            print('invalid bc')
-        
+        jvect = self.jh(self.cyls[label], idxa)
         return -np.multiply(jvect, self.make_d_coeffs_1cyl(label))
 
     def make_rhs_vector(self):
         rhs = np.hstack([self.make_rhs_vector_1cyl(i) for i in self.labels])
         self.rhs = rhs
         return rhs
-
-    class gmres_counter(object):
-        def __init__(self, disp=False):
-            self._disp = disp
-            self.niter = 0
-            self.res = np.array([0])
-        def __call__(self, rk=None):
-            self.niter += 1
-            self.res = np.append(self.res, rk)
-            if self._disp:
-                print('iter %3i\trk = %s' % (self.niter, str(rk)))
-
-    def make_jh(self):
-        if self.jh is None:
-            self.jh = [None for p in self.labels]
+    
+    def make_jhm(self):
+        if self.jhm is None:
+            self.jhm = [None for p in self.labels]
             for p in self.labels:
-                bc = self.cyls[p].bc
-                radius = self.cyls[p].radius
-                lam = self.cyls[p].impedance
                 idxa_p = np.arange(-self.cyls[p].sum_index, self.cyls[p].sum_index + 1)
-                if bc == 'd':
-                    jhv = jv(idxa_p, self.k*radius)/hankel1(idxa_p, self.k*radius)
-                elif bc == 'n':
-                    jhv = jvp(idxa_p, self.k*radius)/h1vp(idxa_p, self.k*radius)
-                elif bc == 'i':
-                    jhv = (lam*jv(idxa_p, self.k*radius) + self.k*jvp(idxa_p, self.k*radius))/(lam*hankel1(idxa_p, self.k*radius) + self.k*h1vp(idxa_p, self.k*radius))
-                self.jh[p] = jhv
-        return self.jh
+                self.jhm[p] = self.jh(self.cyls[p], idxa_p)
+        return self.jhm
 
     def mvp(self, x):
         x = np.array(x, dtype=np.complex128)
-        xs = [np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.lengths))] # break up all p coefficients
-        xcalc = xs.copy()
+
+        #split up the x coeffs
+        xs = [np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.lengths))]
         ST = self.ST
 
         mulscat = [1j*np.zeros(len(xn)) for xn in xs]
+
+        #does the block MVPs and stores in a multidimensional list
+        SCmvp = [
+            [
+                convolve(
+                    np.array(ST[p][q], dtype=np.complex128),
+                    np.array(xs[q], dtype=np.complex128),
+                    mode='valid',
+                    method='fft'
+                ) for q in self.labels]
+            for p in self.labels]
+        
+        #TODO: remove this double loop
         for p in self.labels:
             for q in self.labels:
-                if p == q:
-                    continue
-                else:
-                    STpq = np.array(ST[p][q], dtype=np.complex128)
-                    Cq = np.array(xcalc[q], dtype=np.complex128)
-                    SCmvp = np.array(convolve(STpq, Cq, mode='valid', method='fft'), dtype=np.complex128)
-                    DSCmvp = self.jh[p]*SCmvp
-                mulscat[p] += DSCmvp
-        for i in range(len(xs)):
-            xs[i] += mulscat[i]
-
+                if p != q:
+                    SCmvp[p][q] *= self.jhm[p]
+                mulscat[p] += SCmvp[p][q]
+        
         self.mvp_counter += 1
-        return np.hstack(xs)
-    
+        return np.hstack(mulscat)
+
     def gmres_callback(self, nrm):
         self.gmres_res[self.iter] = nrm
         self.iter += 1
@@ -456,7 +433,6 @@ class scattering(cyl):
         if self.method == 'gmres':
             #set the vectors for fast matrix multiplication
             self.ST = self.make_root_matrix()
-            self.jh = self.make_jh()
             self.gmres_iter = 0
             self.mvp_counter = 0
             dim = self.scat_matrix_dim
@@ -466,7 +442,7 @@ class scattering(cyl):
                 linearop = LinearOperator((dim, dim), matvec = self.mvp)
 
             rhs = self.make_rhs_vector()
-            counter = self.gmres_counter()
+            #counter = self.gmres_counter()
 
             #initialize the residual vector
             reslength = 0.
@@ -474,7 +450,8 @@ class scattering(cyl):
                 reslength = self.gmres_restart*len(rhs)*10
             else:
                 reslength = self.gmres_restart*self.gmres_maxiter
-
+            
+            #initialize residual vector
             self.gmres_res = np.zeros(reslength)
             self.iter = 0
 
@@ -487,18 +464,17 @@ class scattering(cyl):
             print(self.freq, self.gmres_restart, self.gmres_tol)
 
             #NOTE: outp will contain the solution vector AND an error code
-            outp = gmres(linearop, 
-                        self.make_rhs_vector(), 
-                        tol = self.gmres_tol, 
+            outp = gmres(
+                        linearop,
+                        self.make_rhs_vector(),
+                        tol = self.gmres_tol,
                         atol = 'legacy',
-                        M=precond_mat, 
-                        restart=self.gmres_restart, 
-                        callback = self.gmres_callback, 
+                        M = precond_mat,
+                        restart = self.gmres_restart,
+                        callback = self.gmres_callback,
                         callback_type = 'pr_norm',
-                        maxiter = self.gmres_maxiter)
-
-            #self.gmres_iter = counter.niter
-            #self.gmres_res = counter.res
+                        maxiter = self.gmres_maxiter
+                        )            
             return outp
 
         elif self.method == 'explicit':
@@ -678,8 +654,7 @@ class time_domain_scattering(scattering):
         #copy solutions as conjugates for negative frequency components
         for n in range((self.N)//2):
             self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
-        
-        
+         
         return self.u_sc
 
     def make_U_sc(self, x, y):
