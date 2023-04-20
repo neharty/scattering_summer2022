@@ -161,7 +161,7 @@ class scattering(cyl):
                 if self.cyls[l].sum_index == None:
                     ka = self.k*self.cyls[l].radius
                     try:
-                        if ka < 1:
+                        if ka < 0.5:
                             self.cyls[l].sum_index = min(self.lowfreq_modes(self.k, self.cyls[l].radius),
                                                          self.modes(self.k, self.cyls[l].radius))
                             #force use explicit solver, not gmres
@@ -461,8 +461,6 @@ class scattering(cyl):
             else:
                 precond_mat = None
 
-            print(self.freq, self.gmres_restart, self.gmres_tol)
-
             #NOTE: outp will contain the solution vector AND an error code
             outp = gmres(
                         linearop,
@@ -474,7 +472,8 @@ class scattering(cyl):
                         callback = self.gmres_callback,
                         callback_type = 'pr_norm',
                         maxiter = self.gmres_maxiter
-                        )            
+                        )
+            print('freq done:', self.freq)
             return outp
 
         elif self.method == 'explicit':
@@ -485,9 +484,11 @@ class scattering(cyl):
             rhs = np.array(self.make_rhs_vector(), dtype=np.complex128)
             if self.precond:
                 pc_mat = self.precond(self).inv_mat
-                return np.linalg.solve(pc_mat@sm, pc_mat@rhs)
+                return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
             else:
-                return np.linalg.solve(sm, rhs)
+                soln = np.linalg.solve(sm, rhs)
+                print('freq done:', self.freq)
+                return soln
 
     def make_u_sc(self, x, y):
         r, theta = self.cart_to_polar([x, y])
@@ -495,6 +496,7 @@ class scattering(cyl):
         del r
         del theta
 
+        print(self.method, self.freq)
         if self.method == 'gmres':
             cs, ecode = self.scattering_coeffs()
             if ecode != 0:
@@ -552,6 +554,8 @@ class time_domain_scattering(scattering):
                  fft_tol = 1e-10,
                  freq_shift = 0,
                  sampnum = 128,
+                 use_par = True,
+                 cpus = None,
                  wvargs={},
                  scargs = {}
                  ):
@@ -564,6 +568,10 @@ class time_domain_scattering(scattering):
         self.fft_tol = fft_tol
         self.freq_shift = freq_shift
         self.sampnum = sampnum
+        self.use_par = use_par
+        self.cpus = cpus
+        if self.cpus is None:
+           self.cpus = cpu_count()
         self.scargs = scargs
     
     def ft(self, x):
@@ -587,7 +595,7 @@ class time_domain_scattering(scattering):
             tmptimes = np.linspace(-self.end_time, self.end_time, num=self.sampnum)
             tmpsig = self.wvp(tmptimes)
             sig_fft = np.abs(rfft(tmpsig))
-        print(sig_fft[-1])
+        print(self.sampnum, sig_fft[-1])
         
         self.times = np.linspace(-self.end_time, self.end_time, num=self.sampnum)
         tmpsig = self.wvp(self.times)
@@ -599,10 +607,12 @@ class time_domain_scattering(scattering):
 
         #set freqs for computation
         self.fft_freqs = fftfreq(self.N, d=self.dt)
+
         #apply shift
         self.fft_freqs += self.freq_shift
         self.fft_freqs = self.fft_freqs[self.fft_freqs > 0]
-        
+        print('min/max freqs', self.fft_freqs[0], self.fft_freqs[-1])
+
         #apply fft with shift in frequency values
         self.sig_fft = self.ft(np.exp(1j*2*np.pi*self.freq_shift*self.times)*tmpsig)
         
@@ -613,20 +623,14 @@ class time_domain_scattering(scattering):
         self.ft_coeffs()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.sig_fft)))
         flen = range(len(self.fft_freqs))
-        
-        '''
-        for i in flen:
-            f = self.fft_freqs[i]
-            sc = scattering(self.cyls, freq=f)
-            self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :, i+1], y[:, :, i+1])
-        '''
-
+        cpus = self.cpus
         def compute_block(a, b=None):
             if b is None:
                 freq_block = self.fft_freqs[a:]
             else:
                 freq_block = self.fft_freqs[a: b]
-
+            
+            print('fblk:', freq_block[0], freq_block[-1], len(freq_block))
             fbrange = range(len(freq_block))
             
             for c in self.cyls:
@@ -641,16 +645,21 @@ class time_domain_scattering(scattering):
                 self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
             [p[i].join() for i in fbrange]
 
-        blocks = int(len(flen)/cpu_count())
-        
-        for b in range(blocks):
-            freq_block = self.fft_freqs[b*cpu_count(): (b+1)*cpu_count()]
-            compute_block(b*cpu_count(), (b+1)*cpu_count())
+        if self.use_par:
+            blocks = int(len(flen)/cpus)
+            for b in range(blocks):
+                freq_block = self.fft_freqs[b*cpus: (b+1)*cpus]
+                compute_block(b*cpus, (b+1)*cpus)
 
-        #finish remaining blocks
-        b = blocks*cpu_count()
-        compute_block(b)
-        
+            #finish remaining blocks
+            b = blocks*cpus
+            compute_block(b)
+        else: 
+            for i in flen:
+                f = self.fft_freqs[i]
+                sc = scattering(self.cyls, freq=f)
+                self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
+       
         #copy solutions as conjugates for negative frequency components
         for n in range((self.N)//2):
             self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()

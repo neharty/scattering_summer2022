@@ -16,11 +16,12 @@ for WVF in g dg ; do
     done
 done
 '
+
 WVF=dg
 SIZE=0.2
 ORDER=r
 SPACING=3
-BC=d
+BC=m
 echo "${WVF}, ${SIZE}, ${ORDER}, ${SPACING}, ${BC}"
 export WVF SIZE ORDER SPACING BC
 sbatch --job-name=tds_sim_wvf${WVF}_s${SIZE}_o${ORDER}_sp${SPACING}_bc${BC} runsim.slurm

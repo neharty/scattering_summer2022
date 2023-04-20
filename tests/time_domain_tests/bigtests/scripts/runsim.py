@@ -1,9 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from Ncyl.tds import time_domain_scattering
 from utils import example_setups
-from utils.plot_cyls import plot_cyls
 from waveforms import waveforms as wv
+import pickle
 import argparse
 import os
 
@@ -22,15 +21,6 @@ bc = parser.parse_args().bc
 
 head = '/home/n/nh287/scattering/tests/time_domain_tests/bigtests' #replace with file location starting at /
 
-if wvf == 'g':
-    inpwv = wv.gaussian(sigma=width, time_shift=10)
-    wvfstr='gaussian'
-    freq_shift = 1e-4 #hardcoded freq offset
-elif wvf == 'dg':
-    inpwv = wv.gaussian_deriv(sigma=width, time_shift=10)
-    wvfstr = 'gaussian_deriv'
-    freq_shift = 0
-
 if bc == 'd':
     bcstr = 'dirichlet'
 elif bc == 'n':
@@ -48,7 +38,7 @@ elif bc == 'm':
 
 np.random.seed(12345)
 
-N = 5 #set number of cylinders - hardcoded for now
+N = 3 #set number of cylinders - hardcoded for now
 
 if oorr == 'o':
     if bc == 'm':
@@ -65,13 +55,38 @@ elif oorr == 'r':
     else:
         cyls = example_setups.random_hexagon(N, bc, 1, d)
 
+#draw a box around the cyls
+pos = [c.pos for c in cyls]
+
+xpos = [p[0] for p in pos]
+xmax = np.max(xpos) + 1
+xmin = np.min(xpos) - 1
+L = xmax - xmin
+xc = (xmax+xmin)/2
+
+ypos = [p[1] for p in pos]
+ymax = np.max(ypos) + 1
+ymin = np.min(ypos) - 1
+M = ymax - ymin
+yc = (ymax+ymin/2)
+
+if wvf == 'g':
+    inpwv = wv.gaussian(sigma=width, time_shift=xmax+5)
+    wvfstr='gaussian'
+    freq_shift = 1e-4 #hardcoded freq offset
+elif wvf == 'dg':
+    inpwv = wv.gaussian_deriv(sigma=width, time_shift=xmax+5)
+    wvfstr = 'gaussian_deriv'
+    freq_shift = 0
+
 #calculate time traces around the grid of cylinders
-x = np.arange(5, 21)
-y = [0]
-T = 20
+y = np.linspace(ymin - M/4, ymax + M/4, num = 10)
+x = [xmin - L/4, xmin - 1, xmax + 1, xmax + L/4]
+T = L + 10
 X, Y = np.meshgrid(x, y)
 
-td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift)
+#compute tds
+td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=True, cpus=6)
 print('solving time domain scattering')
 U = td.make_U(X, Y)
 print('done with time domain scattering')
@@ -93,17 +108,6 @@ if not os.path.exists(figpath):
 #write data out
 np.save(datapath+'/gridpoints_x.npy', X)
 np.save(datapath+'/gridpoints_y.npy', Y)
+np.save(datapath+'/times.npy', td.times)
 np.save(datapath+'/timetrace.npy', U)
-
-#plot the data
-plot_cyls(cyls, figpath+'/cyls.png')
-for i in range(len(x)):
-    for j in range(len(y)):
-        plt.clf()
-        plt.plot(U.times, U[i, j, :])
-        plt.xlabel('t')
-        plt.ylabel('E')
-        plt.title('time trace at '+ str((x[i], y[j])))
-        plt.tight_layout()
-        plt.savefig(figpath+'/timetrace_'+str((x[i], y[j]))+'.png')
-
+pickle.dump(cyls, open(datapath+"/cyls.p", "wb"))
