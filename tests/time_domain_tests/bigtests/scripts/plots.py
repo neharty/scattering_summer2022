@@ -15,7 +15,16 @@ for root, dirs, files in os.walk(head):
             times = np.load(pwd+'times.npy')
             U = np.load(pwd+'timetrace.npy')
 
-            
+            for xpt in range(len(x)):
+                plt.cla()
+                for ypt in range(len(y)):
+                    tval = U[ypt, xpt, :]
+                    offset = y[ypt]
+                    plt.plot(times, tval + offset, 'k')
+                    plt.title('x='+str(x[xpt]))
+                    plt.xlabel('time')
+                    plt.ylabel('y')
+                plt.savefig(pwd+'timetrace_x='+str(x[xpt])+'.png')
         except Exception as e:
             pass
     '''
@@ -25,6 +34,7 @@ for root, dirs, files in os.walk(head):
 
     if 'cyls.png' not in files:
         try:
+            plt.cla()
             #reciever locations
             x = np.load(pwd+'gridpoints_x.npy')[0,:]
             y = np.load(pwd+'gridpoints_y.npy')[:,0]
@@ -65,6 +75,5 @@ for root, dirs, files in os.walk(head):
             plt.savefig(pwd+'cyls.png')
             plt.cla()
         except Exception as e:
-            print(pwd)
-            print(e)
+            pass
 
