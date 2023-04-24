@@ -12,12 +12,14 @@ parser.add_argument('width', help='waveform width',type=float)
 parser.add_argument('oorr', help='ordered or random')
 parser.add_argument('d', help='cylinder spacing', type=float)
 parser.add_argument('bc', help='boundary condition')
+parser.add_argument('cpus', help='cpus for parallel computation', type=int)
 
 wvf = parser.parse_args().wvf
 width = parser.parse_args().width
 oorr = parser.parse_args().oorr
 d = parser.parse_args().d
 bc = parser.parse_args().bc
+cpus = parser.parse_args().cpus
 
 head = '/home/n/nh287/scattering/tests/time_domain_tests/bigtests' #replace with file location starting at /
 
@@ -38,7 +40,7 @@ elif bc == 'm':
 
 np.random.seed(12345)
 
-N = 3 #set number of cylinders - hardcoded for now
+N = 5 #set number of cylinders - hardcoded for now
 
 if oorr == 'o':
     if bc == 'm':
@@ -86,9 +88,9 @@ T = L + 10
 X, Y = np.meshgrid(x, y)
 
 #compute tds
-td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=True, cpus=6)
+td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=True, cpus=cpus)
 print('solving time domain scattering')
-U = td.make_U(X, Y)
+U = td.make_U_sc(X, Y)
 print('done with time domain scattering')
 
 #create file structures
