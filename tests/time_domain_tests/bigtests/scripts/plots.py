@@ -20,10 +20,19 @@ for root, dirs, files in os.walk(head):
                 for ypt in range(len(y)):
                     tval = U[ypt, xpt, :]
                     offset = y[ypt]
+                    trace = tval+offset
+                    plt.fill_between(
+                        times,
+                        trace,
+                        y2=[offset for i in range(len(trace))],
+                        where=(trace > offset),
+                        color='k')
                     plt.plot(times, tval + offset, 'k')
-                    plt.title('x='+str(x[xpt]))
+                    plt.title('scattered field, x='+str(x[xpt]))
                     plt.xlabel('time')
                     plt.ylabel('y')
+                plt.axis('scaled')
+                plt.tight_layout()
                 plt.savefig(pwd+'timetrace_x='+str(x[xpt])+'.png')
         except Exception as e:
             pass
@@ -71,6 +80,7 @@ for root, dirs, files in os.walk(head):
             plt.title('cylinder positions and boundary conditions')
             plt.xlabel('x')
             plt.ylabel('y')
+            plt.axis('scaled')
             plt.tight_layout()
             plt.savefig(pwd+'cyls.png')
             plt.cla()

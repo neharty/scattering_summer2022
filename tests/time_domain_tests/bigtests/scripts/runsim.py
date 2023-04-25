@@ -30,11 +30,11 @@ elif bc == 'n':
 elif bc == 'is':
     bcstr = 'impedance_small'
     bc = 'i'
-    imp = 0.5+0.5*1j
+    imp = 0.5-0.5*1j
 elif bc == 'il':
     bcstr = 'impedance_large'
     bc = 'i'
-    imp = 5 + 5*1j
+    imp = 5-5*1j
 elif bc == 'm':
     bcstr = 'mixed'
 
@@ -44,14 +44,14 @@ N = 5 #set number of cylinders - hardcoded for now
 
 if oorr == 'o':
     if bc == 'm':
-        cyls = example_setups.uniform_grid_random_bc(N, ['d', 'n', 'i'], 1, d, impedance=1+1j)
+        cyls = example_setups.uniform_grid_random_bc(N, ['d', 'n', 'i'], 1, d, impedance=1-1j)
     elif bc == 'i':
         cyls = example_setups.uniform_grid_NxN(N, ['i' for i in range(N)], 1, d, impedance=imp)
     else:
         cyls = example_setups.uniform_grid_NxN(N, [bc for i in range(N)], 1, d)
 elif oorr == 'r':
     if bc == 'm':
-        cyls = example_setups.all_random_hexagon(N, ['d', 'n', 'i'], 1, d, impedance=1+1j)
+        cyls = example_setups.all_random_hexagon(N, ['d', 'n', 'i'], 1, d, impedance=1-1j)
     elif bc == 'i':
         cyls = example_setups.random_hexagon(N, bc, 1, d, impedance=imp)
     else:
@@ -83,7 +83,7 @@ elif wvf == 'dg':
 
 #calculate time traces around the grid of cylinders
 y = np.linspace(ymin - M/4, ymax + M/4, num = 10)
-x = [xmin - L/4, xmin - 1, xmax + 1, xmax + L/4]
+x = [xmin - L, xmin - 1, xmax + 1, xmax + L]
 T = L + 10
 X, Y = np.meshgrid(x, y)
 

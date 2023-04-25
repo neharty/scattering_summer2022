@@ -659,11 +659,12 @@ class time_domain_scattering(scattering):
                 f = self.fft_freqs[i]
                 sc = scattering(self.cyls, freq=f)
                 self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
-       
+        '''
         #copy solutions as conjugates for negative frequency components
         for n in range((self.N)//2):
             self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
-         
+        '''
+
         return self.u_sc
 
     def make_U_sc(self, x, y):
@@ -672,6 +673,10 @@ class time_domain_scattering(scattering):
         #shift the coefficients to the correct start time
         tshift = self.waveform.time_shift
         self.u_sc *= np.exp(1j*2*np.pi*np.arange(self.N)*tshift/(self.N*self.dt))
+        
+        #zero pad in frequency
+        u_pad = 1j*np.zeros((*x.shape, 2*self.N))
+        u_pad[:, :, self.N//2:self.N + self.N//2] = self.u_sc[:, :, :]
 
         #FT back to time
         self.U_sc = self.ift(self.u_sc)
@@ -680,11 +685,11 @@ class time_domain_scattering(scattering):
         self.U_sc *= np.exp(-1j*2*np.pi*self.freq_shift*self.times)
         
         #apply windowing
-        self.U_sc = self.U_sc[:, :, self.N//2:]
+        self.U_sc = self.U_sc[:, :, self.N:]
 
-        self.times = np.linspace(0, self.end_time, num=self.N//2)
+        self.times = np.linspace(0, self.end_time, num=self.N)
 
-        return self.U_sc
+        return 2*self.U_sc.real
 
     def make_U(self, x, y):
         self.make_U_sc(x, y)
