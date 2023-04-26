@@ -21,6 +21,7 @@ for root, dirs, files in os.walk(head):
                 tval = U[ypt, xpt, :]
                 offset = y[ypt]
                 trace = tval+offset
+                
                 plt.fill_between(
                     times, 
                     trace, 
