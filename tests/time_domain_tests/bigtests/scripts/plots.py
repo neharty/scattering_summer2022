@@ -9,6 +9,7 @@ fig, ax = plt.subplots()
 for root, dirs, files in os.walk(head):
     pwd = root+'/'
     if 'timetrace.png' not in files:
+        print(pwd)
         try:
             x = np.load(pwd+'gridpoints_x.npy')[0, :]
             y = np.load(pwd+'gridpoints_y.npy')[:, 0]
