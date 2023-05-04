@@ -559,7 +559,6 @@ class time_domain_scattering(scattering):
                  wvargs={},
                  scargs = {}
                  ):
-
         super().__init__(cyls)
         self.cyls = cyls
         self.waveform = waveform
@@ -577,11 +576,11 @@ class time_domain_scattering(scattering):
     def ft(self, x):
         #compute the time -> frequency fourier transform
         x*= (-1)**np.arange(self.N)
-        return np.exp(1j*np.pi*self.N/2)*self.dt*fftshift((-1)**np.arange(self.N))*self.N*ifft(x)
+        return self.dt*ifftshift((-1)**np.arange(self.N))*self.N*ifft(x)
 
     def ift(self, X):
         #compute the frequency -> time fourier transform
-        X *= fftshift((-1)**np.arange(self.N))
+        X *= ifftshift((-1)**np.arange(self.N))
         return np.exp(-1j*np.pi*self.N/2)*self.df*((-1)**np.arange(self.N))*fft(X)
     
     def ft_coeffs(self):
