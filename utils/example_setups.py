@@ -34,20 +34,26 @@ def uniform_grid_5x5(radius, spacing):
 
     return uniform_grid_NxN(5, bcs, radius, spacing)
 
-def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None, impedance=None):
+def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None, impedance=None, center = None):
     cyls = [None for i in range(N*N)]
     if N%2 == 1:
         coeffs = np.arange(-(N-1)/2, (N-1)/2 + 1)
     else:
         coeffs = np.arange(-N/2, N/2 + 1) + 0.5
-    origins = np.array([[coeffs[i], coeffs[j]] for i in range(N) for j in range(N)])*spacing
+    
+    if center==None:
+        origins = np.array([[coeffs[i], coeffs[j]] for i in range(N) for j in range(N)])*spacing
+    else:
+        center = np.array(center)
+        origins = np.array([[coeffs[i] + center[0], coeffs[j] + center[1]] for i in range(N) for j in range(N)])*spacing
+
     for i in range(N*N):
         cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_index = sum_num, impedance = impedance)
 
     return cyls
 
-def uniform_grid_random_bc(N, bcs, radius, spacing, sum_num=None, impedance=None):
-    cyls = uniform_grid_NxN(N, ['d' for n in range(N)], radius, spacing, sum_num = sum_num) #placeholder to change bcs
+def uniform_grid_random_bc(N, bcs, radius, spacing, sum_num=None, impedance=None, center=None):
+    cyls = uniform_grid_NxN(N, ['d' for n in range(N)], radius, spacing, sum_num = sum_num, center=center) #placeholder to change bcs
     bcs = np.random.choice(bcs, size=len(cyls))
     for c in range(len(cyls)):
         cyls[c].bc = bcs[c]
@@ -87,7 +93,7 @@ def uniform_grating(N, bcs, radius, spacing, sum_num = None, impedance = None):
 
     return cyls
 
-def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None):
+def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center = None):
     cyls = [None for i in range(Nx*Ny)]
     
     if Nx%2 == 1:
@@ -99,17 +105,20 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
         ycoeffs = np.arange(-(Ny-1)/2, (Ny-1)/2 + 1)
     else:
         ycoeffs = np.arange(-Ny/2, Ny/2 + 1) + 0.5
-
-    origins = np.array([[xcoeffs[i]*xspace, ycoeffs[j]*yspace] for i in range(Nx) for j in range(Ny)])
+    
+    if center==None:
+        origins = np.array([[xcoeffs[i]*xspace, ycoeffs[j]*yspace] for i in range(Nx) for j in range(Ny)])
+    else:
+        origins = np.array([[xcoeffs[i]*xspace+center[0], ycoeffs[j]*yspace+center[1]] for i in range(Nx) for j in range(Ny)])
 
     for i in range(Nx*Ny):
         cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_index = sum_num, impedance = impedance)
 
     return cyls
 
-def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None):
-    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance)
-    cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance)
+def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center=None):
+    cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
+    cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
     return cyls_main + cyls_off
 
 def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, impedance=None):
@@ -145,11 +154,11 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 
     return cyls
 
-def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None):
+def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None, center=None):
 
     #compute the initial grid to perturb
     #TODO: algorithm to find max num Nx and Ny
-    ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None)
+    ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None, center=center)
     
     cnum = len(ctemp)
     pos = np.array([c.pos for c in ctemp])
@@ -202,8 +211,8 @@ def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None):
 
     return cyls
 
-def all_random_hexagon(N, bcs, radius, dist, sum_num = None, impedance = None):
-    cyls = random_hexagon(N, 'd', radius, dist, sum_num = sum_num) #placeholder to change bcs
+def all_random_hexagon(N, bcs, radius, dist, sum_num = None, impedance = None, center=None):
+    cyls = random_hexagon(N, 'd', radius, dist, sum_num = sum_num, center=center) #placeholder to change bcs
     bcs = np.random.choice(bcs, size=len(cyls))
     for c in range(len(cyls)):
         cyls[c].bc = bcs[c]
