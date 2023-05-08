@@ -14,10 +14,10 @@ for root, dirs, files in os.walk(head):
         x = np.load(pwd+'gridpoints_x.npy')
         y = np.load(pwd+'gridpoints_y.npy')
         snums = np.load(pwd+'sampnums.npy')
-        
         Uexact = np.load(pwd+'timetrace_'+str(snums[-1])+'.npy')
         texact = np.load(pwd+'times_'+str(snums[-1])+'.npy')
         #interpolate the exact solution
+        print(pwd, len(texact), Uexact.shape)
         Uinterp = interp1d(texact, Uexact)
 
         for xpt in range(len(x)):
@@ -37,6 +37,7 @@ for root, dirs, files in os.walk(head):
             plt.tight_layout()
             plt.savefig(pwd+'convergence_x='+str(x[xpt])+'.png')
     except Exception as e:
+        print(pwd)
         print(e)
 
     try:
@@ -69,8 +70,7 @@ for root, dirs, files in os.walk(head):
                 plt.tight_layout()
                 plt.savefig(pwd+'timetrace_x='+str(x[xpt])+'_'+str(snums[s])+'.png')
     except Exception as e:
-        pass
-
+        print(e)
 
     try:
         plt.cla()
