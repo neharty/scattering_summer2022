@@ -553,7 +553,7 @@ class time_domain_scattering(scattering):
                  end_time,
                  fft_tol = 1e-10,
                  freq_shift = 0,
-                 samprate = 128,
+                 samprate = 64,
                  use_par = True,
                  cpus = None,
                  wvargs={},
@@ -592,7 +592,7 @@ class time_domain_scattering(scattering):
         self.M = int(4)
         self.comptime = self.M*self.end_time
 
-        self.sampnum = self.samprate*2*self.comptime
+        self.sampnum = int(self.samprate*2*self.comptime)
         tmptimes = np.linspace(-self.comptime, self.comptime, num=self.sampnum)
         tmpsig = self.wvp(tmptimes)
         sig_fft = np.abs(rfft(tmpsig))
