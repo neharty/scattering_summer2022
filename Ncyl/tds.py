@@ -553,7 +553,8 @@ class time_domain_scattering(scattering):
                  end_time,
                  fft_tol = 1e-10,
                  freq_shift = 0,
-                 samprate = 64,
+                 sampnum1T = None,
+                 timeextend = 4,
                  use_par = True,
                  cpus = None,
                  wvargs={},
@@ -566,7 +567,8 @@ class time_domain_scattering(scattering):
         self.end_time = end_time
         self.fft_tol = fft_tol
         self.freq_shift = freq_shift
-        self.samprate = samprate
+        self.sampnum1T = sampnum1T
+        self.M = timeextend
         self.use_par = use_par
         self.cpus = cpus
         if self.cpus is None:
@@ -589,21 +591,27 @@ class time_domain_scattering(scattering):
     def ft_coeffs(self):
         #fft to get the cutoff frequency
         #extend the time integral
-        self.M = int(4)
         self.comptime = self.M*self.end_time
 
-        self.sampnum = int(self.samprate*2*self.comptime)
-        tmptimes = np.linspace(-self.comptime, self.comptime, num=self.sampnum)
-        tmpsig = self.wvp(tmptimes)
-        sig_fft = np.abs(rfft(tmpsig))
-        
-        while sig_fft[-1] > self.fft_tol:
-            print(sig_fft[-1])
-            self.sampnum *= 2
+        if self.sampnum1T is None:
+            self.sampnum1T = 64 #default
+            self.sampnum = self.M*self.sampnum1T
             tmptimes = np.linspace(-self.comptime, self.comptime, num=self.sampnum)
             tmpsig = self.wvp(tmptimes)
             sig_fft = np.abs(rfft(tmpsig))
-        
+                   
+            while sig_fft[-1] > self.fft_tol:
+                print(sig_fft[-1])
+                self.sampnum *= 2
+                tmptimes = np.linspace(-self.comptime, self.comptime, num=self.sampnum)
+                tmpsig = self.wvp(tmptimes)
+                sig_fft = np.abs(rfft(tmpsig))
+        else:
+            self.sampnum = 2*self.M*self.sampnum1T
+            tmptimes = np.linspace(-self.comptime, self.comptime, num=self.sampnum)
+            tmpsig = self.wvp(tmptimes)
+            sig_fft = np.abs(rfft(tmpsig))
+
         self.samprate = self.sampnum/(2*self.comptime)
         self.times = np.linspace(-self.comptime, self.comptime, num=self.sampnum)
         tmpsig = self.wvp(self.times)
@@ -617,15 +625,22 @@ class time_domain_scattering(scattering):
         #set freqs for computation
         self.fft_freqs = fftfreq(self.N, d=self.dt)
 
-        #apply shift
+        #apply frequency shift
         self.fft_freqs += self.freq_shift
         freqmask = (self.fft_freqs > 0) & (sig_mag > self.fft_tol)
         self.fft_freqs = self.fft_freqs[freqmask]
-        print('min/max freqs', self.fft_freqs[0], self.fft_freqs[-1])
+        try:
+            print('min/max freqs', self.fft_freqs[0], self.fft_freqs[-1])
+        except:
+            pass
 
         #apply fft with shift in frequency values
         self.sig_fft = self.ft(np.exp(1j*2*np.pi*self.freq_shift*self.times)*tmpsig)
         
+        #shift to correct start time
+        tshift = self.waveform.time_shift
+        self.sig_fft *= np.exp(1j*2*np.pi*np.arange(self.N)*tshift/(self.N*self.dt))
+
         #zero out component with no conjugate
         self.sig_fft[self.N//2] = 0
 
@@ -657,7 +672,11 @@ class time_domain_scattering(scattering):
             p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :], y[:, :], q[i])) for i in fbrange])
             [p[i].start() for i in fbrange]
             for i in fbrange:
-                self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
+                if self.freq_shift == 0:
+                    self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
+                else:
+                    self.u_sc[:, :, a+i] = self.sig_fft[a+i]*q[i].get()
+
             [p[i].join() for i in fbrange]
 
         if self.use_par:
@@ -674,22 +693,28 @@ class time_domain_scattering(scattering):
             for i in flen:
                 f = self.fft_freqs[i]
                 sc = scattering(self.cyls, freq=f)
-                self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
-        '''
+                if self.freq_shift == 0:
+                    self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
+                else:
+                    self.u_sc[:, :, i] = self.sig_fft[i]*sc.make_u_sc(x[:, :], y[:, :])
+        
         #copy solutions as conjugates for negative frequency components
         for n in range((self.N)//2):
-            self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
-        '''
+            if self.freq_shift == 0:
+                self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
+            #else:
+                #self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n].conjugate()
 
         return self.u_sc
-
-    def make_U_sc(self, x, y):
+    
+    def make_U_sc_full(self, x, y):
         self.make_time_harmonic_soln(x, y)
         
         #shift the coefficients to the correct start time
-        tshift = self.waveform.time_shift
-        self.u_sc *= np.exp(1j*2*np.pi*np.arange(self.N)*tshift/(self.N*self.dt))
-        
+                
+        #mulitply the positive frequencies by 2
+        #self.u_sc[:, :, 1:] *= 2
+
         #zero pad in frequency
         #u_pad = 1j*np.zeros((*x.shape, 2*self.N))
         #u_pad[:, :, :self.N//2] = self.u_sc[:, :, :self.N//2]
@@ -701,21 +726,26 @@ class time_domain_scattering(scattering):
         #self.df = 1/(2*self.comptime)
 
         #FT back to time domain
-        self.U_sc = self.ift(self.u_sc)
+        self.U_sc_full = self.ift(self.u_sc)
         
         #update time bins for freq shift
-        self.times = np.linspace(0, self.end_time, num=self.U_sc.shape[2])
+        self.times_full = np.linspace(-self.comptime, self.comptime, num=self.U_sc_full.shape[2])
 
         #apply freq shift
-        self.U_sc *= np.exp(-1j*2*np.pi*self.freq_shift*self.times)
+        self.U_sc_full *= np.exp(-1j*2*np.pi*self.freq_shift*self.times)
         
+        return np.real(self.U_sc_full)
+
+    def make_U_sc(self, x, y):
+        self.make_U_sc_full(x, y)
+
         #apply windowing
-        self.U_sc = self.U_sc[:, :, self.N//2:self.N//2 + self.N//(2*self.M)]
+        self.U_sc = self.U_sc_full[:, :, self.N//2:self.N//2 + self.sampnum1T]
         
         #update time again after windowing
-        self.times = np.linspace(0, self.end_time, num=self.U_sc.shape[2])
+        self.times = self.times[self.N//2:self.N//2 + self.U_sc.shape[2]]
 
-        return np.real(2*self.U_sc)
+        return np.real(self.U_sc)
 
     def make_U(self, x, y):
         self.make_U_sc(x, y)

@@ -163,7 +163,10 @@ cython_debug/
 *.out
 *.err
 *.npy
+*.csv
+*.dat
 *.p
 
 #misc
+*.zip
 *.swp

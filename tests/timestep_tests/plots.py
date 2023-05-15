@@ -6,11 +6,11 @@ import pickle
 
 head = '/home/nick/scattering/tests/timestep_tests/data/'
 
-fig, ax = plt.subplots()
 for root, dirs, files in os.walk(head):
     pwd = root+'/'
     
     try:
+        #plot the absolute error
         x = np.load(pwd+'gridpoints_x.npy')
         y = np.load(pwd+'gridpoints_y.npy')
         snums = np.load(pwd+'sampnums.npy')
@@ -18,29 +18,35 @@ for root, dirs, files in os.walk(head):
         texact = np.load(pwd+'times_'+str(snums[-1])+'.npy')
         #interpolate the exact solution
         print(pwd, len(texact), Uexact.shape)
-        Uinterp = interp1d(texact, Uexact)
-
+        
         for xpt in range(len(x)):
             plt.cla()
             for ypt in range(len(y)):
                 err = np.zeros(len(snums)-1)
                 for s in range(len(snums)-1):
-                    times = np.load(pwd+'times_'+str(snums[s])+'.npy')
-                    U = np.load(pwd+'timetrace_'+str(snums[s])+'.npy')
-                    tval = U[ypt, xpt, :]
-                    err[s] = np.max(np.abs(Uinterp(times)[ypt, xpt, :] - tval))
-                plt.semilogx(snums[:-1], err, '.-', label='y='+str(y[ypt]))
+                    try:
+                        times = np.load(pwd+'times_'+str(snums[s])+'.npy')
+                        U = np.load(pwd+'timetrace_'+str(snums[s])+'.npy')
+                        Uinterp = interp1d(times, U)
+                        err[s] = np.max(np.abs(Uinterp(texact)[ypt, xpt, :] - Uexact[ypt, xpt, :]))
+                    except:
+                        pass
+                plt.loglog(snums[:-1], err, '.-', label='y='+str(y[ypt]))
             plt.title('x='+str(x[xpt]))
             plt.legend()
             plt.xlabel('sample number')
-            plt.ylabel('error')
+            plt.ylabel('absolute error')
             plt.tight_layout()
             plt.savefig(pwd+'convergence_x='+str(x[xpt])+'.png')
+        plt.close('all')
     except Exception as e:
+        pass
         print(pwd)
         print(e)
 
     try:
+        #plot a seismogram of the solution
+        plt.clf()
         x = np.load(pwd+'gridpoints_x.npy')
         y = np.load(pwd+'gridpoints_y.npy')
         snums = np.load(pwd+'sampnums.npy')
@@ -69,11 +75,43 @@ for root, dirs, files in os.walk(head):
                 plt.axis('scaled')
                 plt.tight_layout()
                 plt.savefig(pwd+'timetrace_x='+str(x[xpt])+'_'+str(snums[s])+'.png')
+        plt.close('all')
+    except Exception as e:
+        pass
+        print(e)
+    
+    try:
+        #plot overlays of the solutions 
+        x = np.load(pwd+'gridpoints_x.npy')
+        y = np.load(pwd+'gridpoints_y.npy')
+        snums = np.load(pwd+'sampnums.npy')
+
+        for xpt in range(len(x)):
+            for ypt in range(len(y)):
+                plt.clf()
+                for s in range(len(snums)):
+                    times = np.load(pwd+'times_'+str(snums[s])+'.npy')
+                    U = np.load(pwd+'timetrace_'+str(snums[s])+'.npy')
+                    tval = U[ypt, xpt, :]
+                   
+                    plt.plot(times, tval, label=str(snums[s]))
+                
+                plt.title('(x, y)='+str((x[xpt], y[ypt])))
+               
+                plt.legend(bbox_to_anchor=(1, 1))
+                
+                plt.xlabel('time')
+                plt.ylabel('U_sc')
+                plt.tight_layout()
+                #plt.legend()
+                plt.savefig(pwd+'timetrace_'+str((x[xpt], y[ypt]))+'.png')
+        plt.close('all')
     except Exception as e:
         print(e)
 
     try:
-        plt.cla()
+        #plot the cylinder and receiver locations
+        fig, ax = plt.subplots()
         #reciever locations
         x = np.load(pwd+'gridpoints_x.npy')
         y = np.load(pwd+'gridpoints_y.npy')
@@ -113,7 +151,7 @@ for root, dirs, files in os.walk(head):
         plt.tight_layout()
         plt.axis('scaled')
         plt.savefig(pwd+'cyls.png')
-        plt.cla()
+        plt.close('all')
     except Exception as e:
-        pass
+        print(e)
 

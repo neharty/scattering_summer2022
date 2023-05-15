@@ -37,7 +37,38 @@ for root, dirs, files in os.walk(head):
         plt.close('all')
     except Exception as e:
         pass
-    
+
+    try:
+        x = np.load(pwd+'gridpoints_x_l.npy')
+        y = np.load(pwd+'gridpoints_y_l.npy')
+        times = np.load(pwd+'times_l.npy')
+        U = np.load(pwd+'timetrace_l.npy')
+        print(U.shape)
+
+        x1 = np.load(pwd+'gridpoints_x_l1.npy')
+        y1 = np.load(pwd+'gridpoints_y_l1.npy')
+        times1 = np.load(pwd+'times_l1.npy')
+        U1 = np.load(pwd+'timetrace_l1.npy')
+        print(U1.shape)
+
+        for ypt in range(len(y1)):
+            for xpt in range(len(x1)):
+                plt.clf()
+                tval = U[ypt, xpt, :]
+                tval1 = U1[ypt, xpt, :]
+                plt.plot(times, tval)
+                plt.plot(times1, tval1)
+                
+                plt.title('x='+str(x1[xpt]))
+                plt.xlabel('time')
+                plt.ylabel('U_sc')
+                plt.tight_layout()
+                plt.savefig(pwd+'timetrace_l_x='+str(x1[xpt])+'.png')
+        print('plotted')
+        plt.close('all')
+    except Exception as e:
+        print(e)
+
     try:
         fig, ax = plt.subplots()
         #reciever locations
@@ -82,6 +113,7 @@ for root, dirs, files in os.walk(head):
         plt.close('all')
     except Exception as e:
         print(e)
+
 '''    
     try:
         plt.close('all')

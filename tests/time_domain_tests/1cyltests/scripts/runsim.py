@@ -60,10 +60,11 @@ T = L + 10
 X, Y = np.meshgrid(x, y)
 
 #compute tds
+'''
 td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=True, cpus=cpus)
 print('solving time domain scattering')
 U = td.make_U_sc(X, Y)
-
+'''
 #create file structures
 from datetime import datetime as dt
 tds = dt.now().isoformat()
@@ -74,13 +75,33 @@ if not os.path.exists(datapath):
     os.makedirs(datapath)
 
 #write data out
+'''
 np.save(datapath+'/gridpoints_x.npy', X)
 np.save(datapath+'/gridpoints_y.npy', Y)
 np.save(datapath+'/times.npy', td.times)
 np.save(datapath+'/timetrace.npy', U)
 pickle.dump(cyls, open(datapath+"/cyls.p", "wb"))
 print('wrote small test')
+'''
 
+#calculate the scattered field for a line on x axis
+x = [2, 3, 4, 5]
+x = np.hstack(([-5, -4, -3, -2], x))
+y = [0]
+X, Y = np.meshgrid(x, y)
+td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=False, cpus=cpus, samprate = 0.27)
+
+U = td.make_U_sc(X, Y)
+
+#write out data
+np.save(datapath+'/gridpoints_x_l1.npy', x)
+np.save(datapath+'/gridpoints_y_l1.npy', y)
+np.save(datapath+'/times_l1.npy', td.times)
+np.save(datapath+'/timetrace_l1.npy', U)
+pickle.dump(cyls, open(datapath+"/cyls_l1.p", "wb"))
+print('wrote line test')
+
+'''
 #calculate the total field 
 grid = np.linspace(-5, 5, num = 100)
 X, Y = np.meshgrid(grid, grid)
@@ -95,4 +116,4 @@ np.save(datapath+'/times_tf.npy', td.times)
 np.save(datapath+'/totalfield.npy', U)
 pickle.dump(cyls, open(datapath+"/cyls_tf.p", "wb"))
 print('wrote large test')
-
+'''
