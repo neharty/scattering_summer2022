@@ -4,7 +4,7 @@ from utils import example_setups
 import matplotlib.pyplot as plt
 from Ncyl.tds import cyl, scattering
 
-def plot_cyls(cyls, fname = None):
+def plot_cyls(cyls):
     fig, ax = plt.subplots()
     pos = np.array([cyls[i].get_pos() for i in range(len(cyls))])
     angs = np.linspace(0, 2*np.pi, num = 20)
@@ -31,13 +31,19 @@ def plot_cyls(cyls, fname = None):
     plt.title('cylinder positions and boundary conditions')
     plt.xlabel('x')
     plt.ylabel('y')
+    plt.axis('scaled')
     plt.tight_layout()
-    if fname is None:
-        plt.show()
-    else:
-        plt.savefig(fname)
+    
+    return fig, ax
+    #if fname is None:
+    #    plt.show()
+    #else:
+    #    plt.savefig(fname)
 
-cyls = example_setups.all_random_hexagon(10, ['d', 'n', 'i'], 1, 3, impedance=1)
-plot_cyls(cyls, 'testplot.png')
+L = 5
+np.random.seed(12345)
+cyls = example_setups.random_pos(-L, L, -L, L, 9, 'd', 1, 2.5)
+fig, ax = plot_cyls(cyls)
+plt.show()
 
 

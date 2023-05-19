@@ -15,7 +15,7 @@ d = 3
 bc = parser.parse_args().bc
 ftol = parser.parse_args().ftol
 
-head = '/home/nick/scattering/tests/datafiles_ringing/k_cutoff' 
+head = '/home/nick/scattering/data/ringing/k_cutoff' 
 #replace with file location starting at /
 
 if bc == 'd':
@@ -56,9 +56,9 @@ wvfstr = 'gaussian_deriv'
 freq_shift = 0
 
 #calculate time traces around the grid of cylinders
-y = np.linspace(ymin - M/4, ymax + M/4, num = 10)
+y = np.linspace(ymin - M/4, ymax + M/4, num = 11)
 x = [xmin - L, xmin - 1, xmax + 1, xmax + L]
-T = L + 10
+#T = 5*(5 + 2*L)
 X, Y = np.meshgrid(x, y)
 
 #create file structures
@@ -70,60 +70,31 @@ datapath = head + '/' + bc
 if not os.path.exists(datapath):
     os.makedirs(datapath)
 
+outpath = datapath+'/'+str(ftol)
+if not os.path.exists(outpath):
+    os.makedirs(outpath)
+
 #write data out
-np.save(datapath+'/gridpoints_x.npy', x)
-np.save(datapath+'/gridpoints_y.npy', y)
-pickle.dump(cyls, open(datapath+"/cyls.p", "wb"))
+np.save(outpath+'/gridpoints_x.npy', x)
+np.save(outpath+'/gridpoints_y.npy', y)
+pickle.dump(cyls, open(outpath+"/cyls.p", "wb"))
 
-'''
-epsarr = [1e-12, 1e-11, 1e-10]
-for eps in epsarr:
-    #compute tds
-    td = time_domain_scattering(
-        cyls, 
-        inpwv, 
-        T, 
-        sampnum1T = 2048,  
-        use_par=True,
-        fft_tol=eps
-        )
-    
-    print('solving time domain scattering')
-    U = td.make_U_sc_full(X, Y)
-    print('done with time domain scattering')
-
-    outpath = datapath+'/'+str(eps)
-    if not os.path.exists(outpath):
-        os.makedirs(outpath)
-
-    for xpt in range(len(x)):
-        for ypt in range(len(y)):
-            arr = [[td.times_full[i], U[ypt, xpt, i]] for i in range(len(td.times_full))]
-            np.savetxt(
-                outpath+'/'+str(x[xpt])+'_'+'{:.3f}'.format(y[ypt])+'_times.dat', 
-                arr
-                )
-'''
 td = time_domain_scattering(
     cyls, 
     inpwv, 
-    T, 
-    sampnum1T = 2048,  
+    100, 
+    sampnum = 2048,  
     use_par=True,
     fft_tol=ftol
     )
 
 print('solving time domain scattering')
-U = td.make_U_sc_full(X, Y)
+U = td.make_U_sc(X, Y)
 print('done with time domain scattering')
-
-outpath = datapath+'/'+str(ftol)
-if not os.path.exists(outpath):
-    os.makedirs(outpath)
 
 for xpt in range(len(x)):
     for ypt in range(len(y)):
-        arr = [[td.times_full[i], U[ypt, xpt, i]] for i in range(len(td.times_full))]
+        arr = [[td.times[i], U[ypt, xpt, i]] for i in range(len(td.times))]
         np.savetxt(
             outpath+'/'+str(x[xpt])+'_'+'{:.3f}'.format(y[ypt])+'_times.dat', 
             arr
