@@ -207,6 +207,8 @@ class scattering(cyl):
             self.rhs = self.make_rhs_vector()
         else:
             self.scat_mat = None
+        
+        self.u_sc = None
 
     def get_wavenumber(self):
         return self.k
@@ -531,15 +533,17 @@ class scattering(cyl):
         for l in self.__labels:
                 u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
         '''
+        self.u_sc = u_sc*self.mask(x,y)
+        return self.u_sc
 
-        return u_sc*self.mask(x,y)
-    
     def make_u_sc_parallel(self, x, y, queue):
         queue.put(self.make_u_sc(x, y))
 
     def make_u(self, x, y):
         r, theta = self.cart_to_polar([x,y])
         u_inc = np.exp(1j*self.k*r*np.cos(theta - self.inc_angle))
+        if self.u_sc is None:
+            self.make_u_sc(x, y)
         return (u_inc+self.make_u_sc(x, y))*self.mask(x,y)
     
     def mask(self, x, y):
