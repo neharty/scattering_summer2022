@@ -116,6 +116,10 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
 
     return cyls
 
+def rectangular_lattice_1bc(Nx, Ny, bc, radius, xspace, yspace, sum_num=None, impedance = None, center = None):
+    bcs = [bc for n in range(Nx)]
+    return rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center = None)
+
 def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center=None):
     cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
     cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
