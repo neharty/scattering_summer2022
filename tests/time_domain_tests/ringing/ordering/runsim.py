@@ -9,6 +9,7 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument('bc', help='boundary condition')
 parser.add_argument('d', help = 'distance', type=float)
+parser.add_argument('T', help = 'end time', type=int)
 
 width = 0.2
 d = parser.parse_args().d
@@ -48,7 +49,7 @@ freq_shift = 0
 #calculate time traces around the grid of cylinders
 y = np.linspace(-L - M/4, L + M/4, num = 11)
 x = [-L - L, -L - 1, L + 1, L + L]
-T = 400
+T = parser.parse_args().T
 X, Y = np.meshgrid(x, y)
 
 #create file structures
@@ -59,7 +60,7 @@ tds = dt.now().isoformat()
 datapath = head + '/' + bc
 if not os.path.exists(datapath):
     os.makedirs(datapath)
-outpath = datapath+'/'+str(d)
+outpath = datapath+'/'+str(d) + '/' + str(T)
 if not os.path.exists(outpath):
     os.makedirs(outpath)
 
@@ -68,11 +69,13 @@ np.save(outpath+'/gridpoints_x.npy', x)
 np.save(outpath+'/gridpoints_y.npy', y)
 pickle.dump(cyls, open(outpath+"/cyls.p", "wb"))
 
+sampnum = int((T/100)*(2**13))
+
 td = time_domain_scattering(
     cyls, 
     inpwv, 
     T, 
-    sampnum = 65536, 
+    sampnum = sampnum, 
     use_par=True
     )
 

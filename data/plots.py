@@ -47,7 +47,7 @@ for root, dirs, files in os.walk(head):
         plt.ylabel('y')
         plt.tight_layout()
         plt.axis('scaled')
-        plt.savefig(pwd+'cyls.png')
+        plt.savefig(pwd+'cyls.pdf')
         plt.cla()
     except Exception as e:
         pass

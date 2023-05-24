@@ -161,14 +161,20 @@ class scattering(cyl):
                 if self.cyls[l].sum_index == None:
                     ka = self.k*self.cyls[l].radius
                     try:
+                        '''
                         if ka < 1e-3:
                             self.cyls[l].sum_index = max(self.lowfreq_modes(self.k, self.cyls[l].radius),
                                                          self.modes(self.k, self.cyls[l].radius))
                             #force use explicit solver, not gmres
                             self.method = 'explicit'
                         else:
-                            self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)
-                    except:
+                            self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)            
+                        '''
+                        self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)
+                        if ka < 1e-2:
+                            self.method = 'explicit'
+                    except Exception as e:
+                        print(e)
                         print('ka = ', ka)
                         print('setting cylinder sum index to 0, this may cause unexpected behavior')
                         self.cyls[l].sum_index = 0
@@ -283,13 +289,22 @@ class scattering(cyl):
         #cyl = incident circle
         return self.jh(cyl, m)*self.S(n, m, b)
     
-    def modes(self, k, a):
+    def highfreq_modes(self, k, a):
         ka = k*a
         return int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
 
     def lowfreq_modes(self, k, a):
         ka = k*a
-        return int(np.floor(np.log(self.sum_tol/np.pi)/np.log(ka/2) +1))
+        if ka >= 1:
+            return 0
+        else:
+            return int(np.floor((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1))
+    
+    def modes(self, k, a):
+        ka = k*a
+        alpha = 1
+        interp = lambda x : 0.5 + 0.5*np.tanh((x - 1e-2)/alpha)
+        return int((1-interp(ka))*self.lowfreq_modes(k, a) + interp(ka)*self.highfreq_modes(k, a))
 
     def make_dist_matrix(self):
         self.dist_matrix = np.zeros((len(self.cyls), len(self.cyls)))

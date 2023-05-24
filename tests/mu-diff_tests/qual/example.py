@@ -20,7 +20,7 @@ plt.ylabel('y')
 plt.title('example of total field solution')
 plt.colorbar(im)
 plt.axis('scaled')
-plt.savefig('/home/nick/School/NJIT/research/qual_talk/example_u.png')
+plt.savefig('/home/nick/School/NJIT/research/qual_talk/example_u.pdf')
 
 
 

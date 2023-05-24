@@ -12,7 +12,7 @@ ypts = pts[1]
 X, Y = np.meshgrid(xpts, ypts)
 N = np.arange(21)
 for n in N:
-    sc = scattering(cyls, freq=1/(2*np.pi)**2, sum_index=n)
+    sc = scattering(cyls, freq=1/(2*np.pi)**2, sum_index=n, method='explicit')
     u = sc.make_u_sc(X, Y)
     outpath = rootdir+'data/mydat/'+str(n)
     if not os.path.exists(outpath):
