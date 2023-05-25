@@ -50,7 +50,8 @@ sc = scattering(cyls, freq=args.f, inc_angle=incang)
 #u_t = self.make_u(X, Y)
 
 #write out results
-dname = os.path.join('/home/n/nh287/scattering/data/periodic_tests', args.bc, str(args.inc))
+#dname = os.path.join('/home/n/nh287/scattering/data/periodic_tests', args.bc, str(args.inc))
+dname = os.path.join('/home/nick/scattering/data/periodic_tests', args.bc, str(args.inc))
 if not os.path.exists(dname):
     os.makedirs(dname)
 
