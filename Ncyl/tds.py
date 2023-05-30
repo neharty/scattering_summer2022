@@ -293,19 +293,20 @@ class scattering(cyl):
     
     def highfreq_modes(self, k, a):
         ka = k*a
-        return int(ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
+        return (ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
 
     def lowfreq_modes(self, k, a):
         ka = k*a
-        if ka >= 1:
+        if ka >= 1.5:
             return 0
         else:
-            return int(np.floor((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1))
+            return (((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1))
     
     def modes(self, k, a):
         ka = k*a
-        alpha = 1
-        interp = lambda x : 0.5 + 0.5*np.tanh((x - 1e-2)/alpha)
+        alpha = 0.5
+        interp = lambda x : 0.5 + 0.5*np.tanh((x - 0.1)/alpha)
+        #interp = lambda x : 1/(1 + np.exp(-(x-1e-1)/alpha))
         return int((1-interp(ka))*self.lowfreq_modes(k, a) + interp(ka)*self.highfreq_modes(k, a))
 
     def make_dist_matrix(self):

@@ -72,32 +72,12 @@ class hbs(preconditioner):
                     m, n = tmpmat.shape
                     Utmp, Stmp, Vtmp = svd(tmpmat)
                     V[0] = Vtmp.conj().T[:, :epsrank]
-                    '''
-                    Atildecol = Utmp @ diagsvd(Stmp, m, n)
-                    for i in range(1, rows):
-                        
-                        tmpmat = Atildecol[(i-1)*rlen:i*rlen, :]
-                        Atilde[i][j] = tmpmat[:epsrank, :epsrank]
-                        
-                        Atilde[i][j] = U[i].conj().T @ A_b[i][j] @ V[j]
-                    Atilde[j][j] = np.zeros((epsrank, epsrank))
-                    '''
                 elif j == cols-1:
                     #compute V[-1] 
                     tmpmat = AVblk[:j*rlen, (j-1)*clen:]
                     m, n = tmpmat.shape
                     Utmp, Stmp, Vtmp = svd(tmpmat)
                     V[-1] = Vtmp.conj().T[:, :epsrank]
-                    '''
-                    Atildecol = Utmp @ diagsvd(Stmp, m, n)
-                    for i in range(rows-1):
-                        
-                        tmpmat = Atildecol[i*rlen:(i+1)*rlen, :]
-                        Atilde[i][j] = tmpmat[:epsrank, :epsrank]
-                        
-                        Atilde[i][j] =  U[i].conj().T @ A_b[i][j] @ V[j]
-                    Atilde[j][j] = np.zeros((epsrank, epsrank))
-                    '''
                 else:
                     #compute V[j]
                     #note, this assumes all blocks are the same size
@@ -109,33 +89,7 @@ class hbs(preconditioner):
                     Utmp, Stmp, Vtmp = svd(tmpmat)
                     Atildecol = Utmp @ diagsvd(Stmp, m, n)
                     V[j] = Vtmp.conj().T[:, :epsrank]
-                    '''
-                    for i in range(j):
-                        
-                        tmpmat = Atildecol[i*rlen:(i+1)*rlen, :]
-                        Atilde[i][j] = tmpmat[:epsrank, :epsrank]
-                        
-                        Atilde[i][j] =  U[i].conj().T @ A_b[i][j] @ V[j]
-                    Atilde[j][j] = np.zeros((epsrank, epsrank))
-                    for i in range(j+1, rows):
-                        
-                        tmpmat = Atildecol[(i-2)*rlen:(i-1)*rlen, :]
-                        Atilde[i][j] = tmpmat[:epsrank, :epsrank]
-                        
-                        Atilde[i][j] = U[i].conj().T @ A_b[i][j] @ V[j]
-                    '''
-            '''
-            D = [None for i in range(rows)]
-            for i in range(rows):
-                D[i] = A_b[i][i]
-            
-            for i in range(rows):
-                #for j in range(cols):
-                #    if Atilde[i][j] is None:
-                #        print(i, j)
-                print([Atilde[i][j].shape for j in range(cols)])
-            '''
-
+        
         if self.method == 'old':
             print('old method')
             A_bH = [[None for i in range(rows)] for j in range(cols)]
@@ -168,7 +122,6 @@ class hbs(preconditioner):
     
     def construct_Ainv_matrices(self, U, V, D):
         Dinv = np.linalg.inv(D)
-        #plt.spy(V.conj().T @ Dinv @ U)
         #plt.show()
         Dhat = np.linalg.inv(V.conj().T @ Dinv @ U)
         #Dhat = U.conj().T @ D @ V
@@ -183,8 +136,6 @@ class hbs(preconditioner):
         
         U = block_diag(*U)
         V = block_diag(*V)
-        #print(np.allclose(V.conj().T @ V, np.eye((V.conj().T @ V).shape[0])))
-
         D = block_diag(*D)
 
         E, F, Dhat, G = self.construct_Ainv_matrices(U, V, D)
@@ -192,7 +143,8 @@ class hbs(preconditioner):
         if l == 1:
             Atilde = np.block(Atilde)
             return E @ np.linalg.inv(Atilde + Dhat) @ F + G
-
+        
+        #recursive step
         Atmp = self.reblock_blockform(Atilde)
         #print(Atmp.shape)
         rows = len(Atmp)
@@ -251,43 +203,44 @@ class antoine(preconditioner):
         return 2*np.eye(matdim) - self.mat
 
 class neumann_lowrank(preconditioner):
-    def __init__(self, sc, tol = 1e-8, neumann_terms=2):
+    def __init__(self, sc, method='svd', tol = 1e-8, neumann_terms=2):
         super().__init__(sc)
         self.mat_block = self.sc.make_scattering_blocks_blockform()
         self.dist_mat = self.sc.dist_matrix
         self.dist = self.sc.precond_dist
         self.tol = tol
         self.neumann_terms = neumann_terms
+        self.method = method
         self.inv_mat = self.make_precond_matrix()
 
     def low_rank_factorization(self, blk):
-        #returns low rank factorization of a matrix, given a tolerance, using the SVD
-        #TODO upgrade to QR factorization
-        '''
-        epsrank = np.argmin(np.abs(svdvals(blk) - self.tol)) + 1
-        U, S, Vh = svd(blk)
-        return U[:, :epsrank] @ np.diag(S[:epsrank]) @ Vh[:epsrank, :]
-        '''
+        #returns low rank factorization of a matrix, given a tolerance
+        if self.method == 'svd':
+            epsrank = np.argmin(np.abs(svdvals(blk) - self.tol)) + 1
+            U, S, Vh = svd(blk)
+            return U[:, :epsrank] @ np.diag(S[:epsrank]) @ Vh[:epsrank, :]
+        
         #Randomized QR factorization
-        m, n = blk.shape
+        if self.method=='qr':
+            m, n = blk.shape
 
-        #do once for initialization
-        R = np.random.normal(size=(n, 1))
-        Q, R = qr(blk@R)
-        B = np.conjugate(Q.T) @ blk
-        blk = blk - Q @ B
+            #do once for initialization
+            R = np.random.normal(size=(n, 1))
+            Q, R = qr(blk@R)
+            B = np.conjugate(Q.T) @ blk
+            blk = blk - Q @ B
 
-        while np.linalg.norm(blk) > self.tol:
-            R = np.random.normal(size=(n, l))
-            Qnew, R = qr(blk@R)
-            Bnew = np.conjugate(Qnew.T) @ blk
-            Qtmp = np.vstack((Q.T, Qnew.T))
-            Q = Qtmp.T
-            B = np.vstack((B, Bnew))
-            blk = blk - Qnew @ Bnew
+            while np.linalg.norm(blk) > self.tol:
+                R = np.random.normal(size=(n, l))
+                Qnew, R = qr(blk@R)
+                Bnew = np.conjugate(Qnew.T) @ blk
+                Qtmp = np.vstack((Q.T, Qnew.T))
+                Q = Qtmp.T
+                B = np.vstack((B, Bnew))
+                blk = blk - Qnew @ Bnew
 
-        return Q@B
-
+            return Q@B
+    
     def neumann_series(self, A, N):
         B = np.eye(*A.shape, dtype=A.dtype)
         for i in range(1, N):
@@ -311,3 +264,5 @@ class neumann_lowrank(preconditioner):
         #return self.neumann_series(self.mat, self.neumann_terms)
         return 2*np.eye(matdim) - self.mat
 
+class ifmm(preconditioner):
+    pass
