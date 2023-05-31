@@ -118,6 +118,7 @@ class scattering(cyl):
             make_scat_matrix = False,
             use_mat = False,
             method = 'gmres',
+            force_method = False,
             gmres_restart = None,
             gmres_maxiter = None,
             fast_matrix_build = True
@@ -140,6 +141,7 @@ class scattering(cyl):
         self.gmres_restart = gmres_restart
         self.gmres_maxiter = gmres_maxiter
         self.method = method
+        self.force_method = force_method
         self.use_mat = use_mat
         self.fast_matrix_build = fast_matrix_build
 
@@ -172,7 +174,8 @@ class scattering(cyl):
                         '''
                         self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)
                         if ka < 1e-2:
-                            self.method = 'explicit'
+                            if not self.force_method:
+                                self.method = 'explicit'
                     except Exception as e:
                         print(e)
                         print('ka = ', ka)
@@ -293,14 +296,14 @@ class scattering(cyl):
     
     def highfreq_modes(self, k, a):
         ka = k*a
-        return (ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1)
+        return ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1
 
     def lowfreq_modes(self, k, a):
         ka = k*a
         if ka >= 1.5:
             return 0
         else:
-            return (((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1))
+            return ((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1)
     
     def modes(self, k, a):
         ka = k*a
@@ -574,7 +577,6 @@ class time_domain_scattering(scattering):
                  fft_tol = 1e-10,
                  freq_shift = 0,
                  sampnum = None,
-                 timeextend = 4,
                  use_par = True,
                  cpus = None,
                  wvargs={},
@@ -605,7 +607,7 @@ class time_domain_scattering(scattering):
     def ft_coeffs(self):
         #fft to get the cutoff frequency
         if self.sampnum is None:
-            self.sampnum = 64 #default
+            self.sampnum = 2048 #default
             self.sampnum = self.M*self.sampnum1T
             tmptimes = np.linspace(0, self.end_time, endpoint=False, num=self.sampnum)
             tmpsig = self.wvp(tmptimes - self.end_time/2)
@@ -644,7 +646,7 @@ class time_domain_scattering(scattering):
             pass
 
         #apply fft with shift in frequency values
-        self.sig_fft = self.ft(np.exp(1j*2*np.pi*self.freq_shift*self.times)*tmpsig)
+        self.sig_fft = self.ft(np.exp(1j*2*np.pi*self.freq_shift*np.arange(self.N)/self.N)*tmpsig)
         
         #shift to correct start time
         t0 = self.waveform.time_shift
@@ -652,7 +654,8 @@ class time_domain_scattering(scattering):
         self.sig_fft *= np.exp(1j*2*np.pi*fftfreq(self.N, d=self.dt)*tshift)
 
         #zero out component with no conjugate
-        self.sig_fft[self.N//2] = 0
+        if self.freq_shift == 0:
+            self.sig_fft[self.N//2] = 0
 
     def make_time_harmonic_soln(self, x, y):
         self.ft_coeffs()
@@ -682,10 +685,10 @@ class time_domain_scattering(scattering):
             p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :], y[:, :], q[i])) for i in fbrange])
             [p[i].start() for i in fbrange]
             for i in fbrange:
-                if self.freq_shift == 0:
-                    self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
-                else:
-                    self.u_sc[:, :, a+i] = self.sig_fft[a+i]*q[i].get()
+                #if self.freq_shift == 0:
+                self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
+                #else:
+                #    self.u_sc[:, :, a+i] = self.sig_fft[a+i]*q[i].get()
 
             [p[i].join() for i in fbrange]
 
@@ -703,26 +706,26 @@ class time_domain_scattering(scattering):
             for i in flen:
                 f = self.fft_freqs[i]
                 sc = scattering(self.cyls, freq=f)
-                if self.freq_shift == 0:
-                    self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
-                else:
-                    self.u_sc[:, :, i] = self.sig_fft[i]*sc.make_u_sc(x[:, :], y[:, :])
+                #if self.freq_shift == 0:
+                self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
+                #else:
+                #    self.u_sc[:, :, i] = self.sig_fft[i]*sc.make_u_sc(x[:, :], y[:, :])
         
         #copy solutions as conjugates for negative frequency components
         for n in range((self.N)//2):
-            if self.freq_shift == 0:
-                self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
+            #if self.freq_shift == 0:
+            self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
 
         return self.u_sc
     
     def make_U_sc(self, x, y):
         self.make_time_harmonic_soln(x, y)
-         
+        
+        #apply freq shift
+        #self.u_sc *= np.exp(-1j*2*np.pi*self.freq_shift*fftshift(fftfreq(self.N, d=self.dt)))
+
         #FT back to time domain
         self.U_sc = self.ift(self.u_sc)
-
-        #apply freq shift
-        self.U_sc *= np.exp(-1j*2*np.pi*self.freq_shift*self.times)
 
         return np.real(self.U_sc)
 

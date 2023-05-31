@@ -35,7 +35,7 @@ class hbs(preconditioner):
                 else:
                     epsrank[i, j] = 0
         epsrank = int(np.amax(epsrank))
-        print(epsrank)
+        #print(epsrank)
 
         rows, cols = len(A_b), len(A_b[0])
         
@@ -59,7 +59,7 @@ class hbs(preconditioner):
             AVblk[i] = (X_i @ Y_i)
     
         if self.method == 'new':
-            print('new method')
+            #print('new method')
             AVblk = np.vstack(AVblk)
 
             for j in range(cols):

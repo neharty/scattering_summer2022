@@ -43,10 +43,11 @@ x = np.hstack(([-5, -4, -3, -2], x))
 y = [0]
 X, Y = np.meshgrid(x, y)
 T = 10
-td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=True, sampnum1T=2048)
+td = time_domain_scattering(cyls, inpwv, T, freq_shift=freq_shift, use_par=True, sampnum=2048)
 
 U = td.make_U_sc(X, Y)
 
+#write computed field
 for xpt in range(len(x)):
     for ypt in range(len(y)):
         arr = [[td.times[i], U[ypt, xpt, i]] for i in range(len(td.times))]
@@ -54,4 +55,14 @@ for xpt in range(len(x)):
             outpath+'/'+str(x[xpt])+'_'+'{:.3f}'.format(y[ypt])+'_field.dat', 
             arr
             )
+
+#write exact field
+for xpt in range(len(x)):
+    for ypt in range(len(y)):
+        arr = [[td.times[i], -inpwv.profile(2 - x[xpt] + td.times[i])/(abs(x[xpt])+1)] for i in range(len(td.times))]
+        np.savetxt(
+            outpath+'/'+str(x[xpt])+'_'+'{:.3f}'.format(y[ypt])+'_field_exact.dat',
+            arr
+            )
+
 

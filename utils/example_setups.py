@@ -235,7 +235,7 @@ def vol_frac_hexagon():
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')
-    pos = np.loadtxt('/home/nicholas/scattering/utils/fig17_points.csv', delimiter=',')
+    pos = np.loadtxt('/home/nick/scattering/utils/fig17_points.csv', delimiter=',')
     cyls = [None for i in range(len(pos))]
     for i in range(len(pos)):
         cyls[i] = cyl(bc, pos[i], radius, sum_index=sum_num, impedance=impedance)
