@@ -20,14 +20,19 @@ args = parser.parse_args()
 
 #circles are a periodic grid
 cyls = example_setups.rectangular_lattice_1bc(args.Nx, args.Ny, args.bc, 1, 3, 3)
+ctr = 0
+for c in cyls:
+    c.label = ctr
+    ctr += 1
 
 #remove circles
 nr = args.Nrem
 random.seed(12345)
 if nr > 0:
     rlst = random.sample(range(args.Nx*args.Ny), nr)
-    for r in rlst:
-        del cyls[r]
+    for c in cyls:
+        if c.label in rlst:
+            del c
 
 #compute the reciever locations
 cpos = np.array([c.pos for c in cyls])
@@ -85,12 +90,12 @@ for x in range(len(xarr)):
     for y in range(len(yarr)):
         arr = [[ks[i], uarr[i][y, x].imag] for i in range(len(ks))]
         np.savetxt(
-            os.path.join(dname, str(xarr[x])+'_'+'{:.3f}'.format(yarr[y])+'_u_sc_r.dat'),
+            os.path.join(dname, '{:.3f}'.format(xarr[x])+'_'+'{:.3f}'.format(yarr[y])+'_u_sc_i.dat'),
             arr)
 
         arr = [[ks[i], uarr[i][y, x].real] for i in range(len(ks))]
         np.savetxt(
-            os.path.join(dname, str(xarr[x])+'_'+'{:.3f}'.format(yarr[y])+'_u_sc_r.dat'),
+            os.path.join(dname, '{:.3f}'.format(xarr[x])+'_'+'{:.3f}'.format(yarr[y])+'_u_sc_r.dat'),
             arr)
 
 '''

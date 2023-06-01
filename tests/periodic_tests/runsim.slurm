@@ -1,7 +1,7 @@
 #!/bin/bash -l
+#SBATCH --array=0-49
 #SBATCH --partition=dms-cpu
 #SBATCH --mem=16GB
-#SBATCH --ntasks=1
 #SBATCH --sockets-per-node=1
 #SBATCH --cores-per-socket=6
 #SBATCH --threads-per-core=1
@@ -13,4 +13,4 @@
 #SBATCH -e /home/n/nh287/scattering/tests/periodic_tests/logs/%j.out
 #SBATCH --open-mode=append
 
-python3 -u /home/n/nh287/scattering/tests/periodic_tests/runsim.py ${NX} ${NY} ${NR} ${INC} ${BC} 10
+python3 -u /home/n/nh287/scattering/tests/periodic_tests/runsim.py ${NX} ${NY} ${SLURM_ARRAY_TASK_ID} ${INC} ${BC} 10

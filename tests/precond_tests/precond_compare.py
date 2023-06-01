@@ -7,10 +7,10 @@ from copy import copy
 
 np.set_printoptions(threshold=sys.maxsize)
 
-N = 6
+#N = 4
 #np.random.seed(1234)
 #cyls = example_setups.random_hexagon(N, 'd', 1, 3)
-f = np.logspace(-3, 2.5, num=10)
+f = np.logspace(-3, 2, num=10)
 freqs = f/(2*np.pi)
 iters = np.zeros((len(freqs), 4))
 mvps = np.zeros((len(freqs), 4))
@@ -77,9 +77,8 @@ for i in range(len(freqs)):
     del sc
     del cyls
 
-arr = [[f[i], *iters[i, :]] for i in range(len(f))]
-print(arr)
-np.savetxt('iters_v_ka.dat', arr)
+    arr = [[f[i], *iters[i, :]] for i in range(len(f))]
+    np.savetxt('/home/n/nh287/scattering/tests/precond_tests/iters_v_ka.dat', arr)
 
-arr = [[f[i], *mvps[i, :]] for i in range(len(f))]
-np.savetxt('mvps_v_ka.dat', arr)
+    arr = [[f[i], *mvps[i, :]] for i in range(len(f))]
+    np.savetxt('/home/n/nh287/scattering/tests/precond_tests/mvps_v_ka.dat', arr)
