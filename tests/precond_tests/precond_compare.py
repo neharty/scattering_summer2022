@@ -10,75 +10,51 @@ np.set_printoptions(threshold=sys.maxsize)
 #N = 4
 #np.random.seed(1234)
 #cyls = example_setups.random_hexagon(N, 'd', 1, 3)
-f = np.logspace(-3, 2, num=10)
+f = np.logspace(-4, 0, num=10)
 freqs = f/(2*np.pi)
-iters = np.zeros((len(freqs), 4))
-mvps = np.zeros((len(freqs), 4))
-
+hbsiters = np.zeros(len(freqs))
+noniters = np.zeros(len(freqs))
+pargs = {'tol':1e-8, 'level':1, 'method':'old'}
+N = 7
 for i in range(len(freqs)): 
-    #unpreconditioned
-    cyls = example_setups.fig17_pos('d', 1)
-    sc = scattering(
-        cyls, 
-        freq=freqs[i], 
-        force_method=True, 
-        method='gmres'
-        )
-    sc.scattering_coeffs()
-    iters[i, 0] = sc.iter
-    mvps[i, 0] = sc.mvp_counter
-    del sc
-    del cyls
-
     #check hbs
-    cyls = example_setups.fig17_pos('d', 1)
+    #cyls = example_setups.fig17_pos('d', 1, clusterdir=False)
+    cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
     sc = scattering(
         cyls, 
         freq=freqs[i], 
         force_method=True, 
         precond=preconditioner.hbs, 
-        method='gmres'
+        pargs = pargs,
+        method='gmres',
+        use_2cyl_modes=False
         )
     sc.scattering_coeffs()
-    iters[i, 1] = sc.iter
-    mvps[i, 1] = sc.mvp_counter
+    hbsiters[i] = sc.iter
+    print(sc.iter)
     del sc
     del cyls
 
-    #check antoine
-    cyls = example_setups.fig17_pos('d', 1)
+    arr = [[f[i], hbsiters[i]] for i in range(len(f))]
+    np.savetxt('/home/nick/scattering/tests/precond_tests/iters_v_ka_hbs_lowfreq.dat', arr)
+
+    #unpreconditioned
+    #cyls = example_setups.fig17_pos('d', 1, clusterdir=False)
+    cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
     sc = scattering(
         cyls, 
         freq=freqs[i], 
         force_method=True, 
         method='gmres',
-        precond=preconditioner.antoine,
-        precond_dist=4.5
+        use_2cyl_modes=False
         )
     sc.scattering_coeffs()
-    iters[i, 2] = sc.iter
-    mvps[i, 2] = sc.mvp_counter
+    noniters[i] = sc.iter
+    print(sc.iter)
     del sc
     del cyls
 
-    #check lowrank
-    cyls = example_setups.fig17_pos('d', 1)
-    sc = scattering(
-        cyls, 
-        freq=freqs[i], 
-        force_method=True, 
-        method='gmres',
-        precond=preconditioner.neumann_lowrank,
-        precond_dist=4.5
-        )
-    sc.scattering_coeffs()
-    iters[i, 3] = sc.iter
-    mvps[i, 3] = sc.mvp_counter
-    del sc
-    del cyls
+    arr = [[f[i], noniters[i]] for i in range(len(f))]
+    np.savetxt('/home/nick/scattering/tests/precond_tests/iters_v_ka_none_lowfreq.dat', arr)
 
-    arr = [[f[i], *iters[i, :]] for i in range(len(f))]
-    np.savetxt('/home/n/nh287/scattering/tests/precond_tests/iters_v_ka.dat', arr)
 
-    arr = [[f[i], *mvps[i, :]] for i in range(len(f))]
-    np.savetxt('/home/n/nh287/scattering/tests/precond_tests/mvps_v_ka.dat', arr)

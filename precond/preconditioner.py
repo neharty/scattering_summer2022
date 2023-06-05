@@ -13,7 +13,7 @@ class preconditioner():
         self.inv_mat = None
 
 class hbs(preconditioner):
-    def __init__(self, sc, tol = 1e-8, level = 1, method='new'):
+    def __init__(self, sc, tol = 1e-8, level = 1, method='old'):
         super().__init__(sc)
         self.mat_block = self.sc.make_scattering_blocks_blockform()
         self.dist_mat = sc.dist_matrix
@@ -34,7 +34,7 @@ class hbs(preconditioner):
                     epsrank[i, j] = len(svdvect[svdvect > self.tol])
                 else:
                     epsrank[i, j] = 0
-        epsrank = int(np.amax(epsrank))
+        epsrank = int(np.amax(epsrank)) + 1
         #print(epsrank)
 
         rows, cols = len(A_b), len(A_b[0])
@@ -121,6 +121,7 @@ class hbs(preconditioner):
         return U, Atilde, V, D
     
     def construct_Ainv_matrices(self, U, V, D):
+        
         Dinv = np.linalg.inv(D)
         #plt.show()
         Dhat = np.linalg.inv(V.conj().T @ Dinv @ U)
@@ -128,6 +129,7 @@ class hbs(preconditioner):
         E = Dinv @ U @ Dhat
         F = Dhat @ V.conj().T @ Dinv
         G = Dinv - (Dinv @ U @ Dhat @ V.conj().T @ Dinv)
+        
         return E, F, Dhat, G
 
     def construct_Ainv(self, A_b, l):

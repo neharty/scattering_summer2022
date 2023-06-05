@@ -233,10 +233,12 @@ def vol_frac_allrandom(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxt
 def vol_frac_hexagon():
     pass
 
-def fig17_pos(bc, radius, sum_num=None, impedance=None):
+def fig17_pos(bc, radius, sum_num=None, impedance=None, clusterdir=True):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')
-    #pos = np.loadtxt('/home/nick/scattering/utils/fig17_points.csv', delimiter=',')
-    pos = np.loadtxt('/home/n/nh287/scattering/utils/fig17_points.csv', delimiter=',')
+    if clusterdir:
+        pos = np.loadtxt('/home/n/nh287/scattering/utils/fig17_points.csv', delimiter=',')
+    else:
+        pos = np.loadtxt('/home/nick/scattering/utils/fig17_points.csv', delimiter=',')
     cyls = [None for i in range(len(pos))]
     for i in range(len(pos)):
         cyls[i] = cyl(bc, pos[i], radius, sum_index=sum_num, impedance=impedance)

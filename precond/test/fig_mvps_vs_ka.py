@@ -9,19 +9,19 @@ try:
         print('dirichlet_x.npy not found')
     
     try:
-        mvp = np.load('data/newhbs_mvps_vs_ka_dirichlet_y.npy')
+        mvp = np.load('data/mvps_vs_ka_dirichlet_y.npy')
     except:
         print('dirichlet_y.npy not found')
     
     for i in range(3):            
         if i == 0:
-            plt.plot(ka, mvp[i,:], '-^', label='no precond')
+            plt.semilogx(ka, mvp[i,:], '-^', label='no precond')
         if i == 1:
-            plt.plot(ka, mvp[i,:], '-*', label='antoine') 
+            plt.semilogx(ka, mvp[i,:], '-*', label='antoine') 
         if i == 2:
-            plt.plot(ka, mvp[i,:], '.-', label='hbs')
+            plt.semilogx(ka, mvp[i,:], '.-', label='hbs')
         if i == 3:
-            plt.plot(ka, mvp[i,:], '-x', label='neumann_lowrank')
+            plt.semilogx(ka, mvp[i,:], '-x', label='neumann_lowrank')
 
     plt.xlabel('ka')
     plt.ylabel('MVP')

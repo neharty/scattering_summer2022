@@ -98,6 +98,76 @@ class scattering(cyl):
 
     Attributes
     ----------
+    
+    sum_index: int
+        index for all circles, if N_l is 
+        the sum idex, then the scatterer will
+        have 2N_l+1 modes.
+
+    sum_tol: float
+        Tolerance for the sum index formula.
+
+    gmres_tol: float
+        Tolerance for GMRES (see SciPy documentation).
+
+    freq: float or complex
+        Input frequency. 
+
+    wavespeed: float
+        Material wavespeed.
+
+    inc_angle: float
+        Angle between 0 and 2pi, as measured from the x-axis
+
+    precond: preconditioner
+        Class handle for the preconditioner, default is 
+        unpreconditioned.
+
+    precond_dist: float
+        Cutoff distance for the preconditioner. We assume a 
+        geometrically-motivated preconditioner to use in 
+        multiple scattering problems.
+
+    precond_matrix: np.array
+        Depricated, use the preconditioner class instead.
+    
+    pargs: dict
+        keyword arguments for preconditioner.
+
+    make_scat_matrix: bool
+        Option to make the full scattering matrix in the 
+        __init__() function.
+    
+    method: str, 'gmres' or 'explicit'
+        Method to compute the scattering coefficients. 
+        Either GMREs or an explicit LU solver (think
+        MATLAB's backslash function).
+
+    use_mat: bool
+        Use the explicit matrix instead of our fast
+        FFT convolution MVP function.
+
+    force_method: bool
+        Force using a particular method, regardless
+        of the input frequency.
+
+    gmres_restart: int
+        GMRES restart parameter. See SciPy documentation.
+
+    gmres_maxiter: int
+        GMRES maximum iteration parameter. See SciPy
+        documentation.
+
+    fast_matrix_build: bool
+        Build the explicit matrix using the root vector. 
+        This cuts down on the number of function evaluations,
+        instead exploiting the Toeplitz structure of the matrix
+        to copy entries.
+
+    use_2cyl_modes: bool
+        Use the matrix mode number a la Rohfritsch. Start with 
+        Antoine's formula, then keep increasing the modes in an 
+        auxiliary problem until a tolerance (sum_tol) is met.
 
     Methods
     -------
@@ -115,13 +185,15 @@ class scattering(cyl):
             precond = None,
             precond_dist = 0,
             precond_matrix = None,
+            pargs = {},
             make_scat_matrix = False,
             use_mat = False,
             method = 'gmres',
             force_method = False,
             gmres_restart = None,
             gmres_maxiter = None,
-            fast_matrix_build = True
+            fast_matrix_build = True,
+            use_2cyl_modes = True
             ):
  
         self.cyls = cyls
@@ -132,7 +204,10 @@ class scattering(cyl):
 
         self.labels = np.array([int(self.cyls[i].get_label()) for i in range(len(self.cyls))])
         self.sum_tol = sum_tol
-        self.freq = np.abs(freq)
+        if np.isreal(freq):
+            self.freq = np.abs(freq)
+        else:
+            self.freq = 1j*np.abs(freq)
         self.wavespeed = wavespeed
         self.k = 2*np.pi*self.freq/self.wavespeed
         self.wavelength = self.wavespeed/freq
@@ -144,10 +219,12 @@ class scattering(cyl):
         self.force_method = force_method
         self.use_mat = use_mat
         self.fast_matrix_build = fast_matrix_build
+        self.use_2cyl_modes = use_2cyl_modes
 
         self.precond = precond
         self.precond_dist = precond_dist
         self.precond_matrix = precond_matrix
+        self.pargs = pargs
 
         self.ST = None
         self.jhm = None
@@ -155,6 +232,9 @@ class scattering(cyl):
         self.gmres_iter = 0
         self.gmres_res = np.array([])
         self.mvp_counter = 0
+        
+        #make dist matrix for mode computation
+        self.dist_matrix = self.make_dist_matrix()
 
         # set the sum index for each cylinder, depending 
         # on if there's a global index or not
@@ -162,25 +242,22 @@ class scattering(cyl):
             for l in self.labels:
                 if self.cyls[l].sum_index == None:
                     ka = self.k*self.cyls[l].radius
-                    try:
-                        '''
-                        if ka < 1e-3:
-                            self.cyls[l].sum_index = max(self.lowfreq_modes(self.k, self.cyls[l].radius),
-                                                         self.modes(self.k, self.cyls[l].radius))
-                            #force use explicit solver, not gmres
-                            self.method = 'explicit'
-                        else:
-                            self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)            
-                        '''
-                        self.cyls[l].sum_index = self.modes(self.k, self.cyls[l].radius)
-                        if ka < 1e-2:
-                            if not self.force_method:
-                                self.method = 'explicit'
-                    except Exception as e:
-                        print(e)
-                        print('ka = ', ka)
-                        print('setting cylinder sum index to 0, this may cause unexpected behavior')
-                        self.cyls[l].sum_index = 0
+                    if self.use_2cyl_modes:
+                        self.cyls[l].sum_index = self.mode_select()
+                    else:
+                        try:
+                            self.cyls[l].sum_index = self.modes(
+                                self.k, 
+                                self.cyls[l].radius
+                                )
+                            if ka < 1e-2:
+                                if not self.force_method:
+                                    self.method = 'explicit'
+                        except Exception as e:
+                            print(e)
+                            print('ka = ', ka)
+                            print('setting cylinder sum index to 0, this may cause unexpected behavior')
+                            self.cyls[l].sum_index = 0
                 else:
                     continue
         else:
@@ -200,10 +277,8 @@ class scattering(cyl):
         
         #default maxiter to 3 restart cycles
         if self.gmres_maxiter is None:
-            self.gmres_maxiter = 3#*self.gmres_restart
-
-        self.dist_matrix = self.make_dist_matrix()
-
+            self.gmres_maxiter = 1
+ 
         if make_scat_matrix:
             self.scat_mat = np.zeros((self.scat_matrix_dim, self.scat_matrix_dim))
             self.scat_mat = self.make_scattering_blocks()
@@ -311,12 +386,50 @@ class scattering(cyl):
         interp = lambda x : 0.5 + 0.5*np.tanh((x - 0.1)/alpha)
         #interp = lambda x : 1/(1 + np.exp(-(x-1e-1)/alpha))
         return int((1-interp(ka))*self.lowfreq_modes(k, a) + interp(ka)*self.highfreq_modes(k, a))
+    
+    def mode_select(self):
+        #find the min distance
+        minidx = np.unravel_index(
+            self.dist_matrix.argmin(), 
+            self.dist_matrix.shape
+            )
+        mindist = self.dist_matrix[minidx]
+
+        #set up the auxiliary 2-circle problem
+        auxcyls = [copy.deepcopy(self.cyls[minidx[0]]), 
+            copy.deepcopy(self.cyls[minidx[1]])]
+        currmodes = self.modes(self.k, 
+            np.max((auxcyls[0].radius, auxcyls[1].radius)))
+        csc = scattering(auxcyls, 
+            freq=self.freq, 
+            method='explicit', 
+            sum_index=currmodes)
+        nsc = scattering(auxcyls, 
+            freq=self.freq, 
+            method='explicit', 
+            sum_index=currmodes+1)
+        carr = csc.scattering_coeffs()
+        narr = nsc.scattering_coeffs()
+        #print(np.abs(carr[0]), np.abs(narr[0]))
+        while np.abs(carr[0]) >= self.sum_tol or np.abs(narr[0]) >= self.sum_tol:
+            carr = narr
+            currmodes += 1
+            nsc = scattering(auxcyls, 
+                freq=self.freq, 
+                method='explicit', 
+                sum_index=currmodes+1)
+            narr = nsc.scattering_coeffs()
+            #print(np.abs(carr[0]), np.abs(narr[0]))
+        return currmodes
 
     def make_dist_matrix(self):
         self.dist_matrix = np.zeros((len(self.cyls), len(self.cyls)))
         for i in self.labels:
             for j in self.labels:
-                self.dist_matrix[i, j] = np.linalg.norm(self.cyls[i].pos - self.cyls[j].pos)
+                if i == j: 
+                    self.dist_matrix[i, j] = np.inf
+                else:
+                    self.dist_matrix[i, j] = np.linalg.norm(self.cyls[i].pos - self.cyls[j].pos)
         return self.dist_matrix
 
     def make_root_vect_1cyl(self, i, sc):
@@ -478,7 +591,7 @@ class scattering(cyl):
 
             #set the preconditioner, if any
             if self.precond is not None:
-                precond_mat = self.precond(self).inv_mat
+                precond_mat = self.precond(self, **self.pargs).inv_mat
             else:
                 precond_mat = None
 
