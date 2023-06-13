@@ -135,6 +135,30 @@ class sinewave(waveform):
         #TODO: make the argument incoming-angle dependent
         return self.profile(x + t - self.time_shift)
 
+class russian(waveform):
+    def __init__(
+                 self, 
+                 inc_angle = np.pi, 
+                 time_shift=0, 
+                 alpha= 1,
+                 beta= 1,
+                 cycles = 1,
+                ):
+        super().__init__(time_shift=time_shift, inc_angle=inc_angle)
+        self.alpha = alpha
+        self.beta = beta
+    
+    def profile(self, z):
+        #waveform profile, centered at the origin
+        mask = (z >= 0)
+        tmp = mask*self.alpha*(z**2)*np.exp(-self.beta*z)
+        return tmp
+
+    def td_wave(self, x, y, t):
+        #TODO: make the argument incoming-angle dependent
+        return self.profile(x + t - self.time_shift)
+
+
 '''
 class bump():
     pass

@@ -1,14 +1,14 @@
 import numpy as np
 from scipy.sparse.linalg import gmres
 import sys
-from tests.cpp_tests.gmres.wrapper import my_gmres
+from tests.cpp_tests.eigen.gmres.wrapper import my_gmres
 from Ncyl.tds import scattering as sc
 from utils import example_setups
 from time import process_time
 
 N = 5
 cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
-s = sc(cyls, freq=50, gmres_tol=1e-10)
+s = sc(cyls, freq=10, gmres_tol=1e-10, use_2cyl_modes=False)
 A = np.ascontiguousarray(s.make_scattering_blocks())
 d = np.ascontiguousarray(s.make_rhs_vector())
 
@@ -26,7 +26,6 @@ print(process_time() - t)
 
 print('actual')
 s.make_root_matrix()
-s.make_jh()
 t = process_time()
 x, err = s.scattering_coeffs()
 print(process_time() - t)
