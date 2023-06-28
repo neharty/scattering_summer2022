@@ -170,3 +170,5 @@ cython_debug/
 #misc
 *.zip
 *.swp
+*.agr
+*.pdf
