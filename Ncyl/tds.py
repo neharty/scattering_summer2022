@@ -775,7 +775,6 @@ class time_domain_scattering(scattering):
         self.sig_fft = self.ft(np.exp(1j*2*np.pi*self.freq_shift*self.times)*tmpsig)
         #self.sig_fft = self.ft(tmpsig)
 
-
         #shift to correct start time
         t0 = self.waveform.time_shift
         tshift = self.end_time/2 + t0

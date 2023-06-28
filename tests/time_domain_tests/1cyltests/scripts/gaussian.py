@@ -10,11 +10,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('bc', help='boundary condition')
 parser.add_argument('df', help='frequency offset', type=float)
 
-width = 0.2
+width = 1/4
+amp = 2/np.sqrt(np.pi)
 bc = parser.parse_args().bc
 df = parser.parse_args().df
 
-head = '/home/nick/scattering/data/time_domain_tests/1cyltests' #replace with file location starting at /
+head = '/home/nick/scattering/data/time_domain_tests/1cyltests/gaussian' #replace with file location starting at /
 
 if bc == 'd':
     bcstr = 'dirichlet'
@@ -38,9 +39,11 @@ if not os.path.exists(outpath):
     os.makedirs(outpath)
 
 #calculate the scattered field for a line on x axis
-x = [2, 3, 4, 5]
-x = np.hstack(([-5, -4, -3, -2], x))
-y = [0]
+#x = [2, 3, 4, 5]
+#x = np.hstack(([-5, -4, -3, -2], x))
+#y = [0]
+x = [-12, 0, 12]
+y = [-12, 0, 12]
 X, Y = np.meshgrid(x, y)
 T = 40
 td = time_domain_scattering(cyls, 
@@ -57,7 +60,7 @@ for xpt in range(len(x)):
     for ypt in range(len(y)):
         arr = [[td.times[i], U[ypt, xpt, i]] for i in range(len(td.times))]
         np.savetxt(
-            outpath+'/'+str(x[xpt])+'_'+'{:.3f}'.format(y[ypt])+'_field.dat', 
+            outpath+'/'+'{:.3f}'.format(x[xpt])+'_'+'{:.3f}'.format(y[ypt])+'_field.dat', 
             arr
             )
 

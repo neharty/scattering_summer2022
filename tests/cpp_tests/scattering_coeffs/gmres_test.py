@@ -1,0 +1,45 @@
+import numpy as np
+from scipy.sparse.linalg import gmres
+import sys
+from tests.cpp_tests.eigen.gmres.wrapper import my_gmres
+from Ncyl.tds import scattering as sc
+from utils import example_setups
+from time import process_time
+
+N = 15
+cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
+s = sc(cyls, freq=1/(2*np.pi), gmres_tol=1e-10, use_2cyl_modes=False)
+
+'''
+np.random.seed(1234)
+A = np.random.rand(N, N) + 1j*np.random.rand(N, N)
+x = np.random.rand(N) + 1j*np.random.rand(N)
+d = A@x
+'''
+'''
+print('scipy')
+t = process_time()
+x_scipy, err = gmres(A, d, tol = 1e-10, restart=N, maxiter=len(d))
+print(err)
+print(process_time() - t)
+'''
+
+print('actual (fast mvp)')
+s.make_root_matrix()
+t = process_time()
+#x, err = s.scattering_coeffs()
+print(process_time() - t)
+
+print('cpp')
+A = np.ascontiguousarray(s.make_scattering_blocks())
+d = np.ascontiguousarray(s.make_rhs_vector())
+t = process_time()
+x_me = my_gmres(A, d, restart=s.scat_matrix_dim)
+print(process_time() - t)
+
+print('cpp: ', np.linalg.norm(x_me - x))
+#print('scipy: ', np.linalg.norm(x_scipy - x))
+#print('relative: ', np.linalg.norm(x_me - x_scipy))
+print('max: ', np.max(np.abs(x_me - x)))
+idx = np.argmax(np.abs(x_me - x))
+print(x_me[idx], x[idx])

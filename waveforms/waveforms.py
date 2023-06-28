@@ -25,11 +25,13 @@ class gaussian(waveform):
                  inc_angle = np.pi, 
                  time_shift=0, 
                  sigma = 0.2, 
-                 cutoff=1e-8
+                 cutoff=1e-8,
+                 amp=1
                 ):
         super().__init__(time_shift=time_shift, inc_angle=inc_angle)
         self.cutoff = 1e-8 #used to truncate signal
         self.sigma = sigma
+        self.amp = amp
     
     def box(self, x, l):
         mask1 = (x <= l)
@@ -39,7 +41,7 @@ class gaussian(waveform):
     def profile(self, z):
         #waveform profile, centered at the origin
         s = self.sigma
-        tmp = np.exp(-(z**2)/s)
+        tmp = self.amp*np.exp(-(z**2)/s)
 
         #cutoff width
         l = np.sqrt(-s*np.log(self.cutoff))+1

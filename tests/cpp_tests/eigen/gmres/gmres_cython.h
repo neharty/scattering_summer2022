@@ -49,7 +49,7 @@ T* gmres_py(T* A, T* b, T* x, int dim, int restart = 30, double tol = 1e-10){
     Matrix<T, Dynamic, Dynamic> Amat = Map<Matrix<T, Dynamic, Dynamic, Eigen::RowMajor> >(A, dim, dim);
     Vector<T, Dynamic> bvect = Map<Vector<T, Dynamic> >(b, dim);
     //solve using gmres
-    Vector<T, Dynamic> xsol = gmres_eigen(Amat, bvect, restart, tol, 2*dim);
+    Vector<T, Dynamic> xsol = gmres_eigen(Amat, bvect, restart, tol, dim);
     //copy the data to the original array
     for(int i=0; i < dim; i++){
         x[i] = xsol[i];
