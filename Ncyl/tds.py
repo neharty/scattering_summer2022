@@ -204,10 +204,13 @@ class scattering(cyl):
 
         self.labels = np.array([int(self.cyls[i].get_label()) for i in range(len(self.cyls))])
         self.sum_tol = sum_tol
+        '''
         if np.isreal(freq):
             self.freq = np.abs(freq)
         else:
             self.freq = 1j*np.abs(freq)
+        '''
+        self.freq = freq
         self.wavespeed = wavespeed
         self.k = 2*np.pi*self.freq/self.wavespeed
         self.wavelength = self.wavespeed/freq
@@ -356,7 +359,14 @@ class scattering(cyl):
         bc = cyl.bc
         radius = cyl.radius
         if bc == 'd':
-            return jv(m, self.k*radius)/hankel1(m, self.k*radius)
+            try:
+                return jv(m, self.k*radius)/hankel1(m, self.k*radius)
+            except:
+                print(m)  
+                print(self.k*radius) 
+                print(jv(m, self.k*radius))
+                print(hankel1(m, self.k*radius))
+                return jv(m, self.k*radius)/hankel1(m, self.k*radius)
         elif bc == 'n':
             return jvp(m, self.k*radius)/h1vp(m, self.k*radius)
         elif bc == 'i':
@@ -538,7 +548,10 @@ class scattering(cyl):
         if self.jhm is None:
             self.jhm = [None for p in self.labels]
             for p in self.labels:
-                idxa_p = np.arange(-self.cyls[p].sum_index, self.cyls[p].sum_index + 1)
+                idxa_p = np.arange(
+                    -self.cyls[p].sum_index, 
+                    self.cyls[p].sum_index + 1
+                    )
                 self.jhm[p] = self.jh(self.cyls[p], idxa_p)
         return self.jhm
 
@@ -637,22 +650,25 @@ class scattering(cyl):
                 print('freq done:', self.freq)
                 return soln
 
-    def make_u_sc(self, x, y):
+    def make_u_sc(self, x, y, coeff_vect=None):
         r, theta = self.cart_to_polar([x, y])
         u_sc = 1j*np.zeros(r.shape)
         del r
         del theta
+        
+        if coeff_vect is not None:
+            cs = coeff_vect
+        else:
+            print(self.method, self.freq)
+            if self.method == 'gmres':
+                cs, ecode = self.scattering_coeffs()
+                if ecode != 0:
+                    print('GMRES failed, switching to explicit')
+                    self.method = 'explicit'
+                    cs = self.scattering_coeffs()
 
-        print(self.method, self.freq)
-        if self.method == 'gmres':
-            cs, ecode = self.scattering_coeffs()
-            if ecode != 0:
-                print('GMRES failed, switching to explicit')
-                self.method = 'explicit'
+            elif self.method == 'explicit':
                 cs = self.scattering_coeffs()
-
-        elif self.method == 'explicit':
-            cs = self.scattering_coeffs()
 
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])

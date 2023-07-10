@@ -48,8 +48,7 @@ class gaussian(waveform):
         return self.box(z, l)*tmp
 
     def td_wave(self, x, y, t):
-        #TODO: make the argument incoming-angle dependent
-        return self.profile(x + t - self.time_shift)
+        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
 
 
 class gaussian_deriv(waveform):
@@ -57,12 +56,14 @@ class gaussian_deriv(waveform):
                  self, 
                  inc_angle = np.pi, 
                  time_shift=0, 
-                 sigma = 0.2, 
+                 sigma = 0.2,
+                 amp = 1, 
                  cutoff=1e-8
                 ):
         super().__init__(time_shift=time_shift, inc_angle=inc_angle)
         self.cutoff = 1e-8 #used to truncate signal
         self.sigma = sigma
+        self.amp = amp
     
     def box(self, x, l):
         mask1 = (x <= l)
@@ -72,15 +73,14 @@ class gaussian_deriv(waveform):
     def profile(self, z):
         #waveform profile, centered at the origin
         s = self.sigma
-        tmp = np.sqrt(2/s)*z*np.exp(0.5-(z**2)/s)
+        tmp = self.amp*np.sqrt(2/s)*z*np.exp(0.5-(z**2)/s)
 
         #approximate cutoff width
         l = np.sqrt(s*np.log(np.exp(0.5)*np.sqrt(2/s)/self.cutoff))+1
         return self.box(z, l)*tmp
 
     def td_wave(self, x, y, t):
-        #TODO: make the argument incoming-angle dependent
-        return self.profile(x + t - self.time_shift)
+        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
 
 class sine_pulse(waveform):
     def __init__(
@@ -108,8 +108,7 @@ class sine_pulse(waveform):
         return self.box(z)*tmp
 
     def td_wave(self, x, y, t):
-        #TODO: make the argument incoming-angle dependent
-        return self.profile(x + t - self.time_shift)
+        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
 
 class sinewave(waveform):
     def __init__(
@@ -134,8 +133,7 @@ class sinewave(waveform):
         return self.box(z)*tmp
 
     def td_wave(self, x, y, t):
-        #TODO: make the argument incoming-angle dependent
-        return self.profile(x + t - self.time_shift)
+        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sing(self.inc_angle)) - self.time_shift)
 
 class russian(waveform):
     def __init__(
@@ -157,8 +155,7 @@ class russian(waveform):
         return tmp
 
     def td_wave(self, x, y, t):
-        #TODO: make the argument incoming-angle dependent
-        return self.profile(x + t - self.time_shift)
+        return self.profile(t (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
 
 
 '''
