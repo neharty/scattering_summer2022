@@ -28,7 +28,7 @@ for N in n:
     zN = np.exp(-2*1j*np.pi*np.arange(0, N+1)/(N+1))   # discretization point on the circle
     sl = gm(zN*lam)/dt
     kl = 1j*sl #complex frequencies
-    plt.plot(kl.real, kl.imag, label='N='+str(N))
+    plt.plot(sl.real, sl.imag, label='N='+str(N))
 
 plt.xlabel('real')
 plt.ylabel('imag')

@@ -4,7 +4,7 @@ from scipy.fft import fft, ifft, fftshift, ifftshift, fftfreq
 from scipy.special import hankel1, h1vp
 import matplotlib.pyplot as plt
 from utils import example_setups
-from Ncyl.tds import scattering, cyl
+from Ncyl.cqm import scattering, cyl
 from waveforms.waveforms import gaussian, gaussian_deriv
 import argparse
 import warnings
@@ -15,8 +15,8 @@ parser = argparse.ArgumentParser()
 #parser.add_argument('')
 
 #initialization
-T = 30    # final time
-N = 1024 # number of time steps
+T = 100    # final time
+N = 2**12 # number of time steps
 dt = T/N   # time step
 t = np.linspace(0, T, N+1) # time grid
 eps = np.finfo(float).eps # machine epsilon
@@ -32,13 +32,13 @@ kl = 1j*sl #complex frequencies
 print(max(abs(kl)), min(abs(kl)))
 
 #define geometry
-cyls = [cyl('d', [-1.5, 0], 1), cyl('d', [1.5, 0], 1)]
+#cyls = [cyl('d', [-1.5, 0], 1), cyl('d', [1.5, 0], 1)]
 #cyls = [cyl('d', [0, 0], 1)]
-#cyls = example_setups.uniform_grid_NxN(2, ['d' for i in range(2)], 3, 1)
+cyls = example_setups.uniform_grid_NxN(2, ['d' for i in range(2)], 3, 1)
 
-n = 10
-ang = np.linspace(0, 2*np.pi, num=2*n+1, endpoint=False)
-modes = fftshift(fftfreq(2*n+1))
+n = 20
+ang = np.linspace(0, 2*np.pi, num=2*n, endpoint=False)
+modes = fftshift(fftfreq(2*n))
 wv = gaussian(time_shift=6)
 g = np.zeros((len(cyls), len(ang), N+1))   
 for i in range(len(t)):
@@ -53,37 +53,42 @@ for j in range(len(cyls)):
     rmat[j] = fft(-g[j]*lammat, axis=-1)
 
 #form the field
-x = [-5, -3, 3, 5]
-y = [0]
+x = [-12, 0, 12]
+y = [0, 12]
 X, Y = np.meshgrid(x, y)
 u_sc = 1j*np.zeros((*X.shape, N+1))
 
 #solve the system
-coeffs = 1j*np.zeros((len(cyls)*(2*n+1), N+1))
+coeffs = 1j*np.zeros((len(cyls)*(2*n), N+1))
 for i in range(len(t)):
-    rhs = 1j*np.zeros((len(cyls), 2*n+1))
+    rhs = 1j*np.zeros((len(cyls), 2*n))
     for j in range(len(cyls)):
-        rhs[j, :] = fftshift(fft(rmat[j][:, i]))/(len(cyls)*(2*n+1))
-        rhs[j, :] = rhs[j, :]/hankel1(modes, kl[i]*1)
-    b = np.reshape(rhs, len(cyls)*(2*n+1))
+        rhs[j, :] = fftshift(fft(rmat[j][:, i]))/(2*n)
+        rhs[j, :] = rhs[j, :]
+    b = np.reshape(rhs, len(cyls)*(2*n))
     if np.linalg.norm(b) > 1e-10:
         #coeffs[:, i] = b 
-        sc = scattering(cyls, freq=kl[i]/(2*np.pi), sum_index=n)
+        sc = scattering(cyls, k=kl[i], sum_index=n)
         A = sc.make_scattering_blocks()
-        print(abs(A))
-        print(np.amax(abs(A)))
         coeffs[:, i] = np.linalg.solve(A, b)    
         u_sc[:, :, i] = sc.make_u_sc(X, Y, coeff_vect = coeffs[:, i])
     
 #u_sc = ifftshift(u_sc, axes=-1)
 lammat = lam**np.arange(0, N+1)
 #u_sc[:, :, N//2:] = 0
-u = (1/lammat)*ifft(u_sc)
+u = (1/lammat)*ifft(u_sc, axis=-1)
 u = u.real
 
 plt.figure()
 plt.plot(t, u[0, -1, :])
+plt.plot(t, u[0, 0, :])
+plt.plot(t, u[1, 1, :])
 
 plt.show()
+
+#%%
+#do tds scattering
+from Ncyl import time_domain_scattering()
+
 
 print('done')

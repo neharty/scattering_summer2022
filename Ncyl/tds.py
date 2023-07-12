@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.special import jv, jvp, hankel1, h1vp
+from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
 from scipy.signal import convolve
 from scipy.linalg import toeplitz
 from scipy.sparse.linalg import gmres
