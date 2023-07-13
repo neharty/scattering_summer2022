@@ -16,7 +16,7 @@ import warnings
 
 
 T = 100    # final time
-powr = np.arange(10, 16)
+powr = np.arange(10, 13)
 n = 2**powr # number of time steps
 eps = np.finfo(float).eps # machine epsilon
 gm = lambda z : 0.5*((z**2)-(4*z)+3) # Z-transform corresponding to BDF2

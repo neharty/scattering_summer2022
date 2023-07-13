@@ -408,7 +408,7 @@ class scattering(cyl):
             )
         csc = scattering(
             auxcyls, 
-            freq=self.freq, 
+            k=self.k, 
             method='explicit', 
             sum_index=currmodes
             )
