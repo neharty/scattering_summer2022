@@ -33,7 +33,7 @@ class cyl:
     sum_index : int
         related to the number of modes in the sum,
         for a given value, the cylinder will have
-        (2*sum_index) modes
+        2*sum_index modes
 
     impedance : complex
         impedance for the cylinder -- needed for
@@ -53,44 +53,8 @@ class cyl:
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
 
-    def set_label(self, l):
-        self.label = l
-
-    def get_label(self):
-        return self.label
-
-    def set_pos(self, pos):
-        self.pos = pos
-
-    def get_pos(self):
-        return self.pos
-
-    def set_radius(self, radius):
-        self.radius = radius
-
-    def get_radius(self):
-        return self.radius
-
-    def set_bc(self, bc):
-        self.bc = bc
-
-    def get_bc(self):
-        return self.bc
-
-    def set_sum_index(self, sum_idx):
-        self.sum_index = sum_idx
-
-    def get_sum_index(self):
-        return self.sum_index
-
-    def set_impedance(self, imp):
-        self.impedance = imp
-
-    def get_impedance(self):
-        return self.impedance
-
-
 class scattering(cyl):
+    
     '''
     Class to solve the Helmholtz equation for an
     assortment of scatterers by constructing a
@@ -174,8 +138,12 @@ class scattering(cyl):
 
 
     '''
+
     
-    def __init__(self, cyls,
+    def __init__(
+            self, 
+            cyls, 
+            rhs,
             sum_index = None,
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
@@ -187,16 +155,17 @@ class scattering(cyl):
             precond_matrix = None,
             pargs = {},
             make_scat_matrix = False,
-            use_mat = False,
+            use_mat = True, #changed to true
             method = 'gmres',
             force_method = False,
             gmres_restart = None,
             gmres_maxiter = None,
             fast_matrix_build = True,
-            use_2cyl_modes = True
+            use_2cyl_modes = False
             ):
  
         self.cyls = cyls
+        self.rhs = rhs
 
         # create 0-indexed labels for cylinders
         for i in range(len(self.cyls)):
@@ -204,12 +173,7 @@ class scattering(cyl):
 
         self.labels = np.array([int(self.cyls[i].get_label()) for i in range(len(self.cyls))])
         self.sum_tol = sum_tol
-        '''
-        if np.isreal(freq):
-            self.freq = np.abs(freq)
-        else:
-            self.freq = 1j*np.abs(freq)
-        '''
+
         self.wavespeed = wavespeed
         self.k = k/self.wavespeed
         self.inc_angle = inc_angle
@@ -238,7 +202,7 @@ class scattering(cyl):
         self.dist_matrix = self.make_dist_matrix()
 
         # set the sum index for each cylinder, depending 
-        # on if there's a global index or not
+        # on whether there's a global index or not
         if sum_index == None:
             for l in self.labels:
                 if self.cyls[l].sum_index == None:
@@ -257,7 +221,6 @@ class scattering(cyl):
                         except Exception as e:
                             print(e)
                             print('ka = ', ka)
-                            print('setting cylinder sum index to 0, this may cause unexpected behavior')
                             self.cyls[l].sum_index = 0
                 else:
                     continue
@@ -289,45 +252,6 @@ class scattering(cyl):
         
         self.u_sc = None
 
-    def get_wavenumber(self):
-        return self.k
-
-    def get_wavelength(self):
-        return self.wavelength
-
-    def get_cyls(self):
-        return self.cyls
-    
-    def get_labels(self):
-        return self.labels
-
-    def get_sum_index(self, label):
-        return self.cyls[label].get_sum_index()
-    
-    def get_radius(self, label):
-        return self.cyls[label].get_radius()
-
-    def get_bc(self, label):
-        return self.cyls[label].get_bc()
-
-    def get_pos(self, label):
-        return self.cyls[label].get_pos()
-    
-    def get_scat_matrix_dim(self):
-        return self.scat_matrix_dim
-
-    def get_u(self):
-        return self.u
-
-    def get_gmres_iter(self):
-        return self.gmres_iter
-
-    def get_gmres_res(self):
-        return self.gmres_res
-    
-    def get_mvp_counter(self):
-        return self.mvp_counter
-
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
 
@@ -353,7 +277,21 @@ class scattering(cyl):
         return self.phihat(m-n, v)
 
     def jh(self, cyl, m):
-        #cyl = incident circle
+        '''
+
+        Parameters
+        ----------
+        cyl : TYPE
+            DESCRIPTION.
+        m : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         bc = cyl.bc
         radius = cyl.radius
         if bc == 'd':
@@ -367,26 +305,87 @@ class scattering(cyl):
             print('invalid bc')
     
     def mulscat_term(self, cyl, n, m, b):
-        #cyl = incident circle
+        '''
+
+        Parameters
+        ----------
+        cyl : TYPE
+            DESCRIPTION.
+        n : TYPE
+            DESCRIPTION.
+        m : TYPE
+            DESCRIPTION.
+        b : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         return self.jh(cyl, m)*self.S(n, m, b)
     
-    def highfreq_modes(self, k, a):
-        ka = k*a
-        return ka + (np.log(2*np.sqrt(2)*np.pi*ka/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(ka)**(1/3) + 1
+    def highfreq_modes(self, x):
+        '''
 
-    def lowfreq_modes(self, k, a):
-        ka = k*a
-        if ka >= 1.5:
+        Parameters
+        ----------
+        k : TYPE
+            DESCRIPTION.
+        a : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        return x + (np.log(2*np.sqrt(2)*np.pi*x/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(x)**(1/3) + 1
+
+    def lowfreq_modes(self, x):
+        '''
+
+        Parameters
+        ----------
+        k : TYPE
+            DESCRIPTION.
+        a : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        if x >= 1.5:
             return 0
         else:
-            return ((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1)
+            return ((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(x/2) + 1)
     
     def modes(self, k, a):
-        ka = k*a
+        '''
+
+        Parameters
+        ----------
+        k : TYPE
+            DESCRIPTION.
+        a : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
+        ka = abs(k*a)
         alpha = 0.5
         interp = lambda x : 0.5 + 0.5*np.tanh((x - 0.1)/alpha)
         #interp = lambda x : 1/(1 + np.exp(-(x-1e-1)/alpha))
-        return int((1-interp(ka))*self.lowfreq_modes(k, a) + interp(ka)*self.highfreq_modes(k, a))
+        return int((1-interp(ka))*self.lowfreq_modes(ka) + interp(ka)*self.highfreq_modes(ka))
     
     def mode_select(self):
         #find the min distance
@@ -414,7 +413,7 @@ class scattering(cyl):
             )
         nsc = scattering(
             auxcyls, 
-            freq=self.freq, 
+            k=self.k, 
             method='explicit', 
             sum_index=currmodes+1
             )
@@ -429,7 +428,7 @@ class scattering(cyl):
             currmodes += 1
             nsc = scattering(
                 auxcyls, 
-                freq=self.freq, 
+                freq=self.k, 
                 method='explicit', 
                 sum_index=currmodes+1
                 )
@@ -468,7 +467,13 @@ class scattering(cyl):
     def make_root_matrix(self):
         self.make_jhm()
         if self.ST is None:
-            self.ST = np.array([[self.make_root_vect_1cyl(p, q) for q in self.labels] for p in self.labels], dtype=object)
+            self.ST = np.array(
+                [
+                    [self.make_root_vect_1cyl(p, q) for q in self.labels] 
+                    for p in self.labels
+                ], 
+                dtype=object
+                )
         return self.ST
 
     def make_direct_scattering_block(self, cyl):
@@ -494,7 +499,7 @@ class scattering(cyl):
         # cyl_i = incident cylinder, 
         # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
 
-        scm = 1j*np.zeros((2*cyl_i.sum_index + 1, 2*cyl_sc.sum_index + 1))
+        scm = 1j*np.zeros((2*cyl_i.sum_index, 2*cyl_sc.sum_index))
         
         b = cyl_i.pos - cyl_sc.pos
         idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
@@ -533,23 +538,6 @@ class scattering(cyl):
     def make_scattering_blocks(self):
         self.scat_mat = np.block(self.make_scattering_blocks_blockform())
         return self.scat_mat
-
-    def make_d_coeffs_1cyl(self, label):
-        b, theta = self.cart_to_polar(self.cyls[label].pos)
-        sum_index = self.cyls[label].sum_index
-        bc = self.cyls[label].bc
-        radius = self.cyls[label].radius
-        return np.array([1j**n*np.exp(-1j*n*self.inc_angle)*np.exp(1j*self.k*b*np.cos(theta-self.inc_angle)) for n in np.arange(-sum_index, sum_index + 1)])
-
-    def make_rhs_vector_1cyl(self, label):
-        idxa = np.arange(-self.cyls[label].sum_index, self.cyls[label].sum_index + 1)
-        jvect = self.jh(self.cyls[label], idxa)
-        return -np.multiply(jvect, self.make_d_coeffs_1cyl(label))
-
-    def make_rhs_vector(self):
-        rhs = np.hstack([self.make_rhs_vector_1cyl(i) for i in self.labels])
-        self.rhs = rhs
-        return rhs
     
     def make_jhm(self):
         if self.jhm is None:
@@ -566,12 +554,16 @@ class scattering(cyl):
         x = np.array(x, dtype=np.complex128)
 
         #split up the x coeffs
-        xs = [np.array(x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128) for i in range(1, len(self.lengths))]
+        xs = [
+            np.array(
+                x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128
+                ) for i in range(1, len(self.lengths))
+            ]
         ST = self.ST
 
         mulscat = [1j*np.zeros(len(xn)) for xn in xs]
 
-        #does the block MVPs and stores in a multidimensional list
+        #computes the block MVPs and stores in a multidimensional list
         SCmvp = [
             [
                 convolve(
@@ -608,7 +600,7 @@ class scattering(cyl):
             else:
                 linearop = LinearOperator((dim, dim), matvec = self.mvp)
 
-            rhs = self.make_rhs_vector()
+            rhs = self.rhs
             #counter = self.gmres_counter()
 
             #initialize the residual vector
@@ -631,7 +623,7 @@ class scattering(cyl):
             #NOTE: outp will contain the solution vector AND an error code
             outp = gmres(
                         linearop,
-                        self.make_rhs_vector(),
+                        self.rhs,
                         tol = self.gmres_tol,
                         atol = 'legacy',
                         M = precond_mat,
@@ -640,7 +632,7 @@ class scattering(cyl):
                         callback_type = 'pr_norm',
                         maxiter = self.gmres_maxiter
                         )
-            print('freq done:', self.freq)
+            print('k done:', self.k)
             return outp
 
         elif self.method == 'explicit':
@@ -648,15 +640,15 @@ class scattering(cyl):
                 self.scat_mat = self.make_scattering_blocks()
 
             sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
-            rhs = np.array(self.make_rhs_vector(), dtype=np.complex128)
+            rhs = np.array(self.rhs, dtype=np.complex128)
             if self.precond:
                 pc_mat = self.precond(self).inv_mat
                 return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
             else:
                 soln = np.linalg.solve(sm, rhs)
-                print('freq done:', self.freq)
+                print('k done:', self.k)
                 return soln
-
+    
     def make_u_sc(self, x, y, coeff_vect=None):
         r, theta = self.cart_to_polar([x, y])
         u_sc = 1j*np.zeros(r.shape)
@@ -666,7 +658,7 @@ class scattering(cyl):
         if coeff_vect is not None:
             cs = coeff_vect
         else:
-            print(self.method, self.freq)
+            print(self.method, self.k)
             if self.method == 'gmres':
                 cs, ecode = self.scattering_coeffs()
                 if ecode != 0:
@@ -682,22 +674,12 @@ class scattering(cyl):
             for j in range(2*self.cyls[l].sum_index):
                 idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
                 u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
-        '''
-        for l in self.__labels:
-                u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
-        '''
+
         self.u_sc = u_sc*self.mask(x,y)
         return self.u_sc
 
-    def make_u_sc_parallel(self, x, y, queue):
-        queue.put(self.make_u_sc(x, y))
-
-    def make_u(self, x, y):
-        r, theta = self.cart_to_polar([x,y])
-        u_inc = np.exp(1j*self.k*r*np.cos(theta - self.inc_angle))
-        if self.u_sc is None:
-            self.make_u_sc(x, y)
-        return (u_inc+self.make_u_sc(x, y))*self.mask(x,y)
+    def make_u_sc_parallel(self, x, y, queue, coeff_vect=None):
+        queue.put(self.make_u_sc(x, y, coeff_vect))
     
     def mask(self, x, y):
         Oi = self.cyls[0].pos
@@ -708,146 +690,137 @@ class scattering(cyl):
             radius = self.cyls[i].radius
             mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         return mask
-
-    def get_scattering_coeffs(self):
-        return self.scattering_coeffs()
-
-    def set_u(self, x, y, recompute=False):
-        if self.u == None:
-            self.u = make_u(x, y)
-        elif self.u != None and not recompute:
-            self.u = make_u(x, y)
-
+  
 class time_domain_scattering(scattering):
     def __init__(self,
                  cyls,
                  waveform,
                  end_time,
                  fft_tol = 1e-10,
-                 freq_shift = 0,
                  sampnum = None,
+                 modes = 10,
                  use_par = True,
                  cpus = None,
                  wvargs={},
                  scargs = {}
                  ):
-        super().__init__(cyls)
+        #super().__init__(cyls)
         self.cyls = cyls
         self.waveform = waveform
         self.wvp = self.waveform.profile
         self.end_time = end_time
         self.fft_tol = fft_tol
-        self.freq_shift = freq_shift
         self.sampnum = sampnum
+        self.modes = modes
         self.use_par = use_par
         self.cpus = cpus
         if self.cpus is None:
            self.cpus = cpu_count()
         self.scargs = scargs
+        
+        #setup cqm variables
+        self.dt = self.end_time/self.sampnum
+        self.times = np.linspace(0, self.end_time, self.sampnum+1)
+        eps = np.finfo(float).eps # machine epsilon
+        
+        self.lam = max(self.dt**(3/self.sampnum), eps**(1/(2*self.sampnum)))
+        zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
+        gm = lambda z : 0.5*((z**2)-(4*z)+3) 
+        sl = gm(zN*self.lam)/self.dt
+        self.ks = 1j*sl #complex frequencies
+        
+        self.lammat = self.lam**np.arange(0, len(self.times))
     
-    def ft(self, x):
-        #compute the time -> frequency fourier transform
-        return self.N*ifft(x)
-
-    def ift(self, X):
-        #compute the frequency -> time fourier transform
-        return fft(X)/self.N
-    
-    def ft_coeffs(self):
-        #fft to get the cutoff frequency
-        if self.sampnum is None:
-            self.sampnum = 2048 #default
-            self.sampnum = self.M*self.sampnum1T
-            tmptimes = np.linspace(0, self.end_time, endpoint=False, num=self.sampnum)
-            tmpsig = self.wvp(tmptimes - self.end_time/2)
-            sig_fft = np.abs(rfft(tmpsig))
-                   
-            while sig_fft[-1] > self.fft_tol:
-                print(sig_fft[-1])
-                self.sampnum *= 2
-                tmptimes = np.linspace(0, self.comptime, endpoint=False, num=self.sampnum)
-                tmpsig = self.wvp(tmptimes - self.end_time/2)
-                sig_fft = np.abs(rfft(tmpsig))
-        else:
-            tmptimes = np.linspace(0, self.end_time, endpoint=False, num=self.sampnum)
-            tmpsig = self.wvp(tmptimes - self.end_time/2)
-            sig_fft = np.abs(rfft(tmpsig))
-
-        self.times = np.linspace(0, self.end_time, endpoint=False, num=self.sampnum)
-        tmpsig = self.wvp(self.times - self.end_time/2)
-        sig_mag = np.abs(fft(tmpsig))
-
-        #compute the coefficients for the fourier transform
-        self.N = len(tmpsig)
-        self.dt = self.end_time/self.N
-        self.df = 1/self.end_time
-
-        #set freqs for computation
-        self.fft_freqs = fftfreq(self.N, d=self.dt)
-
-        #apply frequency shift
-        self.fft_freqs += self.freq_shift
-        freqmask = (self.fft_freqs > 0) & (sig_mag > self.fft_tol)
-        self.fft_freqs = self.fft_freqs[freqmask]
-        try:
-            print('min/max freqs', min(self.fft_freqs), max(self.fft_freqs))
-        except:
-            pass
-
-        #apply fft with shift in frequency values
-        self.sig_fft = self.ft(np.exp(1j*2*np.pi*self.freq_shift*self.times)*tmpsig)
-        #self.sig_fft = self.ft(tmpsig)
-
-        #shift to correct start time
-        t0 = self.waveform.time_shift
-        tshift = self.end_time/2 + t0
-        self.sig_fft *= np.exp(1j*2*np.pi*fftfreq(self.N, d=self.dt)*tshift)
-
-        #zero out component with no conjugate
-        #if self.freq_shift == 0:
-        self.sig_fft[self.N//2] = 0
-
+    def fzt_boundary_1cyl(self, cyl):
+        n = 2*self.modes
+        N = len(self.times)
+        r = cyl.radius
+        p = np.array(cyl.pos)
+        bc = cyl.bc
+        imp = cyl.impedance
+        ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
+        modeidx = fftshift(fftfreq(n))
+        
+        # discretize the boundary 
+        g = np.zeros((n, N))
+        for i in range(len(self.times)):
+            pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
+            if bc == 'd':
+                g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
+            elif bc == 'n':
+                dirvect = (pts[:] - p)/r
+                g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
+            elif bc == 'i':
+                pass
+                #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
+        
+        # z-transform the boundary condition
+        rhs = fft(-g*self.lammat, axis=-1)
+        
+        g = 1j*np.zeros((n, N))
+        # get the fourier coefficients on the boundary
+        for i in range(N):
+            g[:, i] = fftshift(fft(rhs[:, i]))/n
+        
+        return g
+                     
+    def fzt_boundary_allcyls(self):
+        rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+        self.rhsmat = [None for n in range(len(self.times))]
+        for i in range(len(self.times)):
+            self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+        return self.rhsmat
+        
     def make_time_harmonic_soln(self, x, y):
-        self.ft_coeffs()
-        self.u_sc = 1j*np.zeros((*x.shape, len(self.sig_fft)))
-        flen = range(len(self.fft_freqs))
+        self.fzt_boundary_allcyls()
+        self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
+        klen = range(len(self.ks))
         cpus = self.cpus
+        N = len(self.times)
         
         def compute_block(a, b=None):
             if b is None:
-                freq_block = self.fft_freqs[a:]
+                k_block = self.ks[a:]
             else:
-                freq_block = self.fft_freqs[a: b]
+                k_block = self.ks[a: b]
             
-            if len(freq_block) > 1:
-                print('fblk:', freq_block[0], freq_block[-1], len(freq_block))
+            if len(k_block) > 1:
+                print('fblk:', k_block[0], k_block[-1], len(k_block))
             else:
-                print('fblk:', freq_block, len(freq_block))
+                print('fblk:', k_block, len(k_block))
 
-            fbrange = range(len(freq_block))
+            kbrange = range(len(k_block))
             
             for c in self.cyls:
                 c.sum_index = None
 
             #find frequencies in parallel
-            sc = [scattering(copy.deepcopy(self.cyls), freq = f, **self.scargs) for f in freq_block]
-            q = np.array([Queue() for i in fbrange])
-            p = np.array([Process(target=sc[i].make_u_sc_parallel, args=(x[:, :], y[:, :], q[i])) for i in fbrange])
-            [p[i].start() for i in fbrange]
-            for i in fbrange:
-                if self.freq_shift == 0:
-                    self.u_sc[:, :, a+i+1] = self.sig_fft[a+i+1]*q[i].get()
-                else:
-                    self.u_sc[:, :, a+i] = self.sig_fft[a+i]*q[i].get()
-
-            [p[i].join() for i in fbrange]
+            sc = [scattering(
+                    copy.deepcopy(self.cyls), 
+                    self.rhsmat[i], 
+                    k = k_block[i],
+                    sum_index=self.modes,
+                    **self.scargs
+                ) 
+                for i in range(len(k_block))]
+            q = np.array([Queue() for i in kbrange])
+            p = np.array([
+                    Process(
+                            target=sc[i].make_u_sc_parallel, 
+                            args=(x, y, q[i])
+                        ) for i in kbrange
+                    ])
+            [p[i].start() for i in kbrange]
+            for i in kbrange:
+                self.u_sc[:, :, a+i] = q[i].get()
+                
+            [p[i].join() for i in kbrange]
 
         if self.use_par:
             #parallel algorithm
-            rem = len(flen)%cpus
-            blocks = len(flen)//cpus
+            rem = len(klen)%cpus
+            blocks = len(klen)//cpus
             for b in range(blocks):
-                freq_block = self.fft_freqs[b*cpus: (b+1)*cpus]
                 compute_block(b*cpus, (b+1)*cpus)
             if rem > 0:
                 #finish remaining blocks
@@ -855,31 +828,21 @@ class time_domain_scattering(scattering):
                 compute_block(b)
         else:
             #serial algorithm
-            for i in flen:
-                f = self.fft_freqs[i]
-                sc = scattering(self.cyls, freq=f)
-                if self.freq_shift == 0:
-                    self.u_sc[:, :, i+1] = self.sig_fft[i+1]*sc.make_u_sc(x[:, :], y[:, :])
-                else:
-                    self.u_sc[:, :, i] = self.sig_fft[i]*sc.make_u_sc(x[:, :], y[:, :])
+            for i in klen:
+                sc = scattering(copy.deepcopy(self.cyls), k=self.ks[i])
+                self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
         
         #copy solutions as conjugates for negative frequency components
-        for n in range((self.N)//2):
-            self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
+        #for n in range((N)//2):
+        #    self.u_sc[:, :, (N-1)-n] = self.u_sc[:, :, n+1].conjugate()
         
         return self.u_sc
     
     def make_U_sc(self, x, y):
         self.make_time_harmonic_soln(x, y)
-        
-        #FT back to time domain
-        if self.freq_shift == 0:
-            self.U_sc = self.ift(self.u_sc)
-        else:
-            self.U_sc = np.exp(-1j*2*np.pi*self.freq_shift*self.times)*self.ift(self.u_sc)
-
-        
-        return np.real(self.U_sc)
+        self.U_sc = (1/self.lammat)*ifft(self.u_sc, axis=-1)
+        self.U_sc = self.U_sc.real 
+        return self.U_sc
 
     def make_U(self, x, y):
         self.make_U_sc(x, y)

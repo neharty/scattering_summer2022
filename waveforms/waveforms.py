@@ -10,13 +10,22 @@ class waveform(ABC):
     def __init__(self, inc_angle = np.pi, time_shift = 0):
         self.inc_angle = inc_angle
         self.time_shift = time_shift
+        
+    def inparg(self, x, y, t):
+        return t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift
+        
+    def d_inparg(self, x, y, t):
+        return -np.array([np.cos(self.inc_angle), np.sin(self.inc_angle)])
     
     @abstractmethod
     def profile(self, z):
         pass
 
-    @abstractmethod
     def td_wave(self, x, y, t):
+        return self.profile(self.inparg(x, y, t))
+    
+    @abstractmethod
+    def td_deriv(self, x, y, t, n):
         pass
 
 class gaussian(waveform):
@@ -45,12 +54,14 @@ class gaussian(waveform):
 
         #cutoff width
         l = np.sqrt(-s*np.log(self.cutoff))+1
-        return self.box(z, l)*tmp
-
-    def td_wave(self, x, y, t):
-        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
-
-
+        return self.box(z, l)*tmp  
+    
+    def td_deriv(self, x, y, t, n):
+        #directional derivative in direction n
+        n = n/np.linalg.norm(n)
+        v = np.dot(self.d_inparg(x, y, t), n)
+        return (-self.inparg(x, y, t)*2/self.sigma)*self.td_wave(x, y, t)*v
+        
 class gaussian_deriv(waveform):
     def __init__(
                  self, 
@@ -78,9 +89,11 @@ class gaussian_deriv(waveform):
         #approximate cutoff width
         l = np.sqrt(s*np.log(np.exp(0.5)*np.sqrt(2/s)/self.cutoff))+1
         return self.box(z, l)*tmp
-
-    def td_wave(self, x, y, t):
-        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
+    
+    def td_deriv(self, x, y, t, n):
+        n = n/np.linalg.norm(n)
+        v = np.dot(self.d_inparg(x, y, t), n)
+        return self.amp*np.sqrt(2/self.sigma)*np.exp(0.5-(self.inparg(x, y, t)**2)/self.sigma)*(1 - 2*self.inparg(x, y, t)**2/self.sigma)
 
 class sine_pulse(waveform):
     def __init__(
@@ -106,9 +119,9 @@ class sine_pulse(waveform):
         a = self.alpha
         tmp = np.sin(self.sf*z)*np.exp(-self.alpha*np.abs(z))
         return self.box(z)*tmp
-
-    def td_wave(self, x, y, t):
-        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
+    
+    def td_deriv(self, x, y, t, n):
+        pass
 
 class sinewave(waveform):
     def __init__(
@@ -131,10 +144,10 @@ class sinewave(waveform):
         #waveform profile, centered at the origin
         tmp = np.sin(self.sf*z)
         return self.box(z)*tmp
-
-    def td_wave(self, x, y, t):
-        return self.profile(t - (x*np.cos(self.inc_angle) + y*np.sing(self.inc_angle)) - self.time_shift)
-
+    
+    def td_deriv(self, x, y, t, n):
+        pass
+    
 class russian(waveform):
     def __init__(
                  self, 
@@ -155,7 +168,10 @@ class russian(waveform):
         return tmp
 
     def td_wave(self, x, y, t):
-        return self.profile(t (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift)
+        return self.profile(self.inparg(x, y, t))
+    
+    def td_deriv(self, x, y, t, n):
+        pass
 
 
 '''
