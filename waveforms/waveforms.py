@@ -91,9 +91,8 @@ class gaussian_deriv(waveform):
         return self.box(z, l)*tmp
     
     def td_deriv(self, x, y, t, n):
-        n = n/np.linalg.norm(n)
-        v = np.dot(self.d_inparg(x, y, t), n)
-        return self.amp*np.sqrt(2/self.sigma)*np.exp(0.5-(self.inparg(x, y, t)**2)/self.sigma)*(1 - 2*self.inparg(x, y, t)**2/self.sigma)
+        v = np.dot(n, self.d_inparg(x, y, t))
+        return self.amp*np.sqrt(2/self.sigma)*np.exp(0.5-(self.inparg(x, y, t)**2)/self.sigma)*(1 - 2*self.inparg(x, y, t)**2/self.sigma)*v
 
 class sine_pulse(waveform):
     def __init__(

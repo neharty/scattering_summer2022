@@ -641,13 +641,13 @@ class scattering(cyl):
 
             sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
             rhs = np.array(self.rhs, dtype=np.complex128)
-            if self.precond:
-                pc_mat = self.precond(self).inv_mat
-                return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
-            else:
-                soln = np.linalg.solve(sm, rhs)
-                print('k done:', self.k)
-                return soln
+            # if self.precond:
+            #     pc_mat = self.precond(self).inv_mat
+            #     return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
+            # else:
+            soln = np.linalg.solve(sm, rhs)
+            print('k done:', self.k)
+            return soln
     
     def make_u_sc(self, x, y, coeff_vect=None):
         r, theta = self.cart_to_polar([x, y])
@@ -678,8 +678,8 @@ class scattering(cyl):
         self.u_sc = u_sc*self.mask(x,y)
         return self.u_sc
 
-    def make_u_sc_parallel(self, x, y, queue, coeff_vect=None):
-        queue.put(self.make_u_sc(x, y, coeff_vect))
+    def make_u_sc_parallel(self, x, y, queue):
+        queue.put(self.make_u_sc(x, y))
     
     def mask(self, x, y):
         Oi = self.cyls[0].pos
@@ -704,7 +704,6 @@ class time_domain_scattering(scattering):
                  wvargs={},
                  scargs = {}
                  ):
-        #super().__init__(cyls)
         self.cyls = cyls
         self.waveform = waveform
         self.wvp = self.waveform.profile
@@ -797,8 +796,8 @@ class time_domain_scattering(scattering):
             #find frequencies in parallel
             sc = [scattering(
                     copy.deepcopy(self.cyls), 
-                    self.rhsmat[i], 
-                    k = k_block[i],
+                    self.rhsmat[a+i], 
+                    k=k_block[i],
                     sum_index=self.modes,
                     **self.scargs
                 ) 
@@ -829,7 +828,13 @@ class time_domain_scattering(scattering):
         else:
             #serial algorithm
             for i in klen:
-                sc = scattering(copy.deepcopy(self.cyls), k=self.ks[i])
+                sc = scattering(
+                        copy.deepcopy(self.cyls), 
+                        self.rhsmat[i], 
+                        k=self.ks[i],
+                        sum_index=self.modes,
+                        **self.scargs
+                    )
                 self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
         
         #copy solutions as conjugates for negative frequency components

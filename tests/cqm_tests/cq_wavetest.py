@@ -6,11 +6,10 @@ from utils import example_setups
 from waveforms.waveforms import gaussian, gaussian_deriv
 
 N = 3
-cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
+cyls = example_setups.uniform_grid_NxN(N, ['n' for i in range(N)], 1, 3)
 
-
-T = 30
-sampnum = 256
+T = 100
+sampnum = 1024
 wv = gaussian_deriv(time_shift=10)
 
 scargs = {'method':'explicit'}
@@ -19,6 +18,7 @@ td = time_domain_scattering(
     wv, 
     T, 
     sampnum=sampnum,
+    use_par=True,
     scargs = scargs)
 
 td.fzt_boundary_allcyls()
@@ -29,8 +29,8 @@ X, Y = np.meshgrid(x, y)
 
 usc = td.make_U_sc(X, Y)
 
-# plt.plot(td.times, usc[0, 3, :])
-# plt.show()
+plt.plot(td.times, usc[0, 3, :])
+plt.show()
 
 #%%
 #test using the old algorithm
@@ -50,7 +50,7 @@ kl = 1j*sl #complex frequencies
 scd = scattering(cyls, None, sum_index=1)
 clab = scd.labels
 
-n = 10
+n = td.modes
 ang = np.linspace(0, 2*np.pi, num=2*n, endpoint=False)
 modes = fftshift(fftfreq(2*n))
 
@@ -81,7 +81,7 @@ for i in range(len(kl)):
     errs[i] = np.linalg.norm(b - td.rhsmat[i])
     sc = scattering(cyls, b, k=kl[i], sum_index=n)
     A = sc.make_scattering_blocks()
-    print(abs(kl[i]), np.linalg.cond(A))
+    print(kl[i], np.linalg.cond(A))
     coeffs[:, i] = np.linalg.solve(A, b)
     u_sc_old[:, :, i] = sc.make_u_sc(X, Y, coeff_vect = coeffs[:, i])[:, :]
     u_sc_err[i] = np.amax(abs(u_sc_old[:, :, i] - td.u_sc[:, :, i]))
