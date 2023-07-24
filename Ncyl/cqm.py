@@ -171,7 +171,7 @@ class scattering(cyl):
         for i in range(len(self.cyls)):
             self.cyls[i].label = i
 
-        self.labels = np.array([int(self.cyls[i].get_label()) for i in range(len(self.cyls))])
+        self.labels = np.array([int(self.cyls[i].label) for i in range(len(self.cyls))])
         self.sum_tol = sum_tol
 
         self.wavespeed = wavespeed
@@ -297,7 +297,7 @@ class scattering(cyl):
         if bc == 'd':
             return jv(m, self.k*radius)
         elif bc == 'n':
-            return jvp(m, self.k*radius)
+            return self.k*jvp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance
             return(imp*jvp(m, self.k*radius) + jv(m, self.k*radius))
@@ -486,7 +486,7 @@ class scattering(cyl):
         if bc == 'd':
             hvec = hankel1(idxa, self.k*radius)
         elif bc == 'n':
-            hvec = h1vp(idxa, self.k*radius)
+            hvec = self.k*h1vp(idxa, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance
             hvec = (imp*h1vp(idxa, self.k*radius) + hankel1(idxa, self.k*radius))
@@ -736,9 +736,9 @@ class time_domain_scattering(scattering):
         r = cyl.radius
         p = np.array(cyl.pos)
         bc = cyl.bc
-        imp = cyl.impedance
+        imp = cyl.impedance #impedance function
         ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
-        modeidx = fftshift(fftfreq(n))
+        #modeidx = fftshift(fftfreq(n))
         
         # discretize the boundary 
         g = np.zeros((n, N))

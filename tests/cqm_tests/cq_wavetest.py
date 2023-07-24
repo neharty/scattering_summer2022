@@ -21,8 +21,6 @@ td = time_domain_scattering(
     use_par=True,
     scargs = scargs)
 
-td.fzt_boundary_allcyls()
-
 x = [-12, -6, 6, 12]
 y = [0, 12]
 X, Y = np.meshgrid(x, y)

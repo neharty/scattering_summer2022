@@ -2,7 +2,8 @@ import numpy as np
 #import matplotlib.pyplot as plt
 import os
 #from Ncyl.Ncyl_gmres import scattering, cyl
-from Ncyl.tds import scattering, cyl
+#from Ncyl.tds import scattering, cyl
+from Ncyl.cqm import cyl
 
 def uniform_grid_3x3(radius, spacing):
     # 3x3 grid of cylinders
@@ -48,8 +49,11 @@ def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None, impedance=None, cent
         origins = np.array([[coeffs[i] + center[0], coeffs[j] + center[1]] for i in range(N) for j in range(N)])*spacing
 
     for i in range(N*N):
-        cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_index = sum_num, impedance = impedance)
-
+        if type(bcs == list):
+            cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_index = sum_num, impedance = impedance)
+        else: 
+            cyls[i] = cyl(bcs, origins[i], radius, sum_index = sum_num, impedance = impedance)
+            
     return cyls
 
 def uniform_grid_random_bc(N, bcs, radius, spacing, sum_num=None, impedance=None, center=None):
@@ -61,6 +65,15 @@ def uniform_grid_random_bc(N, bcs, radius, spacing, sum_num=None, impedance=None
         if bcs[c] == 'i':
             cyls[c].impedance = impedance
     return cyls
+
+def big_circle(N, bc, big_radius, small_radius, sum_num = None, impedance=None, center=None):
+    angs = np.linspace(0, 2*np.pi, N, endpoint=False)
+    if center is None:
+        c = [0, 0]
+    else:
+        c = center
+    points = [[c[0] + big_radius*np.cos(a), c[1] + big_radius*np.sin(a)] for a in angs]
+    return [cyl(bc, points[i], small_radius, sum_index=sum_num, impedance=impedance) for i in range(N)]
 
 def uniform_pentagon(penta_radius, cyl_radius, ang_shift):
     origins_cmplx = 1j*np.zeros(5)
@@ -75,7 +88,7 @@ def uniform_pentagon(penta_radius, cyl_radius, ang_shift):
     print(origins)
     bcs = ['d', 'n', 'i', 'd', 'n']
     radius = 0.3
-    return scattering([cyl(i, bcs[i], pos=origins[i], radius = cyl_radius) for i in range(5)])
+    return [cyl(i, bcs[i], pos=origins[i], radius = cyl_radius) for i in range(5)]
 
 def uniform_grating(N, bcs, radius, spacing, sum_num = None, impedance = None):
     cyls = [None for i in range(N)]

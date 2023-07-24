@@ -1,6 +1,5 @@
 import numpy as np
 from abc import ABC, abstractmethod
-#import matplotlib.pyplot as plt
 
 class waveform(ABC):
     '''
@@ -57,10 +56,12 @@ class gaussian(waveform):
         return self.box(z, l)*tmp  
     
     def td_deriv(self, x, y, t, n):
-        #directional derivative in direction n
-        n = n/np.linalg.norm(n)
-        v = np.dot(self.d_inparg(x, y, t), n)
-        return (-self.inparg(x, y, t)*2/self.sigma)*self.td_wave(x, y, t)*v
+        v= (-self.inparg(x, y, t)*2/self.sigma)*self.td_wave(x, y, t)
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= v
+        return dg
         
 class gaussian_deriv(waveform):
     def __init__(
@@ -91,8 +92,28 @@ class gaussian_deriv(waveform):
         return self.box(z, l)*tmp
     
     def td_deriv(self, x, y, t, n):
-        v = np.dot(n, self.d_inparg(x, y, t))
-        return self.amp*np.sqrt(2/self.sigma)*np.exp(0.5-(self.inparg(x, y, t)**2)/self.sigma)*(1 - 2*self.inparg(x, y, t)**2/self.sigma)*v
+        v = self.amp*np.sqrt(2/self.sigma)*np.exp(0.5-(self.inparg(x, y, t)**2)/self.sigma)*(1 - 2*(self.inparg(x, y, t))**2/(self.sigma))
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= v
+        return dg
+
+class kachanovska(waveform):
+    #wave from kachanovska 
+    def __init__(self, inc_angle = np.pi/2, time_shift=2):
+        super().__init__(inc_angle, time_shift)
+        
+    def profile(self, z):
+        return np.exp(-20*z**2)*np.sin(30*z)
+    
+    def td_deriv(self, x, y, t, n):
+        dv = None #TODO: replace with derivative
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= dv
+        return dg
 
 class sine_pulse(waveform):
     def __init__(
@@ -115,7 +136,6 @@ class sine_pulse(waveform):
 
     def profile(self, z):
         #waveform profile, centered at the origin
-        a = self.alpha
         tmp = np.sin(self.sf*z)*np.exp(-self.alpha*np.abs(z))
         return self.box(z)*tmp
     
