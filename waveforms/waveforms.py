@@ -108,7 +108,7 @@ class kachanovska(waveform):
         return np.exp(-20*z**2)*np.sin(30*z)
     
     def td_deriv(self, x, y, t, n):
-        dv = None #TODO: replace with derivative
+        dv = np.exp(-20*self.inparg(x, y, t)**2)*(30*np.cos(30*self.inparg(x, y, t)) - 40*self.inparg(x, y, t)*np.sin(30*self.inparg(x, y, t)))
         dg = np.zeros(len(x))
         for i in range(len(x)):
             dg[i] = self.d_inparg(x, y, t).dot(n[i])
