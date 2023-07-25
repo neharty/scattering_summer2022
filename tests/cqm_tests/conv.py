@@ -23,20 +23,37 @@ bc = args.bc
 Nt = args.Nt
 wvarg = args.wvf
 Nmodes = args.Nmodes
-fout = args.fout
+dataout = args.fout
 
-#scale relative to the size of the problem
-#TODO: calculate this shit
 if wvarg == 'g':
-    wv = gaussian() #TODO: fix
+    wv = gaussian()
 elif wvarg == 'dg':
     wv = gaussian_deriv()
 
-if not os.path.exists(fout):
-    os.makedirs(fout)
-
+end_time=100
 cyls = example_setups.uniform_grid_NxN(cn, bc, 1, 3)
 
-td = time_domain_scattering(cyls, wv, end_time)
+td = time_domain_scattering(cyls, 
+                            wv, 
+                            end_time, 
+                            sampnum=Nt, 
+                            modes=Nmodes,
+                            scargs={'method':'explicit'}
+                            )
+pts = [-6, 0, 6]
+X, Y = np.meshgrid(pts, pts)
+U = td.make_U_sc(X, Y)
 
 #write out the data
+os.makedirs(dataout, exist_ok=True)
+
+for xpt in range(len(pts)):
+    for ypt in range(len(pts)):
+        if [pts[xpt], pts[ypt]] in pts:
+            arr = [[td.times[i], U[ypt, xpt, i]] for i in range(len(td.times))]
+            np.savetxt(
+                os.path.join(dataout, 
+                             '{:.3f}'.format(pts[xpt])+'_'+'{:.3f}'.format(pts[ypt])+'.dat',
+                             arr)
+                )
+
