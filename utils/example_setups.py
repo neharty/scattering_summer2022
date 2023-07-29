@@ -49,7 +49,7 @@ def uniform_grid_NxN(N, bcs, radius, spacing, sum_num=None, impedance=None, cent
         origins = np.array([[coeffs[i] + center[0], coeffs[j] + center[1]] for i in range(N) for j in range(N)])*spacing
 
     for i in range(N*N):
-        if type(bcs == list):
+        if type(bcs) is list:
             cyls[i] = cyl(bcs[i%N], origins[i], radius, sum_index = sum_num, impedance = impedance)
         else: 
             cyls[i] = cyl(bcs, origins[i], radius, sum_index = sum_num, impedance = impedance)

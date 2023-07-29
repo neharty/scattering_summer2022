@@ -15,7 +15,7 @@ parser.add_argument('samppow', help='sample number power', type=int)
 bc = parser.parse_args().bc
 samppow = parser.parse_args().samppow
 
-head = '/home/nick/scattering/data/convergence/dgaussian' #replace with file location starting at /
+head = '/home/n/nh287/scattering/data/convergence/dgaussian' #replace with file location starting at /
 
 if bc == 'd':
     bcstr = 'dirichlet'
