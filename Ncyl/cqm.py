@@ -147,6 +147,7 @@ class scattering(cyl):
             sum_index = None,
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
+            rhs_tol = 1e-14,
             k = 1,
             wavespeed = 1,
             inc_angle = np.pi,
@@ -179,6 +180,7 @@ class scattering(cyl):
         self.inc_angle = inc_angle
         self.gmres_tol = gmres_tol
         self.gmres_restart = gmres_restart
+        self.rhs_tol = rhs_tol
         self.gmres_maxiter = gmres_maxiter
         self.method = method
         self.force_method = force_method
@@ -590,6 +592,10 @@ class scattering(cyl):
 
     def scattering_coeffs(self):
         if self.method == 'gmres':
+            #check if rhs is zero-ish
+            if np.all(np.abs(self.rhs) < self.rhs_tol):
+                return (np.zeros(len(self.rhs)), 0)
+            
             #set the vectors for fast matrix multiplication
             self.ST = self.make_root_matrix()
             self.gmres_iter = 0
@@ -636,6 +642,10 @@ class scattering(cyl):
             return outp
 
         elif self.method == 'explicit':
+            #check if rhs is zero-ish
+            if np.all(np.abs(self.rhs) < self.rhs_tol):
+                return np.zeros(len(self.rhs))
+            
             if self.scat_mat is None:
                 self.scat_mat = self.make_scattering_blocks()
 
@@ -701,6 +711,7 @@ class time_domain_scattering(scattering):
                  modes = 10,
                  use_par = True,
                  cpus = None,
+                 use_conj = True,
                  wvargs={},
                  scargs = {}
                  ):
@@ -716,6 +727,7 @@ class time_domain_scattering(scattering):
         if self.cpus is None:
            self.cpus = cpu_count()
         self.scargs = scargs
+        self.use_conj = use_conj
         
         #setup cqm variables
         self.dt = self.end_time/self.sampnum
@@ -726,7 +738,10 @@ class time_domain_scattering(scattering):
         zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
         gm = lambda z : 0.5*((z**2)-(4*z)+3) 
         sl = gm(zN*self.lam)/self.dt
-        self.ks = 1j*sl #complex frequencies
+        if self.use_conj:
+            self.ks = 1j*sl[:self.sampnum//2]
+        else:
+            self.ks = 1j*sl #complex frequencies
         
         self.lammat = self.lam**np.arange(0, len(self.times))
     
@@ -760,7 +775,12 @@ class time_domain_scattering(scattering):
         # get the fourier coefficients on the boundary
         for i in range(N):
             g[:, i] = fftshift(fft(rhs[:, i]))/n
-        
+            #sparsify the rhs
+            tmp = np.abs(g[:, i])
+            if np.max(tmp) < self.fft_tol:
+                g[:, i] = np.zeros(n)
+                self.ks = self.ks[:i+1]
+                return g
         return g
                      
     def fzt_boundary_allcyls(self):
@@ -838,8 +858,9 @@ class time_domain_scattering(scattering):
                 self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
         
         #copy solutions as conjugates for negative frequency components
-        #for n in range((N)//2):
-        #    self.u_sc[:, :, (N-1)-n] = self.u_sc[:, :, n+1].conjugate()
+        if self.use_conj:
+            for n in range(self.sampnum//2):
+                self.u_sc[:, :, -1-n] = self.u_sc[:, :, n+1].conjugate()
         
         return self.u_sc
     

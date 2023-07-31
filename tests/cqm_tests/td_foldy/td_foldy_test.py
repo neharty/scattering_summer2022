@@ -52,6 +52,8 @@ U = td.make_U_sc(X, Y)
 darr = [[td.times[i], U[0,0,i]] for i in range(len(td.times))]
 np.savetxt(os.path.join(dataout, 'td_fl_fig_2-2_n.dat'), darr)
 
+
+
 #%% fig 6.2 top
 #dirichlet
 cyls = example_setups.big_circle(20, 'd', 1, 0.05)
