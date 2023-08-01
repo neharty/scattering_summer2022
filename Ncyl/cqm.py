@@ -720,6 +720,7 @@ class time_domain_scattering(scattering):
         self.wvp = self.waveform.profile
         self.end_time = end_time
         self.fft_tol = fft_tol
+        self.fftidx = []
         self.sampnum = sampnum
         self.modes = modes
         self.use_par = use_par
@@ -744,6 +745,7 @@ class time_domain_scattering(scattering):
             self.ks = 1j*sl #complex frequencies
         
         self.lammat = self.lam**np.arange(0, len(self.times))
+        
     
     def fzt_boundary_1cyl(self, cyl):
         n = 2*self.modes
@@ -779,7 +781,6 @@ class time_domain_scattering(scattering):
             tmp = np.abs(g[:, i])
             if np.max(tmp) < self.fft_tol:
                 g[:, i] = np.zeros(n)
-                self.ks = self.ks[:i+1]
                 return g
         return g
                      
@@ -788,6 +789,7 @@ class time_domain_scattering(scattering):
         self.rhsmat = [None for n in range(len(self.times))]
         for i in range(len(self.times)):
             self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+
         return self.rhsmat
         
     def make_time_harmonic_soln(self, x, y):
