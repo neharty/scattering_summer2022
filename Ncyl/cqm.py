@@ -162,7 +162,8 @@ class scattering(cyl):
             gmres_restart = None,
             gmres_maxiter = None,
             fast_matrix_build = True,
-            use_2cyl_modes = False
+            use_2cyl_modes = False,
+            use_foldy_lax = False
             ):
  
         self.cyls = cyls
@@ -187,6 +188,7 @@ class scattering(cyl):
         self.use_mat = use_mat
         self.fast_matrix_build = fast_matrix_build
         self.use_2cyl_modes = use_2cyl_modes
+        self.fl = use_foldy_lax
 
         self.precond = precond
         self.precond_dist = precond_dist
@@ -233,7 +235,10 @@ class scattering(cyl):
         # make lengths of coefficient vector blocks for MVP algorithm
         self.lengths = np.zeros(len(self.cyls) + 1, dtype=int)
         for i in self.labels:
-            self.lengths[i+1] = 2*self.cyls[i].sum_index + self.lengths[i]
+            if self.fl:
+                self.lengths = np.arange(len(self.cyls))
+            else:
+                self.lengths[i+1] = 2*self.cyls[i].sum_index + self.lengths[i]
 
         self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
        
@@ -327,6 +332,20 @@ class scattering(cyl):
 
         '''
         return self.jh(cyl, m)*self.S(n, m, b)
+    
+    def directscat_term(self, cyl, m):
+        bc = cyl.bc
+        radius = cyl.radius
+        if bc == 'd':
+            hterm = hankel1(m, self.k*radius)
+        elif bc == 'n':
+            hterm = self.k*h1vp(m, self.k*radius)
+        elif bc == 'i':
+            imp = cyl.impedance
+            hterm = (imp*h1vp(m, self.k*radius) + hankel1(m, self.k*radius))
+        else:
+            print('invalid bc')
+        return hterm
     
     def highfreq_modes(self, x):
         '''
@@ -479,21 +498,11 @@ class scattering(cyl):
         return self.ST
 
     def make_direct_scattering_block(self, cyl):
-        bc = cyl.bc
         idxa = np.arange(
             -cyl.sum_index, 
             cyl.sum_index
             )
-        radius = cyl.radius
-        if bc == 'd':
-            hvec = hankel1(idxa, self.k*radius)
-        elif bc == 'n':
-            hvec = self.k*h1vp(idxa, self.k*radius)
-        elif bc == 'i':
-            imp = cyl.impedance
-            hvec = (imp*h1vp(idxa, self.k*radius) + hankel1(idxa, self.k*radius))
-        else:
-            print('invalid bc')
+        hvec = self.directscat_term(cyl, idxa)
         return np.diag(hvec)
 
     def make_mul_scattering_block(self, cyl_i, cyl_sc):
@@ -538,7 +547,18 @@ class scattering(cyl):
         return scat_mat
 
     def make_scattering_blocks(self):
-        self.scat_mat = np.block(self.make_scattering_blocks_blockform())
+        if self.fl:
+            self.scat_mat = 1j*np.zeros((len(self.cyls), len(self.cyls)))
+            for i in self.labels:
+                for j in self.labels:
+                    if i == j:
+                        self.scat_mat[i][j] = self.directscat_term(self.cyls[i], 0)
+                    else:
+                        b = b = self.cyls[i].pos - self.cyls[j].pos
+                        self.scat_mat[i][j] = self.mulscat_term(self.cyls[j], 0, 0, b)
+        else:
+            self.scat_mat = np.block(self.make_scattering_blocks_blockform())
+        
         return self.scat_mat
     
     def make_jhm(self):
@@ -681,9 +701,12 @@ class scattering(cyl):
 
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
-            for j in range(2*self.cyls[l].sum_index):
-                idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
-                u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
+            if self.fl:
+                u_sc += cs[self.lengths[l]]*self.phi(0, R)
+            else:
+                for j in range(2*self.cyls[l].sum_index):
+                    idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
+                    u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
 
         self.u_sc = u_sc*self.mask(x,y)
         return self.u_sc
@@ -708,10 +731,11 @@ class time_domain_scattering(scattering):
                  end_time,
                  fft_tol = 1e-10,
                  sampnum = None,
-                 modes = 10,
+                 modes = 8,
                  use_par = True,
                  cpus = None,
                  use_conj = True,
+                 use_foldy_lax=False,
                  wvargs={},
                  scargs = {}
                  ):
@@ -729,6 +753,7 @@ class time_domain_scattering(scattering):
            self.cpus = cpu_count()
         self.scargs = scargs
         self.use_conj = use_conj
+        self.fl = use_foldy_lax
         
         #setup cqm variables
         self.dt = self.end_time/self.sampnum
@@ -773,23 +798,40 @@ class time_domain_scattering(scattering):
         # z-transform the boundary condition
         rhs = fft(-g*self.lammat, axis=-1)
         
-        g = 1j*np.zeros((n, N))
+        # TODO: only uses 1 mode -- incorrect for Neumann case
+        if not self.fl:
+            g = 1j*np.zeros((n, N))
+        else:
+            g = 1j*np.zeros(N)
+            
         # get the fourier coefficients on the boundary
         for i in range(N):
-            g[:, i] = fftshift(fft(rhs[:, i]))/n
-            #sparsify the rhs
-            tmp = np.abs(g[:, i])
-            if np.max(tmp) < self.fft_tol:
-                g[:, i] = np.zeros(n)
-                return g
+            if self.fl:
+                gtmp = fftshift(fft(rhs[:, i]))/n
+                g[i] = gtmp[n//2]
+                #sparsify the rhs
+                tmp = np.abs(g[i])
+                if np.max(tmp) < self.fft_tol:
+                    g[i] = 0
+                    return g
+            else:
+                g[:, i] = fftshift(fft(rhs[:, i]))/n
+                #sparsify the rhs
+                tmp = np.abs(g[:, i])
+                if np.max(tmp) < self.fft_tol:
+                    g[:, i] = np.zeros(n)
+                    return g
         return g
                      
     def fzt_boundary_allcyls(self):
         rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
         self.rhsmat = [None for n in range(len(self.times))]
         for i in range(len(self.times)):
-            self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
-
+            if self.fl:
+                self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
+            else:
+                self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+        
         return self.rhsmat
         
     def make_time_harmonic_soln(self, x, y):
@@ -820,6 +862,7 @@ class time_domain_scattering(scattering):
                     copy.deepcopy(self.cyls), 
                     self.rhsmat[a+i], 
                     k=k_block[i],
+                    use_foldy_lax = self.fl,
                     sum_index=self.modes,
                     **self.scargs
                 ) 

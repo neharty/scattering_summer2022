@@ -15,9 +15,9 @@ x=25
 X, Y = np.meshgrid([6], [0])
 
 #initialize variables
-T=10
-sn=2**13-1
-m=64
+T=6
+sn=2**10-1
+m=16
 #%%
 
 #compute the exact solution
@@ -30,7 +30,7 @@ te = process_time() - te
 #%%
 #compute approx solution
 ta = process_time()
-tdsa = time_domain_scattering(cyls, wv, T, sampnum=sn, modes=m, fft_tol=1e-10, scargs=scargs)
+tdsa = time_domain_scattering(cyls, wv, T, sampnum=sn, modes=m, fft_tol=1e-12, scargs=scargs)
 u_a = tdsa.make_U_sc(X, Y)
 plt.plot(tdsa.times, u_a[0, 0, :])
 ta = process_time() - ta
