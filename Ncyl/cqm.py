@@ -736,6 +736,7 @@ class time_domain_scattering(scattering):
                  cpus = None,
                  use_conj = True,
                  use_foldy_lax=False,
+                 timeint = None,
                  wvargs={},
                  scargs = {}
                  ):
@@ -754,24 +755,36 @@ class time_domain_scattering(scattering):
         self.scargs = scargs
         self.use_conj = use_conj
         self.fl = use_foldy_lax
+        self.timeint = timeint
         
+        self.init_vars()
+        
+    def init_vars(self):
         #setup cqm variables
         self.dt = self.end_time/self.sampnum
         self.times = np.linspace(0, self.end_time, self.sampnum+1)
         eps = np.finfo(float).eps # machine epsilon
-        
         self.lam = max(self.dt**(3/self.sampnum), eps**(1/(2*self.sampnum)))
         zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
-        gm = lambda z : 0.5*((z**2)-(4*z)+3) 
-        sl = gm(zN*self.lam)/self.dt
-        if self.use_conj:
-            self.ks = 1j*sl[:self.sampnum//2]
-        else:
-            self.ks = 1j*sl #complex frequencies
+        self.zs = zN*self.lam
         
+        if self.timeint is None:
+            gm = lambda z : 0.5*((z**2)-(4*z)+3) 
+            sl = gm(zN*self.lam)/self.dt
+            if self.use_conj:
+                self.ks = 1j*sl[:self.sampnum//2]
+            else:
+                self.ks = 1j*sl
+        else:
+            gm = lambda z : self.timeint.A + (z/(1-z))*self.timeint.b
+            gminv = [np.linalg.inv(gm(z)) for z in self.zs]
+            peig = [np.linalg.eig(Ainv) for Ainv in gminv]
+            self.evals = [tup[0] for tup in peig]
+            self.pmats = [tup[1] for tup in peig]
+            self.pinvmats = [np.linalg.inv(p) for p in self.pmats]
+            
         self.lammat = self.lam**np.arange(0, len(self.times))
         
-    
     def fzt_boundary_1cyl(self, cyl):
         n = 2*self.modes
         N = len(self.times)
@@ -782,48 +795,83 @@ class time_domain_scattering(scattering):
         ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
         #modeidx = fftshift(fftfreq(n))
         
-        # discretize the boundary 
-        g = np.zeros((n, N))
-        for i in range(len(self.times)):
-            pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
-            if bc == 'd':
-                g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
-            elif bc == 'n':
-                dirvect = (pts[:] - p)/r
-                g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
-            elif bc == 'i':
-                pass
-                #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
-        
-        # z-transform the boundary condition
-        rhs = fft(-g*self.lammat, axis=-1)
-        
-        # TODO: only uses 1 mode -- incorrect for Neumann case
-        if not self.fl:
-            g = 1j*np.zeros((n, N))
-        else:
-            g = 1j*np.zeros(N)
+        if self.timeint is None:
+            # discretize the boundary 
+            g = np.zeros((n, N))
+            for i in range(len(self.times)):
+                pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
+                if bc == 'd':
+                    g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
+                elif bc == 'n':
+                    dirvect = (pts[:] - p)/r
+                    g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
+                elif bc == 'i':
+                    pass
+                    #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
             
-        # get the fourier coefficients on the boundary
-        for i in range(N):
-            if self.fl:
-                gtmp = fftshift(fft(rhs[:, i]))/n
-                g[i] = gtmp[n//2]
-                #sparsify the rhs
-                tmp = np.abs(g[i])
-                if np.max(tmp) < self.fft_tol:
-                    g[i] = 0
-                    return g
+            # z-transform the boundary condition
+            rhs = fft(-g*self.lammat, axis=-1)
+            
+            # TODO: only uses 1 mode -- incorrect for Neumann case
+            if not self.fl:
+                g = 1j*np.zeros((n, N))
             else:
-                g[:, i] = fftshift(fft(rhs[:, i]))/n
-                #sparsify the rhs
-                tmp = np.abs(g[:, i])
-                if np.max(tmp) < self.fft_tol:
-                    g[:, i] = np.zeros(n)
-                    return g
-        return g
+                g = 1j*np.zeros(N)
+                
+            # get the fourier coefficients on the boundary
+            for i in range(N):
+                if self.fl:
+                    gtmp = fftshift(fft(rhs[:, i]))/n
+                    g[i] = gtmp[n//2]
+                    #sparsify the rhs
+                    tmp = np.abs(g[i])
+                    if np.max(tmp) < self.fft_tol:
+                        g[i] = 0
+                        return g
+                else:
+                    g[:, i] = fftshift(fft(rhs[:, i]))/n
+                    #sparsify the rhs
+                    tmp = np.abs(g[:, i])
+                    if np.max(tmp) < self.fft_tol:
+                        g[:, i] = np.zeros(n)
+                        return g
+            return g
+        
+        else:
+            # discretize the boundary 
+            g = [np.zeros((n, N)) for c in self.timeint.c]
+            for j in range(len(self.timeint.c)):
+                c = self.timeint.c
+                for i in range(len(self.times)):
+                    pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
+                    if bc == 'd':
+                        g[j][:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i]+self.dt*c)
+                    elif bc == 'n':
+                        dirvect = (pts[:] - p)/r
+                        g[j][:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i]+self.dt*c, dirvect)
+                    elif bc == 'i':
+                        pass
+                        #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
+                
+                # z-transform the boundary condition
+                rhs = fft(-g[j]*self.lammat, axis=-1)
+             
+                # get the fourier coefficients on the boundary
+                for i in range(N):
+                    g[j][:, i] = fftshift(fft(rhs[:, i]))/n
+                    #sparsify the rhs
+                    tmp = np.abs(g[j][:, i])
+                    if np.max(tmp) < self.fft_tol:
+                        g[j][:, i] = np.zeros(n)
+                        break
+                    
+            #TODO: form the right hand side
+            
+
+            return g
                      
     def fzt_boundary_allcyls(self):
+        #only works for BDF2
         rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
         self.rhsmat = [None for n in range(len(self.times))]
         for i in range(len(self.times)):
@@ -833,7 +881,7 @@ class time_domain_scattering(scattering):
                 self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
         
         return self.rhsmat
-        
+    
     def make_time_harmonic_soln(self, x, y):
         self.fzt_boundary_allcyls()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
@@ -856,7 +904,85 @@ class time_domain_scattering(scattering):
             
             for c in self.cyls:
                 c.sum_index = None
+            
+            #find frequencies in parallel
+            sc = [scattering(
+                    copy.deepcopy(self.cyls), 
+                    self.rhsmat[a+i], 
+                    k=k_block[i],
+                    use_foldy_lax = self.fl,
+                    sum_index=self.modes,
+                    **self.scargs
+                ) 
+                for i in range(len(k_block))]
+            q = np.array([Queue() for i in kbrange])
+            p = np.array([
+                    Process(
+                            target=sc[i].make_u_sc_parallel, 
+                            args=(x, y, q[i])
+                        ) for i in kbrange
+                    ])
+            [p[i].start() for i in kbrange]
+            for i in kbrange:
+                self.u_sc[:, :, a+i] = q[i].get()
+                
+            [p[i].join() for i in kbrange]
 
+        if self.use_par:
+            #parallel algorithm
+            rem = len(klen)%cpus
+            blocks = len(klen)//cpus
+            for b in range(blocks):
+                compute_block(b*cpus, (b+1)*cpus)
+            if rem > 0:
+                #finish remaining blocks
+                b = blocks*cpus
+                compute_block(b)
+        else:
+            #serial algorithm
+            for i in klen:
+                sc = scattering(
+                        copy.deepcopy(self.cyls), 
+                        self.rhsmat[i], 
+                        k=self.ks[i],
+                        sum_index=self.modes,
+                        **self.scargs
+                    )
+                self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
+        
+        #copy solutions as conjugates for negative frequency components
+        if self.use_conj:
+            for n in range(self.sampnum//2):
+                self.u_sc[:, :, -1-n] = self.u_sc[:, :, n+1].conjugate()
+        
+        return self.u_sc
+    
+    def highorder_solve(idx):
+        pass
+    
+    def make_time_harmonic_soln_highorder(self, x, y):
+        self.fzt_boundary_allcyls_highorder()
+        self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
+        klen = range(len(self.ks))
+        cpus = self.cpus
+        N = len(self.times)
+        
+        def compute_block(a, b=None):
+            if b is None:
+                k_block = self.ks[a:]
+            else:
+                k_block = self.ks[a: b]
+            
+            if len(k_block) > 1:
+                print('fblk:', k_block[0], k_block[-1], len(k_block))
+            else:
+                print('fblk:', k_block, len(k_block))
+
+            kbrange = range(len(k_block))
+            
+            for c in self.cyls:
+                c.sum_index = None
+            
             #find frequencies in parallel
             sc = [scattering(
                     copy.deepcopy(self.cyls), 
@@ -910,7 +1036,10 @@ class time_domain_scattering(scattering):
         return self.u_sc
     
     def make_U_sc(self, x, y):
-        self.make_time_harmonic_soln(x, y)
+        if self.timeint is None:
+            self.make_time_harmonic_soln(x, y)
+        else:
+            self.make_time_harmonic_soln_highorder(x, y)
         self.U_sc = (1/self.lammat)*ifft(self.u_sc, axis=-1)
         self.U_sc = self.U_sc.real 
         return self.U_sc
