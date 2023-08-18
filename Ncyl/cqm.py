@@ -776,12 +776,17 @@ class time_domain_scattering(scattering):
             else:
                 self.ks = 1j*sl
         else:
-            gm = lambda z : self.timeint.A + (z/(1-z))*self.timeint.b
-            gminv = [np.linalg.inv(gm(z)) for z in self.zs]
+            blist = self.timeint.b.tolist()
+            bmat = np.array([blist, blist])
+            #gm = lambda z : self.timeint.A + (z/(1-z))*bmat
+            invmat = np.linalg.inv(self.timeint.A)
+            gm = lambda z : invmat@(np.eye(len(invmat)) - z*(bmat@invmat))
+            #gminv = [np.linalg.inv(gm(z)) for z in self.zs]
+            gminv = [gm(z) for z in self.zs]
             peig = [np.linalg.eig(Ainv) for Ainv in gminv]
             self.evals = [tup[0] for tup in peig]
-            self.pmats = [tup[1] for tup in peig]
-            self.pinvmats = [np.linalg.inv(p) for p in self.pmats]
+            self.pmats = np.array([tup[1] for tup in peig])
+            self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])
             
         self.lammat = self.lam**np.arange(0, len(self.times))
         
@@ -839,9 +844,9 @@ class time_domain_scattering(scattering):
         
         else:
             # discretize the boundary 
-            g = [np.zeros((n, N)) for c in self.timeint.c]
+            g = [1j*np.zeros((n, N)) for c in self.timeint.c]
             for j in range(len(self.timeint.c)):
-                c = self.timeint.c
+                c = self.timeint.c[j]
                 for i in range(len(self.times)):
                     pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
                     if bc == 'd':
@@ -864,11 +869,15 @@ class time_domain_scattering(scattering):
                     if np.max(tmp) < self.fft_tol:
                         g[j][:, i] = np.zeros(n)
                         break
-                    
-            #TODO: form the right hand side
             
+            gret = [None for c in self.timeint.c]
+            for i in range(len(self.timeint.c)):
+                gtmp = 1j*np.zeros((n, N))
+                for j in range(len(self.timeint.c)):
+                    gtmp += self.pinvmats[:, i, j]*g[j]
+                gret[i] = gtmp
 
-            return g
+            return gret
                      
     def fzt_boundary_allcyls(self):
         #only works for BDF2
@@ -957,47 +966,65 @@ class time_domain_scattering(scattering):
         
         return self.u_sc
     
-    def highorder_solve(idx):
-        pass
+    def fzt_boundary_allcyls_highorder(self):
+        rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+        self.rhsmat = [[None for n in range(len(self.times))] for c in range(len(self.timeint.c))]
+        for j in range(len(self.timeint.c)):
+            for i in range(len(self.times)):
+                self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
+        return self.rhsmat
+    
+    def highorder_solve(self, idx, x, y):
+        ks = 1j*self.evals[idx]/self.dt
+        wmat = [None for k in ks]
+        for i in range(len(ks)):
+            sc = scattering(
+                    copy.deepcopy(self.cyls), 
+                    self.rhsmat[i][idx], 
+                    k=ks[i],
+                    sum_index=self.modes,
+                    **self.scargs
+                )
+            wmat[i] = sc.make_u_sc(x, y)
+        print(wmat)
+        for i in range(len(ks)):
+            rmat = 1j*np.zeros(wmat[0].shape)
+            for j in range(len(wmat)):
+                rmat += self.pmats[idx][i, j]*wmat[j]
+        
+        return self.zs[idx]*rmat
+            
+    def highorder_solve_par(self, idx, x, y, q):
+        q.put(self.highorder_solve(idx, x, y))
     
     def make_time_harmonic_soln_highorder(self, x, y):
         self.fzt_boundary_allcyls_highorder()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
-        klen = range(len(self.ks))
+        klen = range(len(self.zs))
         cpus = self.cpus
-        N = len(self.times)
+        idxs = np.arange(len(self.times)//2)
         
         def compute_block(a, b=None):
             if b is None:
-                k_block = self.ks[a:]
+                idx_block = idxs[a:]
             else:
-                k_block = self.ks[a: b]
+                idx_block = idxs[a: b]
             
-            if len(k_block) > 1:
-                print('fblk:', k_block[0], k_block[-1], len(k_block))
+            if len(idx_block) > 1:
+                print('fblk:', idx_block[0], idx_block[-1], len(idx_block))
             else:
-                print('fblk:', k_block, len(k_block))
+                print('fblk:', idx_block, len(idx_block))
 
-            kbrange = range(len(k_block))
+            kbrange = range(len(idx_block))
             
             for c in self.cyls:
                 c.sum_index = None
             
-            #find frequencies in parallel
-            sc = [scattering(
-                    copy.deepcopy(self.cyls), 
-                    self.rhsmat[a+i], 
-                    k=k_block[i],
-                    use_foldy_lax = self.fl,
-                    sum_index=self.modes,
-                    **self.scargs
-                ) 
-                for i in range(len(k_block))]
             q = np.array([Queue() for i in kbrange])
             p = np.array([
                     Process(
-                            target=sc[i].make_u_sc_parallel, 
-                            args=(x, y, q[i])
+                            target=self.highorder_solve_par, 
+                            args=(idx_block[i], x, y, q[i])
                         ) for i in kbrange
                     ])
             [p[i].start() for i in kbrange]
@@ -1017,6 +1044,7 @@ class time_domain_scattering(scattering):
                 b = blocks*cpus
                 compute_block(b)
         else:
+            #TODO: does not work for the highorder stuff
             #serial algorithm
             for i in klen:
                 sc = scattering(

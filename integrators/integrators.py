@@ -14,7 +14,7 @@ class integrator(ABC):
 
 
 class IRK3(integrator):
-    def __init__():
+    def __init__(self):
         Amat = np.array([[5/12, -1/12], 
                          [3/4, 1/4]])
         bmat = np.array([3/4, 1/4])

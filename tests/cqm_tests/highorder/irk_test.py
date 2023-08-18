@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 from Ncyl.cqm import time_domain_scattering, cyl
 from waveforms.waveforms import gaussian
 from utils import example_setups
+from integrators.integrators import IRK3
 
-irk = 'IRK3'
+irk = IRK3()
 cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
 wv = gaussian(time_shift=10)
 T = 40
@@ -13,7 +14,7 @@ tds = time_domain_scattering(
                              wv,
                              T,
                              modes=16,
-                             sampnum=2**12,
+                             sampnum=2**10,
                              timeint=irk,
                              scargs={'method':'explicit'}
                              )
