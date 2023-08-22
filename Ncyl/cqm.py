@@ -777,7 +777,7 @@ class time_domain_scattering(scattering):
                 self.ks = 1j*sl
         else:
             blist = self.timeint.b.tolist()
-            bmat = np.array([blist, blist])
+            bmat = np.array([blist for b in blist])
             #gm = lambda z : self.timeint.A + (z/(1-z))*bmat
             invmat = np.linalg.inv(self.timeint.A)
             gm = lambda z : invmat@(np.eye(len(invmat)) - z*(bmat@invmat))
@@ -845,6 +845,7 @@ class time_domain_scattering(scattering):
         else:
             # discretize the boundary 
             g = [1j*np.zeros((n, N)) for c in self.timeint.c]
+            rhs = [None for c in self.timeint.c]
             for j in range(len(self.timeint.c)):
                 c = self.timeint.c[j]
                 for i in range(len(self.times)):
@@ -859,25 +860,26 @@ class time_domain_scattering(scattering):
                         #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
                 
                 # z-transform the boundary condition
-                rhs = fft(-g[j]*self.lammat, axis=-1)
-             
-                # get the fourier coefficients on the boundary
-                for i in range(N):
-                    g[j][:, i] = fftshift(fft(rhs[:, i]))/n
-                    #sparsify the rhs
-                    tmp = np.abs(g[j][:, i])
-                    if np.max(tmp) < self.fft_tol:
-                        g[j][:, i] = np.zeros(n)
-                        break
+                rhs[j] = fft(-g[j]*self.lammat, axis=-1)
             
+            #form the boundary condition for W
             gret = [None for c in self.timeint.c]
             for i in range(len(self.timeint.c)):
                 gtmp = 1j*np.zeros((n, N))
                 for j in range(len(self.timeint.c)):
-                    gtmp += self.pinvmats[:, i, j]*g[j]
+                    gtmp += self.pinvmats[:, i, j]*rhs[j]
                 gret[i] = gtmp
-
-            return gret
+            
+            # get the fourier coefficients on the boundary
+            g = [1j*np.zeros((n, N)) for c in self.timeint.c]
+            for j in range(len(self.timeint.c)):
+                for i in range(N):
+                    g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
+                    #sparsify the rhs
+                    if np.max(np.abs(g[j][:, i])) < self.fft_tol:
+                        g[j][:, i] = np.zeros(n)
+                        break
+            return g
                      
     def fzt_boundary_allcyls(self):
         #only works for BDF2
@@ -986,12 +988,11 @@ class time_domain_scattering(scattering):
                     **self.scargs
                 )
             wmat[i] = sc.make_u_sc(x, y)
-        print(wmat)
-        for i in range(len(ks)):
-            rmat = 1j*np.zeros(wmat[0].shape)
-            for j in range(len(wmat)):
-                rmat += self.pmats[idx][i, j]*wmat[j]
-        
+
+        rmat = 1j*np.zeros(wmat[0].shape)
+        for i in range(len(wmat)):
+            rmat += self.pmats[idx][-1, i]*wmat[i]
+
         return self.zs[idx]*rmat
             
     def highorder_solve_par(self, idx, x, y, q):
@@ -1002,7 +1003,7 @@ class time_domain_scattering(scattering):
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         klen = range(len(self.zs))
         cpus = self.cpus
-        idxs = np.arange(len(self.times)//2)
+        idxs = np.arange((self.sampnum//2)+1)
         
         def compute_block(a, b=None):
             if b is None:
@@ -1044,17 +1045,9 @@ class time_domain_scattering(scattering):
                 b = blocks*cpus
                 compute_block(b)
         else:
-            #TODO: does not work for the highorder stuff
             #serial algorithm
-            for i in klen:
-                sc = scattering(
-                        copy.deepcopy(self.cyls), 
-                        self.rhsmat[i], 
-                        k=self.ks[i],
-                        sum_index=self.modes,
-                        **self.scargs
-                    )
-                self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
+            for i in idxs:
+                self.u_sc[:, :, i] = self.highorder_solve(i, x, y)
         
         #copy solutions as conjugates for negative frequency components
         if self.use_conj:

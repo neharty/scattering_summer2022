@@ -3,6 +3,7 @@ import numpy as np
 from Ncyl.cqm import time_domain_scattering
 from utils import example_setups
 from waveforms.waveforms import gaussian, gaussian_deriv
+from integrators.integrators import IRK3, IRK5
 
 import argparse
 import os
@@ -13,6 +14,7 @@ parser.add_argument('cylnum', help='number of cyls', type=int)
 parser.add_argument('bc', help='boundary condition')
 parser.add_argument('Nt', help = 'number of time samples', type=int)
 parser.add_argument('wvf', help='waveform')
+parser.add_argument('timeint', help='time integration technique')
 parser.add_argument('Nmodes', help='number of eigenmodes', type=int)
 parser.add_argument('fout', help='full data output path')
 
@@ -22,15 +24,22 @@ cn = args.cylnum
 bc = args.bc
 Nt = args.Nt
 wvarg = args.wvf
+tint = args.timeint
+if tint == 'bdf2':
+    tintt = None
+elif tint == 'irk3':
+    tintt = IRK3()
+elif tint == 'irk5':
+    tintt = IRK5()
 Nmodes = args.Nmodes
 dataout = args.fout
 
 if wvarg == 'g':
-    wv = gaussian(time_shift=10)
+    wv = gaussian(time_shift=6)
 elif wvarg == 'dg':
-    wv = gaussian_deriv(time_shift=10)
+    wv = gaussian_deriv(time_shift=6)
 
-end_time=100
+end_time=50
 cyls = example_setups.uniform_grid_NxN(cn, bc, 1, 3)
 
 td = time_domain_scattering(cyls, 
@@ -38,6 +47,7 @@ td = time_domain_scattering(cyls,
                             end_time, 
                             sampnum=2**Nt, 
                             modes=Nmodes,
+                            timeint=tintt,
                             scargs={'method':'explicit'}
                             )
 pts = [-6, 0, 6]
