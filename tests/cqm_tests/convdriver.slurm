@@ -2,9 +2,10 @@
 #SBATCH --partition=dms-cpu
 #SBATCH --mem=16GB
 #SBATCH --ntasks=1
-#SBATCH --sockets-per-node=2
+#SBATCH --sockets-per-node=1
 #SBATCH --cores-per-socket=6
 #SBATCH --threads-per-core=1
+#SBATCH --hint=nomultithread
 #SBATCH --nodes=1
 #SBATCH --time=1-0
 #SBATCH --mail-type=BEGIN,END,FAIL

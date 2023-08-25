@@ -20,6 +20,8 @@ parser.add_argument('fout', help='full data output path')
 
 args = parser.parse_args()
 
+print(args)
+
 cn = args.cylnum
 bc = args.bc
 Nt = args.Nt
@@ -48,6 +50,7 @@ td = time_domain_scattering(cyls,
                             sampnum=2**Nt, 
                             modes=Nmodes,
                             timeint=tintt,
+                            cpus=6,
                             scargs={'method':'explicit'}
                             )
 pts = [-6, 0, 6]
