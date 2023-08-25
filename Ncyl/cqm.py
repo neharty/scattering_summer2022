@@ -147,7 +147,7 @@ class scattering(cyl):
             sum_index = None,
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
-            rhs_tol = 1e-14,
+            rhs_tol = 1e-8,
             k = 1,
             wavespeed = 1,
             inc_angle = np.pi,
@@ -663,7 +663,7 @@ class scattering(cyl):
 
         elif self.method == 'explicit':
             #check if rhs is zero-ish
-            if np.all(np.abs(self.rhs) < self.rhs_tol):
+            if np.linalg.norm(self.rhs) < self.rhs_tol:
                 return np.zeros(len(self.rhs))
             
             if self.scat_mat is None:
@@ -675,7 +675,11 @@ class scattering(cyl):
             #     pc_mat = self.precond(self).inv_mat
             #     return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
             # else:
-            soln = np.linalg.solve(sm, rhs)
+            try:
+                soln = np.linalg.solve(sm, rhs)
+            except:
+                print('singular matrix', np.linalg.norm(rhs))
+                return np.zeros(len(self.rhs))
             print('k done:', self.k)
             return soln
     
@@ -770,7 +774,7 @@ class time_domain_scattering(scattering):
         
         if self.timeint is None:
             gm = lambda z : 0.5*((z**2)-(4*z)+3) 
-            sl = gm(zN*self.lam)/self.dt
+            sl = gm(self.zs)/self.dt
             if self.use_conj:
                 self.ks = 1j*sl[:self.sampnum//2]
             else:

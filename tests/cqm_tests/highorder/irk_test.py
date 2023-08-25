@@ -6,7 +6,7 @@ from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 
 #%%
-cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
+cyls = example_setups.uniform_grid_NxN(3, 'n', 1, 3)
 #cyls = [cyl('d', [0,0], 1)]
 wv = gaussian(time_shift=6)
 T = 20
@@ -16,7 +16,7 @@ tds = time_domain_scattering(
                              wv,
                              T,
                              modes=8,
-                             sampnum=2**10,
+                             sampnum=2**12,
                              scargs={'method':'explicit'}
                              )
 
@@ -46,7 +46,7 @@ tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
-                             modes=16,
+                             modes=8,
                              sampnum=2**10,
                              timeint=irk,
                              scargs={'method':'explicit'}
@@ -61,5 +61,5 @@ plt.legend()
 plt.xlabel('t')
 plt.ylabel('U_sc')
 
-plt.savefig('highorder_compare.pdf')
+plt.savefig('tests/cqm_tests/highorder/highorder_compare_n.pdf')
 
