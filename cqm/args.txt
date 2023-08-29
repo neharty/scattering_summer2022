@@ -1,0 +1,4 @@
+T=20
+modes=8
+sampnum=2**12
+scargs={'method':'explicit'}

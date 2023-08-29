@@ -1075,3 +1075,5 @@ class time_domain_scattering(scattering):
         for i in range(len(self.times)):
             self.U[:, :, i] = self.U_sc[:, :, i] + (scattering.mask(self, x, y)*self.waveform.td_wave(x, y, self.times[i]))
         return self.U
+
+    
