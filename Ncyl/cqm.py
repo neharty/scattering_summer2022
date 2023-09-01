@@ -9,8 +9,6 @@ from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
 from multiprocessing import Process, Queue, cpu_count
 import copy
 
-np.set_printoptions(linewidth=np.inf, precision=3)
-
 class cyl:
     '''
     Class to build 1 cylinder. Cylinders are identified by a
@@ -301,15 +299,18 @@ class scattering(cyl):
         '''
         bc = cyl.bc
         radius = cyl.radius
+        
         if bc == 'd':
-            return jv(m, self.k*radius)
+            st = jv(m, self.k*radius)
         elif bc == 'n':
-            return self.k*jvp(m, self.k*radius)
+            st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance
-            return(imp*jvp(m, self.k*radius) + jv(m, self.k*radius))
+            st = (imp*jvp(m, self.k*radius) + jv(m, self.k*radius))
         else:
             print('invalid bc')
+        
+        return st
     
     def mulscat_term(self, cyl, n, m, b):
         '''
@@ -331,7 +332,16 @@ class scattering(cyl):
             DESCRIPTION.
 
         '''
-        return self.jh(cyl, m)*self.S(n, m, b)
+        tmp = self.jh(cyl, m)*self.S(n, m, b)
+        if not np.isfinite(tmp):
+            k = self.k
+            a = cyl.radius
+            b, theta = self.cart_to_polar(b)
+            return np.exp(-1j*n*np.pi/2) \
+                    *(np.exp(1j*(k*(a+b)-np.pi/2)) + np.exp(1j*(k*(b-a) + m*np.pi))) \
+                    /(np.pi*k*np.sqrt(a*b)) \
+                    *np.exp(1j*(n-m)*theta)
+        return tmp
     
     def directscat_term(self, cyl, m):
         bc = cyl.bc
@@ -663,7 +673,7 @@ class scattering(cyl):
 
         elif self.method == 'explicit':
             #check if rhs is zero-ish
-            if np.linalg.norm(self.rhs) < self.rhs_tol:
+            if np.max(np.abs(self.rhs)) < self.rhs_tol:
                 return np.zeros(len(self.rhs))
             
             if self.scat_mat is None:
@@ -675,6 +685,10 @@ class scattering(cyl):
             #     pc_mat = self.precond(self).inv_mat
             #     return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
             # else:
+            if not np.isfinite(sm).all():
+                self.fast_matrix_build = False
+                sm = self.make_scattering_blocks()
+            
             try:
                 soln = np.linalg.solve(sm, rhs)
             except:
