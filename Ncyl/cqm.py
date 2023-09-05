@@ -145,7 +145,7 @@ class scattering(cyl):
             sum_index = None,
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
-            rhs_tol = 1e-8,
+            rhs_tol = 1e-10,
             k = 1,
             wavespeed = 1,
             inc_angle = np.pi,
@@ -337,8 +337,14 @@ class scattering(cyl):
             k = self.k
             a = cyl.radius
             b, theta = self.cart_to_polar(b)
-            return np.exp(-1j*n*np.pi/2) \
+            if cyl.bc == 'd':
+                return np.exp(-1j*n*np.pi/2) \
                     *(np.exp(1j*(k*(a+b)-np.pi/2)) + np.exp(1j*(k*(b-a) + m*np.pi))) \
+                    /(np.pi*k*np.sqrt(a*b)) \
+                    *np.exp(1j*(n-m)*theta)
+            elif cyl.bc == 'n':
+                return k*1j*np.exp(-1j*n*np.pi/2) \
+                    *(np.exp(1j*(k*(a+b)-np.pi/2)) - np.exp(1j*(k*(b-a) + m*np.pi))) \
                     /(np.pi*k*np.sqrt(a*b)) \
                     *np.exp(1j*(n-m)*theta)
         return tmp
