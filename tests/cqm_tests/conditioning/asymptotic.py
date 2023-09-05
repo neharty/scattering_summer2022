@@ -18,7 +18,7 @@ b=[1, 0]
 m = 16
 n = -16
 
-cyls = [cyl('d', [0,0], a)]
+cyls = [cyl('n', [0,0], a)]
 phase = 3*np.pi/4
 
 ks = np.logspace(2, 3)*np.exp(1j*phase)
@@ -35,7 +35,7 @@ for i in range(len(ks)):
 plt.loglog(np.abs(ks), errs)
 plt.xlabel('|k|')
 plt.ylabel('err')
-plt.savefig('/home/nick/scattering/tests/cqm_tests/conditioning/asymptotic_err_d.pdf')
+plt.savefig('/home/nick/scattering/tests/cqm_tests/conditioning/asymptotic_err_n.pdf')
 #%%
 exact = 1j*np.zeros(len(ks))
 approx = 1j*np.zeros(len(ks))
@@ -49,8 +49,8 @@ for i in range(len(ks)):
         approx[i] = asymptotic_n(cyls[0], m, n, 1, k)
 
 plt.loglog(np.abs(ks), np.abs(exact), label='exact solution')
-plt.loglog(np.abs(ks), np.abs(approx), label='apsymptotic solution')
+plt.loglog(np.abs(ks), np.abs(approx), label='asymptotic solution')
 plt.legend()
 plt.xlabel('|k|')
 plt.ylabel('magnitude')
-plt.savefig('/home/nick/scattering/tests/cqm_tests/conditioning/asymptotic_converge_d.pdf')
+plt.savefig('/home/nick/scattering/tests/cqm_tests/conditioning/asymptotic_converge_n.pdf')
