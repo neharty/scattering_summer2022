@@ -788,7 +788,12 @@ class time_domain_scattering(scattering):
         self.dt = self.end_time/self.sampnum
         self.times = np.linspace(0, self.end_time, self.sampnum+1)
         eps = np.finfo(float).eps # machine epsilon
-        self.lam = max(self.dt**(3/self.sampnum), eps**(1/(2*self.sampnum)))
+        
+        if self.timeint is None:
+            self.lam = max(self.dt**(3/self.sampnum), eps**(1/(2*self.sampnum)))
+        else:
+            self.lam = max(self.dt**((self.timeint.order + 1)/self.sampnum), eps**(1/(2*self.sampnum)))
+        
         zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
         self.zs = zN*self.lam
         

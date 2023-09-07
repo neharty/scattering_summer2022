@@ -9,7 +9,7 @@ modes = 16
 pos = (6, 0)
 posstr = str(pos[0])+'.000_'+str(pos[1])+'.000.dat'
 tmeth = 'irk3'
-path = '/home/nick/scattering/data/cqm/convergence/lambda/'
+path = '/home/nick/scattering/data/cqm/convergence/'
 fpath = path + tmeth +'/'+ wave+'/' + bc 
 
 maxpow = 15

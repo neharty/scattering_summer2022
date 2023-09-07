@@ -19,6 +19,7 @@ class IRK3(integrator):
                          [3/4, 1/4]])
         bmat = np.array([3/4, 1/4])
         cmat = np.array([1/3, 1])
+        self.order = 3
         super().__init__(Amat, bmat, cmat)
         
 class IRK5(integrator):
@@ -28,4 +29,5 @@ class IRK5(integrator):
                       [4/9 - np.sqrt(6)/36, 4/9 + np.sqrt(6)/36, 1/9]])
         b = np.array([4/9 - np.sqrt(6)/36, 4/9 + np.sqrt(6)/36, 1/9])
         c = np.array([2/5 - np.sqrt(6)/10, 2/5 + np.sqrt(6)/10, 1])
+        self.order=5
         super().__init__(A, b, c)
