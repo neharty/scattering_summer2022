@@ -14,7 +14,7 @@ for tmeth in ['bdf2', 'irk3', 'irk5']:
     fpath = path + tmeth +'/'+ wave+'/' + bc 
     
     maxpow = 15
-    pows = np.arange(7, maxpow)
+    pows = np.arange(5, maxpow)
     Nsamps = (2**pows)
     
     tmp = 2**maxpow
@@ -49,5 +49,5 @@ for tmeth in ['bdf2', 'irk3', 'irk5']:
 plt.legend()
 plt.xlabel('dt')
 plt.ylabel('err')
-plt.title('using asymptotic')
-#plt.savefig('/home/nick/scattering/data/cqm/convergence/asymptotic_err.pdf')
+plt.title('(x,y)='+str(pos)+', bc='+bc)
+plt.savefig('/home/nick/scattering/data/cqm/convergence/'+str(pos)+'bc='+bc+'.pdf')
