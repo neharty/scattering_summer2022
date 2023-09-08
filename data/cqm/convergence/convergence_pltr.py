@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 #%%
 wave = 'g'
-bc = 'n'
+bc = 'd'
 modes = 16
 pos = (6, 0)
 posstr = str(pos[0])+'.000_'+str(pos[1])+'.000.dat'
