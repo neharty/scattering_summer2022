@@ -46,7 +46,7 @@ class cyl:
         self.pos = np.array(pos)
         self.radius = radius
         self.bc = bc
-        self.impedance = impedance #impedance is the impedance parameter xi, lambda = k/xi
+        self.impedance = impedance #impedance is the impedance parameter xi, lambda = xi*k
         if self.bc == 'i' and impedance == None:
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
@@ -282,21 +282,6 @@ class scattering(cyl):
         return self.phihat(m-n, v)
 
     def jh(self, cyl, m):
-        '''
-
-        Parameters
-        ----------
-        cyl : TYPE
-            DESCRIPTION.
-        m : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
         bc = cyl.bc
         radius = cyl.radius
         
@@ -305,33 +290,14 @@ class scattering(cyl):
         elif bc == 'n':
             st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
-            imp = cyl.impedance
-            st = (imp*jvp(m, self.k*radius) + jv(m, self.k*radius))
+            imp = cyl.impedance(cyl, self.k, m)
+            st = self.k*(jvp(m, self.k*radius) + imp*jv(m, self.k*radius))
         else:
             print('invalid bc')
         
         return st
     
     def mulscat_term(self, cyl, n, m, b):
-        '''
-
-        Parameters
-        ----------
-        cyl : TYPE
-            DESCRIPTION.
-        n : TYPE
-            DESCRIPTION.
-        m : TYPE
-            DESCRIPTION.
-        b : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
         tmp = self.jh(cyl, m)*self.S(n, m, b)
         if not np.isfinite(tmp):
             k = self.k
@@ -347,6 +313,9 @@ class scattering(cyl):
                     *(np.exp(1j*(k*(a+b)-np.pi/2)) - np.exp(1j*(k*(b-a) + m*np.pi))) \
                     /(np.pi*k*np.sqrt(a*b)) \
                     *np.exp(1j*(n-m)*theta)
+            elif cyl.bc == 'i':
+                #TODO: implement
+                return None
         return tmp
     
     def directscat_term(self, cyl, m):
@@ -357,67 +326,22 @@ class scattering(cyl):
         elif bc == 'n':
             hterm = self.k*h1vp(m, self.k*radius)
         elif bc == 'i':
-            imp = cyl.impedance
-            hterm = (imp*h1vp(m, self.k*radius) + hankel1(m, self.k*radius))
+            imp = cyl.impedance(cyl, self.k, m)
+            hterm = self.k*(h1vp(m, self.k*radius) + imp*hankel1(m, self.k*radius))
         else:
             print('invalid bc')
         return hterm
     
     def highfreq_modes(self, x):
-        '''
-
-        Parameters
-        ----------
-        k : TYPE
-            DESCRIPTION.
-        a : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
         return x + (np.log(2*np.sqrt(2)*np.pi*x/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(x)**(1/3) + 1
 
     def lowfreq_modes(self, x):
-        '''
-
-        Parameters
-        ----------
-        k : TYPE
-            DESCRIPTION.
-        a : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
         if x >= 1.5:
             return 0
         else:
             return ((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(x/2) + 1)
     
     def modes(self, k, a):
-        '''
-
-        Parameters
-        ----------
-        k : TYPE
-            DESCRIPTION.
-        a : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
-        '''
         ka = abs(k*a)
         alpha = 0.5
         interp = lambda x : 0.5 + 0.5*np.tanh((x - 0.1)/alpha)
@@ -832,6 +756,11 @@ class time_domain_scattering(scattering):
         if self.timeint is None:
             # discretize the boundary 
             g = np.zeros((n, N))
+            if bc == 'i':
+                #for dirichlet and neumann, respectively
+                dg = 1j*np.zeros((n, N))
+                ng = 1j*np.zeros((n, N))
+            
             for i in range(len(self.times)):
                 pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
                 if bc == 'd':
@@ -840,16 +769,25 @@ class time_domain_scattering(scattering):
                     dirvect = (pts[:] - p)/r
                     g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
                 elif bc == 'i':
-                    pass
-                    #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
-            
+                    #neumann part
+                    dirvect = (pts[:] - p)/r
+                    ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
+                    #dirichlet part
+                    dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
+                    
             # z-transform the boundary condition
-            rhs = fft(-g*self.lammat, axis=-1)
+            if bc == 'i':
+                rhs_d = fft(-dg*self.lammat, axis=-1)
+                rhs_n = fft(-ng*self.lammat, axis=-1)
+            else:
+                rhs = fft(-g*self.lammat, axis=-1)
             
-            # TODO: only uses 1 mode -- incorrect for Neumann case
+            
             if not self.fl:
                 g = 1j*np.zeros((n, N))
             else:
+                # for foldy-lax approximations
+                # only uses 1 mode -- incorrect for Neumann case
                 g = 1j*np.zeros(N)
                 
             # get the fourier coefficients on the boundary
@@ -863,7 +801,13 @@ class time_domain_scattering(scattering):
                         g[i] = 0
                         return g
                 else:
-                    g[:, i] = fftshift(fft(rhs[:, i]))/n
+                    if bc == 'i':
+                        dg[:, i] = fftshift(fft(rhs_d[:, i]))/n
+                        ng[:, i] = fftshift(fft(rhs_n[:, i]))/n
+                        idxs = np.arange(-(n//2), n//2)
+                        g[:, i] = ng[:, i] + self.ks[i]*cyl.impedance(cyl, self.ks[i], idxs)*dg[:, i]
+                    else:
+                        g[:, i] = fftshift(fft(rhs[:, i]))/n
                     #sparsify the rhs
                     tmp = np.abs(g[:, i])
                     if np.max(tmp) < self.fft_tol:
@@ -875,6 +819,15 @@ class time_domain_scattering(scattering):
             # discretize the boundary 
             g = [1j*np.zeros((n, N)) for c in self.timeint.c]
             rhs = [None for c in self.timeint.c]
+            
+            if bc == 'i':
+                #for dirichlet and neumann, respectively
+                dg = [1j*np.zeros((n, N)) for c in self.timeint.c]
+                rhs_d = rhs
+                
+                ng = [1j*np.zeros((n, N)) for c in self.timeint.c]
+                rhs_n = [None for c in self.timeint.c]
+                
             for j in range(len(self.timeint.c)):
                 c = self.timeint.c[j]
                 for i in range(len(self.times)):
@@ -885,25 +838,50 @@ class time_domain_scattering(scattering):
                         dirvect = (pts[:] - p)/r
                         g[j][:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i]+self.dt*c, dirvect)
                     elif bc == 'i':
-                        pass
-                        #g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t[i]) g[:, i] + imp*self.waveform.td_wave(pts[:, 0], pts[:, 1], t[i])
+                        #neumann part
+                        dirvect = (pts[:] - p)/r
+                        ng[j][:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
+                        #dirichlet part
+                        dg[j][:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
                 
                 # z-transform the boundary condition
-                rhs[j] = fft(-g[j]*self.lammat, axis=-1)
+                if bc == 'i':
+                    rhs_d[j] = fft(-dg[j]*self.lammat, axis=-1)
+                    rhs_n[j] = fft(-ng[j]*self.lammat, axis=-1)
+                else:
+                    rhs[j] = fft(-g[j]*self.lammat, axis=-1)
             
             #form the boundary condition for W
             gret = [None for c in self.timeint.c]
+            if bc == 'i':
+                dgret = [None for c in self.timeint.c]
+                ngret = [None for c in self.timeint.c]
             for i in range(len(self.timeint.c)):
-                gtmp = 1j*np.zeros((n, N))
-                for j in range(len(self.timeint.c)):
-                    gtmp += self.pinvmats[:, i, j]*rhs[j]
-                gret[i] = gtmp
+                if bc == 'i':
+                    dgtmp = 1j*np.zeros((n, N))
+                    ngtmp = 1j*np.zeros((n, N))
+                    for j in range(len(self.timeint.c)):
+                        dgtmp += self.pinvmats[:, i, j]*rhs_d[j]
+                        ngtmp += self.pinvmats[:, i, j]*rhs_n[j]
+                    dgret[i] = dgtmp
+                    ngret[i] = ngtmp
+                else:
+                    gtmp = 1j*np.zeros((n, N))
+                    for j in range(len(self.timeint.c)):
+                        gtmp += self.pinvmats[:, i, j]*rhs[j]
+                    gret[i] = gtmp
             
             # get the fourier coefficients on the boundary
             g = [1j*np.zeros((n, N)) for c in self.timeint.c]
             for j in range(len(self.timeint.c)):
                 for i in range(N):
-                    g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
+                    if bc == 'i':
+                        dg[:, i] = fftshift(fft(rhs_d[:, i]))/n
+                        ng[:, i] = fftshift(fft(rhs_n[:, i]))/n
+                        idxs = np.arange(-(n//2), n//2)
+                        g[j][:, i] = ng[j][:, i] + self.k*cyl.impedance(cyl, self.evals[i][j], idxs)*dg[j][:, i]
+                    else:
+                        g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
                     #sparsify the rhs
                     if np.max(np.abs(g[j][:, i])) < self.fft_tol:
                         g[j][:, i] = np.zeros(n)
