@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.fft import fft, ifft, fftfreq
+from scipy.special import hankel1
 from abc import ABC, abstractmethod
 
 class waveform(ABC):
@@ -6,9 +8,18 @@ class waveform(ABC):
         preconditioner template class for
         scattering-based preconditioners
     '''
-    def __init__(self, inc_angle = np.pi, time_shift = 0):
+    def __init__(
+                 self, 
+                 inc_angle = np.pi, 
+                 time_shift = 0, 
+                 r0 = np.array([0, 0]), 
+                 src_type = 'planewave'
+                 ):
         self.inc_angle = inc_angle
         self.time_shift = time_shift
+        self.src_type = src_type
+        self.r0 = r0
+        self.ts = None #used for point source times
         
     def inparg(self, x, y, t):
         return t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift
@@ -19,9 +30,28 @@ class waveform(ABC):
     @abstractmethod
     def profile(self, z):
         pass
-
+    
+    def ptsrc_init(self, t):
+        self.times = t
+        self.coeffs = ifft(self.profile(t - self.time_shift))
+        dt = t[1] - t[0]
+        self.freq = fftfreq(len(t), d=dt)
+        
+    def ptsrc(self, x, y, t):
+        G = self.coeffs
+        r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
+        u = 1j*np.zeros((*x.shape, len(t)))
+        for i in range(1,len(self.freq)//2):
+            u[:, :, i] = 1j*G[i]*hankel1(0, 2*np.pi*self.freq[i]*r)/4
+            u[:, :, len(t) - i] = u[:, :, i].conj()
+        #u[:, :, 0] = -G[0]*np.log(r)/(2*np.pi)
+        return fft(u)
+    
     def td_wave(self, x, y, t):
-        return self.profile(self.inparg(x, y, t))
+        if self.src_type == 'planewave':
+            return self.profile(self.inparg(x, y, t))
+        elif self.src_type == 'pointsource': 
+            return self.ptsrc(x, y, t)
     
     @abstractmethod
     def td_deriv(self, x, y, t, n):
@@ -120,11 +150,16 @@ class sine_pulse(waveform):
                  self, 
                  inc_angle = np.pi, 
                  time_shift=0, 
+                 r0 = np.array([0,0]),
+                 src_type = 'planewave',
                  alpha = 0.5, 
                  width = 20, 
                  cycles = 1,
                 ):
-        super().__init__(time_shift=time_shift, inc_angle=inc_angle)
+        super().__init__(time_shift=time_shift, 
+                         inc_angle=inc_angle,
+                         r0 = r0,
+                         src_type=src_type)
         self.alpha = alpha
         self.width = width
         self.sf = cycles*np.pi*2/(width/4)
@@ -142,6 +177,43 @@ class sine_pulse(waveform):
     def td_deriv(self, x, y, t, n):
         pass
 
+class gauss_mod_sine_pulse(waveform):
+    def __init__(
+                self,
+                inc_angle=np.pi,
+                time_shift=0, 
+                r0 = np.array([0,0]),
+                src_type = 'planewave',
+                d = 0.075,
+                w0 = 50.6
+                ):
+        super().__init__(inc_angle, 
+                         time_shift,
+                         r0 = r0,
+                         src_type=src_type)
+        self.d = d
+        self.w0 = w0
+      
+    def stepfn(self, z):
+        mask = (z > 0)
+        arr = np.ones(len(z))
+        return mask*arr
+    
+    def profile(self, z):
+        stp = self.stepfn(z) - self.stepfn(z - 2*self.time_shift)
+        squig = np.exp(-1j*self.w0*(z - self.time_shift))
+        ex = np.exp(-((z-self.time_shift)**2)/(4*self.d**2))
+        return (stp*squig*ex).real
+    
+    def td_deriv(self, x, y, t, n):
+        z = self.inparg(x, y, t)
+        dv = self.profile(z)*(-1j*self.w0 - 2*((z - self.time_shift)/(4*self.d**2)))
+        dg = 1j*np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= dv
+        return dg
+        
 class sinewave(waveform):
     def __init__(
                  self, 

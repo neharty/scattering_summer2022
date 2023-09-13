@@ -743,6 +743,32 @@ class time_domain_scattering(scattering):
             
         self.lammat = self.lam**np.arange(0, len(self.times))
         
+        if self.waveform.src_type == 'pointsource':
+            self.waveform.ptsrc_init(self.times)
+    
+    def td_bdy(cyl):
+        bc = cyl.bc
+        n = 2*self.modes
+        N = len(self.times)
+        r = cyl.radius
+        p = np.array(cyl.pos)
+        bc = cyl.bc
+        imp = cyl.impedance
+        ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
+        pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
+        if bc == 'd':
+            return self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times)
+        elif bc == 'n':
+            dirvect = (pts[:] - p)/r
+            return self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times, dirvect)
+        elif bc == 'i':
+            #neumann part
+            dirvect = (pts[:] - p)/r
+            ng = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times, dirvect)
+            #dirichlet part
+            dg = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times)
+            return (ng, dg)
+    
     def fzt_boundary_1cyl(self, cyl):
         n = 2*self.modes
         N = len(self.times)
@@ -876,10 +902,10 @@ class time_domain_scattering(scattering):
             for j in range(len(self.timeint.c)):
                 for i in range(N):
                     if bc == 'i':
-                        dg[:, i] = fftshift(fft(rhs_d[:, i]))/n
-                        ng[:, i] = fftshift(fft(rhs_n[:, i]))/n
+                        dg[j][:, i] = fftshift(fft(rhs_d[j][:, i]))/n
+                        ng[j][:, i] = fftshift(fft(rhs_n[j][:, i]))/n
                         idxs = np.arange(-(n//2), n//2)
-                        g[j][:, i] = ng[j][:, i] + self.k*cyl.impedance(cyl, self.evals[i][j], idxs)*dg[j][:, i]
+                        g[j][:, i] = ng[j][:, i] + self.evals[i][j]*cyl.impedance(cyl, self.evals[i][j], idxs)*dg[j][:, i]
                     else:
                         g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
                     #sparsify the rhs
