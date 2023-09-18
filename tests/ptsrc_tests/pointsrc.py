@@ -1,37 +1,50 @@
 import numpy as np
-from scipy.special import hankel1
-from scipy.fft import fft, ifft, fftfreq, fftshift
 import matplotlib.pyplot as plt
+from Ncyl.cqm import time_domain_scattering, cyl
+from waveforms.waveforms import gaussian_deriv
+from utils import example_setups
+from integrators.integrators import IRK3, IRK5
+#%%
+#init variables
+T = 15
+cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
+Nmode = 8
+Nsamp = 2**10
 
-def ptsrc(x, y, r0, t, g):
-    G = ifft(g(t))
-    dt = t[1] - t[0]
-    f = fftfreq(len(t), d=dt)
-    r = np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
-    u = 1j*np.zeros((*x.shape, len(t)))
-    for i in range(1,len(f)//2):
-        u[:, :, i] = 1j*G[i]*hankel1(0, 2*np.pi*f[i]*r)/4
-        u[:, :, len(t) - i] = u[:, :, i].conj()
-    u[:, :, 0] = G[0]*np.log(r)/(2*np.pi)
-    return fft(u)
+#%%plane wave
+wv = gaussian_deriv(time_shift=4)
 
-def srcfn(t):
-    return np.exp(-(t-1)**2/0.01)
+tds = time_domain_scattering(
+                             cyls,
+                             wv,
+                             T,
+                             modes=Nmode,
+                             sampnum=Nsamp,
+                             scargs={'method':'explicit'}
+                             )
 
-N = 2**12
-t = np.linspace(0, 5, num=N, endpoint=False)
+X, Y = np.meshgrid([6], [0])
+U = tds.make_U_sc(X, Y)
 
-
-#x = np.linspace(-2, 2, 100)
-#X, Y = np.meshgrid(x, x)
-X, Y = np.meshgrid([1/2], [1/2])
-
-u = ptsrc(X, Y, [0,0], t, srcfn)
+plt.plot(tds.times, U[0,0,:])
 
 #%%
-#im = plt.matshow(u[:, :,820].real, extent=(min(x), max(x), min(x), max(x)))
-im = plt.plot(t, u[0,0, :])
-#plt.colorbar(im)
-plt.xlabel('x')
-plt.ylabel('y')
-plt.show()
+#point source
+wv = gaussian_deriv(time_shift=0,
+                    r0=[10, 0],
+                    src_type='pointsource', 
+                    amp=100)
+
+tds = time_domain_scattering(
+                             cyls,
+                             wv,
+                             T,
+                             modes=Nmode,
+                             sampnum=Nsamp,
+                             scargs={'method':'explicit'}
+                             )
+
+X, Y = np.meshgrid([6], [0])
+U = tds.make_U_sc(X, Y)
+
+plt.plot(tds.times, U[0,0,:])

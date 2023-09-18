@@ -28,7 +28,7 @@ def srcfn(t):
 
 force = np.zeros(u_sc.shape)
 for i in range(len(t)):
-    force[N//2:N//2+2, N//2:N//2+2, i]=srcfn(t[i])
+    force[N//2, N//2, i]=srcfn(t[i])
 
 #center of point source
 r0 = (0, 0)
@@ -42,7 +42,7 @@ for i in range(2, len(t)):
                     a**2*(u_sc[:-2, 1:-1, i-1] + u_sc[1:-1, :-2, i-1] + \
                     u_sc[2:, 1:-1, i-1] + u_sc[1:-1, 2:, i-1] - \
                     4*u_sc[1:-1, 1:-1, i-1]) + \
-                    dt**2*force[1:-1, 1:-1, i]/(4*dx**2)
+                    dt**2*force[1:-1, 1:-1, i]/(dx**2)
     
     #apply absorbing boundary conditions
     #left boundary

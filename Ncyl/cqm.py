@@ -291,12 +291,30 @@ class scattering(cyl):
             st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance(cyl, self.k, m)
-            st = self.k*(jvp(m, self.k*radius) + imp*jv(m, self.k*radius))
+            st = self.k*(jvp(m, self.k*radius) + 1j*imp*jv(m, self.k*radius))
         else:
             print('invalid bc')
         
         return st
     
+    def dirichlet_asymptotic(self, cyl, n, m, b):
+        k = self.k
+        a = cyl.radius
+        b, theta = self.cart_to_polar(b)
+        return np.exp(-1j*n*np.pi/2) \
+            *(np.exp(1j*(k*(a+b)-np.pi/2)) + np.exp(1j*(k*(b-a) + m*np.pi))) \
+            /(np.pi*k*np.sqrt(a*b)) \
+            *np.exp(1j*(n-m)*theta)
+            
+    def neumann_asymptotic(self, cyl, n, m, b):
+        k = self.k
+        a = cyl.radius
+        b, theta = self.cart_to_polar(b)
+        return k*1j*np.exp(-1j*n*np.pi/2) \
+            *(np.exp(1j*(k*(a+b)-np.pi/2)) - np.exp(1j*(k*(b-a) + m*np.pi))) \
+            /(np.pi*k*np.sqrt(a*b)) \
+            *np.exp(1j*(n-m)*theta)
+            
     def mulscat_term(self, cyl, n, m, b):
         tmp = self.jh(cyl, m)*self.S(n, m, b)
         if not np.isfinite(tmp):
@@ -304,18 +322,14 @@ class scattering(cyl):
             a = cyl.radius
             b, theta = self.cart_to_polar(b)
             if cyl.bc == 'd':
-                return np.exp(-1j*n*np.pi/2) \
-                    *(np.exp(1j*(k*(a+b)-np.pi/2)) + np.exp(1j*(k*(b-a) + m*np.pi))) \
-                    /(np.pi*k*np.sqrt(a*b)) \
-                    *np.exp(1j*(n-m)*theta)
+                return self.dirichlet_asymptotic(cyl, n, m, b)
             elif cyl.bc == 'n':
-                return k*1j*np.exp(-1j*n*np.pi/2) \
-                    *(np.exp(1j*(k*(a+b)-np.pi/2)) - np.exp(1j*(k*(b-a) + m*np.pi))) \
-                    /(np.pi*k*np.sqrt(a*b)) \
-                    *np.exp(1j*(n-m)*theta)
+                return self.neumann_asymptotic(cyl, n, m, b)
             elif cyl.bc == 'i':
                 #TODO: implement
-                return None
+                imp = cyl.impedance(cyl, k, m)
+                return (self.neumann_asymptotic(cyl, n, m, b) +\
+                          1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b))
         return tmp
     
     def directscat_term(self, cyl, m):
@@ -327,7 +341,7 @@ class scattering(cyl):
             hterm = self.k*h1vp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance(cyl, self.k, m)
-            hterm = self.k*(h1vp(m, self.k*radius) + imp*hankel1(m, self.k*radius))
+            hterm = self.k*(h1vp(m, self.k*radius) + 1j*imp*hankel1(m, self.k*radius))
         else:
             print('invalid bc')
         return hterm
@@ -714,8 +728,10 @@ class time_domain_scattering(scattering):
         eps = np.finfo(float).eps # machine epsilon
         
         if self.timeint is None:
+            #BDF2
             self.lam = max(self.dt**(3/self.sampnum), eps**(1/(2*self.sampnum)))
         else:
+            #IRK methods
             self.lam = max(self.dt**((self.timeint.order + 1)/self.sampnum), eps**(1/(2*self.sampnum)))
         
         zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
@@ -724,10 +740,7 @@ class time_domain_scattering(scattering):
         if self.timeint is None:
             gm = lambda z : 0.5*((z**2)-(4*z)+3) 
             sl = gm(self.zs)/self.dt
-            if self.use_conj:
-                self.ks = 1j*sl[:self.sampnum//2]
-            else:
-                self.ks = 1j*sl
+            self.ks = 1j*sl
         else:
             blist = self.timeint.b.tolist()
             bmat = np.array([blist for b in blist])
@@ -735,80 +748,85 @@ class time_domain_scattering(scattering):
             invmat = np.linalg.inv(self.timeint.A)
             gm = lambda z : invmat@(np.eye(len(invmat)) - z*(bmat@invmat))
             #gminv = [np.linalg.inv(gm(z)) for z in self.zs]
-            gminv = [gm(z) for z in self.zs]
-            peig = [np.linalg.eig(Ainv) for Ainv in gminv]
-            self.evals = [tup[0] for tup in peig]
+            self.gminv = np.array([gm(z) for z in self.zs])
+            peig = [np.linalg.eig(Ainv) for Ainv in self.gminv]
+            self.evals = np.array([tup[0] for tup in peig])
             self.pmats = np.array([tup[1] for tup in peig])
-            self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])
-            
-        self.lammat = self.lam**np.arange(0, len(self.times))
+            self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])     
         
+        self.lammat = self.lam**np.arange(0, len(self.times))
         if self.waveform.src_type == 'pointsource':
             self.waveform.ptsrc_init(self.times)
-    
-    def td_bdy(cyl):
+
+    def td_bdy(self, cyl, c=0):
         bc = cyl.bc
         n = 2*self.modes
         N = len(self.times)
         r = cyl.radius
         p = np.array(cyl.pos)
         bc = cyl.bc
-        imp = cyl.impedance
         ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
         pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
-        if bc == 'd':
-            return self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times)
-        elif bc == 'n':
-            dirvect = (pts[:] - p)/r
-            return self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times, dirvect)
-        elif bc == 'i':
-            #neumann part
-            dirvect = (pts[:] - p)/r
-            ng = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times, dirvect)
-            #dirichlet part
-            dg = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times)
-            return (ng, dg)
-    
-    def fzt_boundary_1cyl(self, cyl):
-        n = 2*self.modes
-        N = len(self.times)
-        r = cyl.radius
-        p = np.array(cyl.pos)
-        bc = cyl.bc
-        imp = cyl.impedance #impedance function
-        ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
-        #modeidx = fftshift(fftfreq(n))
         
-        if self.timeint is None:
-            # discretize the boundary 
-            g = np.zeros((n, N))
+        if self.waveform.src_type == 'planewave':
+            #initialize arrays
             if bc == 'i':
-                #for dirichlet and neumann, respectively
-                dg = 1j*np.zeros((n, N))
-                ng = 1j*np.zeros((n, N))
+                ng = np.zeros((n, N))
+                dg = np.zeros((n, N))
+            else:
+                g = np.zeros((n, N))
             
-            for i in range(len(self.times)):
-                pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
+            for i in range(N):
+                t = self.times[i]
                 if bc == 'd':
-                    g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
+                    g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
                 elif bc == 'n':
                     dirvect = (pts[:] - p)/r
-                    g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
+                    g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
                 elif bc == 'i':
                     #neumann part
                     dirvect = (pts[:] - p)/r
-                    ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
+                    ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
                     #dirichlet part
-                    dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
-                    
+                    dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
+        elif self.waveform.src_type=='pointsource':
+            if bc == 'd':
+                g = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times+c*self.dt)
+            elif bc == 'n':
+                dirvect = (pts[:] - p)/r
+                g = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times+c*self.dt, dirvect)
+            elif bc == 'i':
+                #neumann part
+                dirvect = (pts[:] - p)/r
+                ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times+c*self.dt, dirvect)
+                #dirichlet part
+                dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times+c*self.dt)
+                   
+        if bc == 'i':
+            return ng, dg
+        else:
+            return g
+
+    def fzt_boundary_1cyl(self, cyl):
+        n = 2*self.modes
+        N = len(self.times)
+        bc = cyl.bc
+        imp = cyl.impedance
+        
+        if self.timeint is None:
+            #BDF2
             # z-transform the boundary condition
-            if bc == 'i':
+            if cyl.bc == 'i':
+                ng, dg = self.td_bdy(cyl) #discretize bdy
                 rhs_d = fft(-dg*self.lammat, axis=-1)
                 rhs_n = fft(-ng*self.lammat, axis=-1)
+                idxs = np.arange(-(n//2), n//2)
+                rhs = rhs_n + 1j*imp(cyl, self.ks, idxs)*self.ks*rhs_d
             else:
-                rhs = fft(-g*self.lammat, axis=-1)
+                g = self.td_bdy(cyl) #discretize bdy
+                rhs = fft(-g*self.lammat, axis=-1)    
             
-            
+            #reset g
             if not self.fl:
                 g = 1j*np.zeros((n, N))
             else:
@@ -817,7 +835,7 @@ class time_domain_scattering(scattering):
                 g = 1j*np.zeros(N)
                 
             # get the fourier coefficients on the boundary
-            for i in range(N):
+            for i in range(len(self.times)):
                 if self.fl:
                     gtmp = fftshift(fft(rhs[:, i]))/n
                     g[i] = gtmp[n//2]
@@ -827,13 +845,7 @@ class time_domain_scattering(scattering):
                         g[i] = 0
                         return g
                 else:
-                    if bc == 'i':
-                        dg[:, i] = fftshift(fft(rhs_d[:, i]))/n
-                        ng[:, i] = fftshift(fft(rhs_n[:, i]))/n
-                        idxs = np.arange(-(n//2), n//2)
-                        g[:, i] = ng[:, i] + self.ks[i]*cyl.impedance(cyl, self.ks[i], idxs)*dg[:, i]
-                    else:
-                        g[:, i] = fftshift(fft(rhs[:, i]))/n
+                    g[:, i] = fftshift(fft(rhs[:, i]))/n
                     #sparsify the rhs
                     tmp = np.abs(g[:, i])
                     if np.max(tmp) < self.fft_tol:
@@ -842,72 +854,57 @@ class time_domain_scattering(scattering):
             return g
         
         else:
-            # discretize the boundary 
-            g = [1j*np.zeros((n, N)) for c in self.timeint.c]
+            # IRK methods
+            # z-transform the boundary condition
             rhs = [None for c in self.timeint.c]
-            
             if bc == 'i':
-                #for dirichlet and neumann, respectively
-                dg = [1j*np.zeros((n, N)) for c in self.timeint.c]
-                rhs_d = rhs
-                
-                ng = [1j*np.zeros((n, N)) for c in self.timeint.c]
+                rhs_d = [None for c in self.timeint.c]
                 rhs_n = [None for c in self.timeint.c]
+                rhs_d_tmp = [None for c in self.timeint.c]
+                for j in range(len(self.timeint.c)):
+                    c = self.timeint.c[j]
+                    ng, dg = self.td_bdy(cyl, c)
+                    rhs_d_tmp[j] = fft(-dg*self.lammat, axis=-1)
+                    rhs_n[j] = fft(-ng*self.lammat, axis=-1)
                 
-            for j in range(len(self.timeint.c)):
-                c = self.timeint.c[j]
-                for i in range(len(self.times)):
-                    pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
-                    if bc == 'd':
-                        g[j][:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i]+self.dt*c)
-                    elif bc == 'n':
-                        dirvect = (pts[:] - p)/r
-                        g[j][:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i]+self.dt*c, dirvect)
-                    elif bc == 'i':
-                        #neumann part
-                        dirvect = (pts[:] - p)/r
-                        ng[j][:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times[i], dirvect)
-                        #dirichlet part
-                        dg[j][:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times[i])
-                
-                # z-transform the boundary condition
-                if bc == 'i':
-                    rhs_d[j] = fft(-dg[j]*self.lammat, axis=-1)
-                    rhs_n[j] = fft(-ng[j]*self.lammat, axis=-1)
-                else:
-                    rhs[j] = fft(-g[j]*self.lammat, axis=-1)
+                #matrix multiply by the k matrix
+                for j in range(len(self.timeint.c)):
+                    rhsdtmp = 1j*np.zeros((n, N))
+                    for i in range(len(self.timeint.c)):
+                        rhsdtmp += (-imp(cyl, 0, 0)*self.gminv[:, j, i]/self.dt)*rhs_d_tmp[i]
+                    rhs_d[j] = rhsdtmp
+                    rhs[j] = rhs_n[j] + rhs_d[j]
+            else:
+                for j in range(len(self.timeint.c)):
+                    c = self.timeint.c[j]
+                    g = self.td_bdy(cyl, c)
+                    rhs[j] = fft(-g*self.lammat, axis=-1)
             
-            #form the boundary condition for W
+            #form the boundary condition for the diagonalized system
             gret = [None for c in self.timeint.c]
-            if bc == 'i':
-                dgret = [None for c in self.timeint.c]
-                ngret = [None for c in self.timeint.c]
             for i in range(len(self.timeint.c)):
-                if bc == 'i':
-                    dgtmp = 1j*np.zeros((n, N))
-                    ngtmp = 1j*np.zeros((n, N))
+                '''
+                if bc=='i':
+                    gdtmp = 1j*np.zeros((n, N))
+                    gntmp = 1j*np.zeros((n, N))
                     for j in range(len(self.timeint.c)):
-                        dgtmp += self.pinvmats[:, i, j]*rhs_d[j]
-                        ngtmp += self.pinvmats[:, i, j]*rhs_n[j]
-                    dgret[i] = dgtmp
-                    ngret[i] = ngtmp
+                        gdtmp += self.pinvmats[:, i, j]*rhs_d[j]
+                        gntmp += self.pinvmats[:, i, j]*rhs_n[j]
+                    #TODO: fix 3rd argument
+                    gdtmp *= 1j*self.evals[:, i]*imp(cyl, self.evals[:, i], 0)
+                    gret[i] = gntmp + gdtmp
                 else:
-                    gtmp = 1j*np.zeros((n, N))
-                    for j in range(len(self.timeint.c)):
-                        gtmp += self.pinvmats[:, i, j]*rhs[j]
-                    gret[i] = gtmp
-            
+                '''
+                gtmp = 1j*np.zeros((n, N))
+                for j in range(len(self.timeint.c)):
+                    gtmp += self.pinvmats[:, i, j]*rhs[j]
+                gret[i] = gtmp
+        
             # get the fourier coefficients on the boundary
             g = [1j*np.zeros((n, N)) for c in self.timeint.c]
             for j in range(len(self.timeint.c)):
                 for i in range(N):
-                    if bc == 'i':
-                        dg[j][:, i] = fftshift(fft(rhs_d[j][:, i]))/n
-                        ng[j][:, i] = fftshift(fft(rhs_n[j][:, i]))/n
-                        idxs = np.arange(-(n//2), n//2)
-                        g[j][:, i] = ng[j][:, i] + self.evals[i][j]*cyl.impedance(cyl, self.evals[i][j], idxs)*dg[j][:, i]
-                    else:
-                        g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
+                    g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
                     #sparsify the rhs
                     if np.max(np.abs(g[j][:, i])) < self.fft_tol:
                         g[j][:, i] = np.zeros(n)
@@ -932,6 +929,9 @@ class time_domain_scattering(scattering):
         klen = range(len(self.ks))
         cpus = self.cpus
         N = len(self.times)
+        
+        if self.use_conj:
+            self.ks = self.ks[:self.sampnum//2]
         
         def compute_block(a, b=None):
             if b is None:

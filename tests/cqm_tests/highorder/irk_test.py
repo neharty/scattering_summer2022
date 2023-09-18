@@ -61,5 +61,5 @@ plt.legend()
 plt.xlabel('t')
 plt.ylabel('U_sc')
 
-plt.savefig('tests/cqm_tests/highorder/highorder_compare_n.pdf')
+#plt.savefig('tests/cqm_tests/highorder/highorder_compare_n.pdf')
 

@@ -4,6 +4,6 @@ from Ncyl.cqm import cyl
 
 def ida_ishihara_goto(cyl, k, m):
     a = cyl.radius
-    kstar = np.sqrt(3)*k
+    #kstar = np.sqrt(3)*k
     #return 1j*h2vp(m, kstar*a)/hankel2(m, kstar*a)/np.sqrt(3)
     return 1/np.sqrt(3)

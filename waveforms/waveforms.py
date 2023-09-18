@@ -5,8 +5,7 @@ from abc import ABC, abstractmethod
 
 class waveform(ABC):
     '''
-        preconditioner template class for
-        scattering-based preconditioners
+        template class for waveforms
     '''
     def __init__(
                  self, 
@@ -18,8 +17,8 @@ class waveform(ABC):
         self.inc_angle = inc_angle
         self.time_shift = time_shift
         self.src_type = src_type
-        self.r0 = r0
-        self.ts = None #used for point source times
+        self.r0 = np.array(r0)
+        self.times = None #used for point source times
         
     def inparg(self, x, y, t):
         return t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift
@@ -42,15 +41,15 @@ class waveform(ABC):
         r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
         u = 1j*np.zeros((*x.shape, len(t)))
         for i in range(1,len(self.freq)//2):
-            u[:, :, i] = 1j*G[i]*hankel1(0, 2*np.pi*self.freq[i]*r)/4
-            u[:, :, len(t) - i] = u[:, :, i].conj()
+            u[:, i] = 1j*G[i]*hankel1(0, 2*np.pi*self.freq[i]*r)/4
+            u[:, len(t) - i] = u[:, i].conj()
         #u[:, :, 0] = -G[0]*np.log(r)/(2*np.pi)
-        return fft(u)
+        return fft(u).real
     
     def td_wave(self, x, y, t):
         if self.src_type == 'planewave':
             return self.profile(self.inparg(x, y, t))
-        elif self.src_type == 'pointsource': 
+        elif self.src_type == 'pointsource':
             return self.ptsrc(x, y, t)
     
     @abstractmethod
@@ -97,12 +96,18 @@ class gaussian_deriv(waveform):
     def __init__(
                  self, 
                  inc_angle = np.pi, 
-                 time_shift=0, 
+                 time_shift=0,
+                 r0 = [0, 0],
+                 src_type='planewave',
                  sigma = 0.2,
                  amp = 1, 
                  cutoff=1e-8
                 ):
-        super().__init__(time_shift=time_shift, inc_angle=inc_angle)
+        super().__init__(time_shift=time_shift, 
+                         inc_angle=inc_angle,
+                         r0 = r0,
+                         src_type=src_type
+                         )
         self.cutoff = 1e-8 #used to truncate signal
         self.sigma = sigma
         self.amp = amp
@@ -201,7 +206,7 @@ class gauss_mod_sine_pulse(waveform):
     
     def profile(self, z):
         stp = self.stepfn(z) - self.stepfn(z - 2*self.time_shift)
-        squig = np.exp(-1j*self.w0*(z - self.time_shift))
+        squig = np.cos(self.w0*(z - self.time_shift))
         ex = np.exp(-((z-self.time_shift)**2)/(4*self.d**2))
         return (stp*squig*ex).real
     
