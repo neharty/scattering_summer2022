@@ -50,6 +50,9 @@ class cyl:
         if self.bc == 'i' and impedance == None:
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
+        
+    def get_label(self):
+        return self.label
 
 class scattering(cyl):
     
@@ -297,19 +300,17 @@ class scattering(cyl):
         
         return st
     
-    def dirichlet_asymptotic(self, cyl, n, m, b):
+    def dirichlet_asymptotic(self, cyl, n, m, b, theta):
         k = self.k
         a = cyl.radius
-        b, theta = self.cart_to_polar(b)
         return np.exp(-1j*n*np.pi/2) \
             *(np.exp(1j*(k*(a+b)-np.pi/2)) + np.exp(1j*(k*(b-a) + m*np.pi))) \
             /(np.pi*k*np.sqrt(a*b)) \
             *np.exp(1j*(n-m)*theta)
             
-    def neumann_asymptotic(self, cyl, n, m, b):
+    def neumann_asymptotic(self, cyl, n, m, b, theta):
         k = self.k
         a = cyl.radius
-        b, theta = self.cart_to_polar(b)
         return k*1j*np.exp(-1j*n*np.pi/2) \
             *(np.exp(1j*(k*(a+b)-np.pi/2)) - np.exp(1j*(k*(b-a) + m*np.pi))) \
             /(np.pi*k*np.sqrt(a*b)) \
@@ -322,14 +323,14 @@ class scattering(cyl):
             a = cyl.radius
             b, theta = self.cart_to_polar(b)
             if cyl.bc == 'd':
-                return self.dirichlet_asymptotic(cyl, n, m, b)
+                return self.dirichlet_asymptotic(cyl, n, m, b, theta)
             elif cyl.bc == 'n':
-                return self.neumann_asymptotic(cyl, n, m, b)
+                return self.neumann_asymptotic(cyl, n, m, b, theta)
             elif cyl.bc == 'i':
                 #TODO: implement
                 imp = cyl.impedance(cyl, k, m)
-                return (self.neumann_asymptotic(cyl, n, m, b) +\
-                          1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b))
+                return (self.neumann_asymptotic(cyl, n, m, b, theta) +\
+                          1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b, theta))
         return tmp
     
     def directscat_term(self, cyl, m):
