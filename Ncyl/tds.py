@@ -179,6 +179,7 @@ class scattering(cyl):
             sum_index = None,
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
+            rhs_tol = 1e-10,
             freq = 1,
             wavespeed = 1,
             inc_angle = np.pi,
@@ -216,6 +217,7 @@ class scattering(cyl):
         self.wavelength = self.wavespeed/freq
         self.inc_angle = inc_angle
         self.gmres_tol = gmres_tol
+        self.rhs_tol = rhs_tol
         self.gmres_restart = gmres_restart
         self.gmres_maxiter = gmres_maxiter
         self.method = method
@@ -392,6 +394,7 @@ class scattering(cyl):
             return ((np.log(self.sum_tol*np.sqrt(2/np.pi))+0.5)/np.log(ka/2) + 1)
     
     def modes(self, k, a):
+        k = np.abs(k)
         ka = k*a
         alpha = 0.5
         interp = lambda x : 0.5 + 0.5*np.tanh((x - 0.1)/alpha)
@@ -591,6 +594,14 @@ class scattering(cyl):
         self.iter += 1
 
     def scattering_coeffs(self):
+        #return vector of zeros if the rhs is below a tolerance
+        rhs=self.make_rhs_vector()
+        if np.max(np.abs(rhs)) < self.rhs_tol:
+            if self.method == 'gmres':
+                return 1j*(np.zeros(rhs.shape), 0)
+            elif self.method == 'explicit':
+                return 1j*np.zeros(rhs.shape)
+        
         if self.method == 'gmres':
             #set the vectors for fast matrix multiplication
             self.ST = self.make_root_matrix()
@@ -722,6 +733,7 @@ class time_domain_scattering(scattering):
                  sampnum = None,
                  use_par = True,
                  cpus = None,
+                 use_conj=True,
                  wvargs={},
                  scargs = {}
                  ):
@@ -735,6 +747,7 @@ class time_domain_scattering(scattering):
         self.sampnum = sampnum
         self.use_par = use_par
         self.cpus = cpus
+        self.use_conj = use_conj
         if self.cpus is None:
            self.cpus = cpu_count()
         self.scargs = scargs
@@ -781,8 +794,12 @@ class time_domain_scattering(scattering):
 
         #apply frequency shift
         self.fft_freqs += self.freq_shift
-        freqmask = (self.fft_freqs > 0) & (sig_mag > self.fft_tol)
-        self.fft_freqs = self.fft_freqs[freqmask]
+        if self.use_conj:
+            freqmask = (self.fft_freqs > 0) & (sig_mag > self.fft_tol)
+            self.fft_freqs = self.fft_freqs[freqmask]
+        else:
+            self.fft_freqs = self.fft_freqs[1:]
+            
         try:
             print('min/max freqs', min(self.fft_freqs), max(self.fft_freqs))
         except:
@@ -858,8 +875,9 @@ class time_domain_scattering(scattering):
                     self.u_sc[:, :, i] = self.sig_fft[i]*sc.make_u_sc(x[:, :], y[:, :])
         
         #copy solutions as conjugates for negative frequency components
-        for n in range((self.N)//2):
-            self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
+        if self.use_conj:
+            for n in range((self.N)//2):
+                self.u_sc[:, :, (self.N-1)-n] = self.u_sc[:, :, n+1].conjugate()
         
         return self.u_sc
     
@@ -871,7 +889,6 @@ class time_domain_scattering(scattering):
             self.U_sc = self.ift(self.u_sc)
         else:
             self.U_sc = np.exp(-1j*2*np.pi*self.freq_shift*self.times)*self.ift(self.u_sc)
-
         
         return np.real(self.U_sc)
 

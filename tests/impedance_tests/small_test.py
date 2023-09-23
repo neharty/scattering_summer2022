@@ -17,7 +17,7 @@ x, y = (r*np.cos(ang), r*np.sin(ang))
 print(x, y)
 X, Y = np.meshgrid([x], [y])
 
-Nmodes = 32
+Nmodes = 64
 Nsamp = 2**12
 T = 20
 
@@ -30,7 +30,7 @@ kmin3 = np.amin(np.abs(cq2.evals))
 
 kmin = min(kmin2, kmin3)
 
-imp = lambda c, k, m: np.exp(1j*np.pi/4)
+imp = lambda c, k, m: 5*np.exp(1j*5*np.pi/4)
 cyls_cq = [cyl('i', [0,0], 1, impedance=imp)]
 cyls = [tds_cyl('i', [0,0], 1, impedance=imp(0,0,0))]
 #Ncyl = 2
@@ -84,7 +84,8 @@ u_irk5 = tds_irk5.make_U_sc(X, Y)
 tds = tds_legacy(cyls, 
                 wv, 
                 T, 
-                sampnum = Nsamp
+                sampnum = 2**8,
+                use_conj=False
                 )
 u = tds.make_U_sc(X, Y)
 
@@ -97,5 +98,5 @@ plt.legend()
 plt.title(r'$\alpha=$'+str(imp(0,0,0)))
 plt.xlabel('t')
 plt.ylabel('U_sc')
-#plt.savefig('/home/nick/scattering/tests/impedance_tests/gaussian_deriv.pdf')
+plt.savefig('/home/nick/scattering/tests/impedance_tests/gaussian_deriv.pdf')
 
