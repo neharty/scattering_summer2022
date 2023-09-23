@@ -149,6 +149,7 @@ class scattering(cyl):
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
             rhs_tol = 1e-10,
+            mat_tol = 1e-10,
             k = 1,
             wavespeed = 1,
             inc_angle = np.pi,
@@ -183,6 +184,7 @@ class scattering(cyl):
         self.gmres_tol = gmres_tol
         self.gmres_restart = gmres_restart
         self.rhs_tol = rhs_tol
+        self.mat_tol = mat_tol
         self.gmres_maxiter = gmres_maxiter
         self.method = method
         self.force_method = force_method
@@ -294,7 +296,7 @@ class scattering(cyl):
             st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance(cyl, self.k, m)
-            st = self.k*(jvp(m, self.k*radius) + 1j*imp*jv(m, self.k*radius))
+            st = self.k*(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))
         else:
             print('invalid bc')
         
@@ -342,9 +344,22 @@ class scattering(cyl):
             hterm = self.k*h1vp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance(cyl, self.k, m)
-            hterm = self.k*(h1vp(m, self.k*radius) + 1j*imp*hankel1(m, self.k*radius))
+            hterm = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
         else:
             print('invalid bc')
+        #expect the hankel functions will go to zero
+        if not np.isfinite(hterm).all():
+            if bc == 'd':
+                tmp = hankel1(m, self.k*radius)
+            elif bc == 'n':
+                tmp = h1vp(m, self.k*radius)
+            elif bc == 'i':
+                imp = cyl.impedance(cyl, self.k, m)
+                tmp = h1vp(m, self.k*radius) + 1j*imp*hankel1(m, self.k*radius)
+                
+            if np.max(np.abs(tmp)) < self.mat_tol:
+                return 1j*np.zeros(tmp.shape)
+        
         return hterm
     
     def highfreq_modes(self, x):
@@ -740,8 +755,8 @@ class time_domain_scattering(scattering):
         
         if self.timeint is None:
             gm = lambda z : 0.5*((z**2)-(4*z)+3) 
-            sl = gm(self.zs)/self.dt
-            self.ks = 1j*sl
+            self.sl = gm(self.zs)/self.dt
+            self.ks = 1j*self.sl
         else:
             blist = self.timeint.b.tolist()
             bmat = np.array([blist for b in blist])
@@ -822,7 +837,7 @@ class time_domain_scattering(scattering):
                 rhs_d = fft(-dg*self.lammat, axis=-1)
                 rhs_n = fft(-ng*self.lammat, axis=-1)
                 idxs = np.arange(-(n//2), n//2)
-                rhs = rhs_n + 1j*imp(cyl, self.ks, idxs)*self.ks*rhs_d
+                rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
             else:
                 g = self.td_bdy(cyl) #discretize bdy
                 rhs = fft(-g*self.lammat, axis=-1)    
@@ -851,7 +866,8 @@ class time_domain_scattering(scattering):
                     tmp = np.abs(g[:, i])
                     if np.max(tmp) < self.fft_tol:
                         g[:, i] = np.zeros(n)
-                        return g
+                        if self.use_conj:
+                            return g
             return g
         
         else:
@@ -865,16 +881,17 @@ class time_domain_scattering(scattering):
                 for j in range(len(self.timeint.c)):
                     c = self.timeint.c[j]
                     ng, dg = self.td_bdy(cyl, c)
-                    rhs_d_tmp[j] = fft(-dg*self.lammat, axis=-1)
+                    #changed from rhs_d_tmp
+                    rhs_d[j] = fft(-dg*self.lammat, axis=-1)
                     rhs_n[j] = fft(-ng*self.lammat, axis=-1)
                 
-                #matrix multiply by the k matrix
-                for j in range(len(self.timeint.c)):
-                    rhsdtmp = 1j*np.zeros((n, N))
-                    for i in range(len(self.timeint.c)):
-                        rhsdtmp += (-imp(cyl, 0, 0)*self.gminv[:, j, i]/self.dt)*rhs_d_tmp[i]
-                    rhs_d[j] = rhsdtmp
-                    rhs[j] = rhs_n[j] + rhs_d[j]
+                # #matrix multiply by the k matrix
+                # for j in range(len(self.timeint.c)):
+                #     rhsdtmp = 1j*np.zeros((n, N))
+                #     for i in range(len(self.timeint.c)):
+                #         rhsdtmp += (1j*imp(cyl, 0, 0)*self.gminv[:, j, i]/self.dt)*rhs_d_tmp[i]
+                #     rhs_d[j] = rhsdtmp
+                #     rhs[j] = rhs_n[j] + rhs_d[j]
             else:
                 for j in range(len(self.timeint.c)):
                     c = self.timeint.c[j]
@@ -884,7 +901,6 @@ class time_domain_scattering(scattering):
             #form the boundary condition for the diagonalized system
             gret = [None for c in self.timeint.c]
             for i in range(len(self.timeint.c)):
-                '''
                 if bc=='i':
                     gdtmp = 1j*np.zeros((n, N))
                     gntmp = 1j*np.zeros((n, N))
@@ -892,14 +908,13 @@ class time_domain_scattering(scattering):
                         gdtmp += self.pinvmats[:, i, j]*rhs_d[j]
                         gntmp += self.pinvmats[:, i, j]*rhs_n[j]
                     #TODO: fix 3rd argument
-                    gdtmp *= 1j*self.evals[:, i]*imp(cyl, self.evals[:, i], 0)
+                    gdtmp *= self.evals[:, i]*imp(cyl, self.evals[:, i], 0)/self.dt
                     gret[i] = gntmp + gdtmp
-                else:
-                '''
-                gtmp = 1j*np.zeros((n, N))
-                for j in range(len(self.timeint.c)):
-                    gtmp += self.pinvmats[:, i, j]*rhs[j]
-                gret[i] = gtmp
+                else:           
+                    gtmp = 1j*np.zeros((n, N))
+                    for j in range(len(self.timeint.c)):
+                        gtmp += self.pinvmats[:, i, j]*rhs[j]
+                    gret[i] = gtmp
         
             # get the fourier coefficients on the boundary
             g = [1j*np.zeros((n, N)) for c in self.timeint.c]
@@ -909,7 +924,8 @@ class time_domain_scattering(scattering):
                     #sparsify the rhs
                     if np.max(np.abs(g[j][:, i])) < self.fft_tol:
                         g[j][:, i] = np.zeros(n)
-                        break
+                        if self.use_conj:
+                            break
             return g
                      
     def fzt_boundary_allcyls(self):
@@ -1037,7 +1053,10 @@ class time_domain_scattering(scattering):
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         klen = range(len(self.zs))
         cpus = self.cpus
-        idxs = np.arange((self.sampnum//2)+1)
+        if self.use_conj:
+            idxs = np.arange((self.sampnum//2)+1)
+        else:
+            idxs = np.arange(len(self.times))
         
         def compute_block(a, b=None):
             if b is None:

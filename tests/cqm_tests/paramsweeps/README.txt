@@ -1,0 +1,1 @@
+The purpose of these tests is to show the convergence of solutions for a variety of circle geometries and boundary conditions. We will sweep a variety of parameters here. The tests are grouped by the positions of the circles. They can be all 1 type of boundary condition, or a mixture.

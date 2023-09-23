@@ -42,4 +42,3 @@ x = pts[:, 0]
 y = pts[:, 1]
 X, Y = np.meshgrid(x, y)
 U = tds.make_U(X, Y)
-

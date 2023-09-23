@@ -9,7 +9,7 @@ from integrators.integrators import IRK3, IRK5
 T = 15
 cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
 Nmode = 8
-Nsamp = 2**10
+Nsamp = 2**12
 
 #%%plane wave
 wv = gaussian_deriv(time_shift=4)
