@@ -46,6 +46,8 @@ elif wvarg == 'dg':
 end_time=20
 
 if bc == 'i':
+    alpha = np.exp(-1j*np.pi/4)
+    eps = 0.01
     imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
     cyls = example_setups.uniform_grid_NxN(cn, bc, 1, 3, impedance=imp)
 else:
