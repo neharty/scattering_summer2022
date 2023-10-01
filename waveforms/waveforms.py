@@ -20,6 +20,7 @@ class waveform(ABC):
         self.r0 = np.array(r0)
         self.times = None #used for point source times
         
+        
     def inparg(self, x, y, t):
         return t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift
         
@@ -32,17 +33,17 @@ class waveform(ABC):
     
     def ptsrc_init(self, t):
         self.times = t
-        self.coeffs = ifft(self.profile(t - self.time_shift))
-        dt = t[1] - t[0]
-        self.freq = fftfreq(len(t), d=dt)
+        self.coeffs = ifft(self.profile(self.times - self.time_shift))
+        dt = self.times[1] - self.times[0]
+        self.freq = fftfreq(len(self.times), d=dt)
         
     def ptsrc(self, x, y, t):
         G = self.coeffs
         r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
-        u = 1j*np.zeros((*x.shape, len(t)))
+        u = 1j*np.zeros((*x.shape, len(self.times)))
         for i in range(1,len(self.freq)//2):
             u[:, i] = 1j*G[i]*hankel1(0, 2*np.pi*self.freq[i]*r)/4
-            u[:, len(t) - i] = u[:, i].conj()
+            u[:, len(self.times) - i] = u[:, i].conj()
         #u[:, :, 0] = -G[0]*np.log(r)/(2*np.pi)
         return fft(u).real
     

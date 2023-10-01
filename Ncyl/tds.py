@@ -372,7 +372,7 @@ class scattering(cyl):
         elif bc == 'n':
             return jvp(m, self.k*radius)/h1vp(m, self.k*radius)
         elif bc == 'i':
-            imp = cyl.impedance
+            imp = cyl.impedance(self.k)
             return(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))/\
                 (h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
         else:

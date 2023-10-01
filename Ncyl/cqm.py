@@ -331,7 +331,7 @@ class scattering(cyl):
             elif cyl.bc == 'i':
                 #TODO: implement
                 imp = cyl.impedance(cyl, k, m)
-                return (self.neumann_asymptotic(cyl, n, m, b, theta) +\
+                return (self.neumann_asymptotic(cyl, n, m, b, theta) -\
                           1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b, theta))
         return tmp
     
@@ -908,7 +908,7 @@ class time_domain_scattering(scattering):
                         gdtmp += self.pinvmats[:, i, j]*rhs_d[j]
                         gntmp += self.pinvmats[:, i, j]*rhs_n[j]
                     #TODO: fix 3rd argument
-                    gdtmp *= self.evals[:, i]*imp(cyl, self.evals[:, i], 0)/self.dt
+                    gdtmp *= self.evals[:, i]*imp(cyl, 1j*self.evals[:, i]/self.dt, 0)/self.dt
                     gret[i] = gntmp + gdtmp
                 else:           
                     gtmp = 1j*np.zeros((n, N))
