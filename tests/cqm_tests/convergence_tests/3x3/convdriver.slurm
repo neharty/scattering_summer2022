@@ -14,4 +14,4 @@
 #SBATCH -e /home/n/nh287/scattering/tests/cqm_tests/logs/%j.out
 #SBATCH --open-mode=append
 
-python3 -u /home/n/nh287/scattering/tests/cqm_tests/lambda/conv.py 3 ${BC} ${NT} ${WV} ${TI} ${NM} ${DO}
+python3 -u /home/n/nh287/scattering/tests/cqm_tests/convergence_tests/3x3/conv.py 3 ${BC} ${NT} ${WV} ${TI} ${NM} ${DO}

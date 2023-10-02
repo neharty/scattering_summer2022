@@ -1,6 +1,6 @@
 for TI in bdf2 irk3 irk5
 do
-for BC in i
+for BC in d n i m
 do
 for WV in dg g
 do

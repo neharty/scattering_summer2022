@@ -81,16 +81,17 @@ td = time_domain_scattering(cyls,
                             cpus=6,
                             scargs={'method':'explicit'}
                             )
-pts = [-6, 0, 6]
-X, Y = np.meshgrid(pts, pts)
+xpts = [-18, -8, 0, 8, 18]
+ypts = [-25.5, -15.5, -10, -5, 0, 5, 10, 15.5, 25.5]
+X, Y = np.meshgrid(xpts, ypts)
 U = td.make_U_sc(X, Y)
 
 #write out the data
 if not os.path.exists(dataout):
     os.makedirs(dataout)
 
-for xpt in range(len(pts)):
-    for ypt in range(len(pts)):
+for xpt in range(len(xpts)):
+    for ypt in range(len(ypts)):
         arr = [[td.times[i], U[ypt, xpt, i]] for i in range(len(td.times))]
         np.savetxt(dataout+'/'+'{:.3f}'.format(pts[xpt])+'_'+'{:.3f}'.format(pts[ypt])+'.dat', arr)
 
