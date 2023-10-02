@@ -4,9 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 #%%
 wave = 'g'
-bc = 'd'
+bc = 'i'
 modes = 16
-pos = (6, 0)
+pos = (-6, 6)
 posstr = str(pos[0])+'.000_'+str(pos[1])+'.000.dat'
 
 for tmeth in ['bdf2', 'irk3', 'irk5']:

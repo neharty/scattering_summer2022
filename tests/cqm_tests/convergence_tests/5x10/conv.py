@@ -1,5 +1,6 @@
 import numpy as np
-
+import random
+import pickle
 from Ncyl.cqm import time_domain_scattering
 from utils import example_setups
 from waveforms.waveforms import gaussian, gaussian_deriv
@@ -45,13 +46,31 @@ elif wvarg == 'dg':
 
 end_time=20
 
+Nx = 10
+Ny = 5
+
 if bc == 'i':
     alpha = np.exp(-1j*np.pi/4)
     eps = 0.01
     imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
-    cyls = example_setups.uniform_grid_NxN(cn, bc, 1, 3, impedance=imp)
+    cyls = example_setups.rectangular_lattice_1bc(Nx, Ny, bc, 1, 3, 3, impedance=imp)
+if bc == 'm':
+    alpha = np.exp(-1j*np.pi/4)
+    eps = 0.01
+    imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
+    bcs = random.choices(['d', 'n', 'i'], k=Nx)
+    cyls = example_setups.rectangular_lattice(Nx, Ny, bcs, 1, 3, 3, impedance=imp)
+if bc=='r':
+    alpha = np.exp(-1j*np.pi/4)
+    eps = 0.01
+    imp = lambda c, k, m: -1/(eps*alpha*(k**0.5)) 
+    bcs = random.choices(['d', 'n', 'i'], k=Nx*Ny)
+    cyls = example_setups.rectangular_lattice(Nx, Ny, bcs, 1, 3, 3, impedance=imp)
 else:
-    cyls = example_setups.uniform_grid_NxN(cn, bc, 1, 3)
+    cyls = example_setups.rectangular_lattice_1bc(Nx, Ny, bc, 1, 3, 3)
+
+outpfile = dataout+'/cyls.p'
+pickle.dump(cyls, open(outpfile, 'wb'))
 
 td = time_domain_scattering(cyls, 
                             wv, 
