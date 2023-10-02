@@ -1,5 +1,5 @@
 TI=bdf2
-BC=r
+BC=i
 WV=dg
 NT=10
 NM=16

@@ -107,6 +107,7 @@ def uniform_grating(N, bcs, radius, spacing, sum_num = None, impedance = None):
     return cyls
 
 def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center = None):
+    print('rect_lat imp', impedance)
     cyls = [None for i in range(Nx*Ny)]
     
     if Nx%2 == 1:
@@ -123,6 +124,7 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
         origins = np.array([[xcoeffs[i]*xspace, ycoeffs[j]*yspace] for i in range(Nx) for j in range(Ny)])
     else:
         origins = np.array([[xcoeffs[i]*xspace+center[0], ycoeffs[j]*yspace+center[1]] for i in range(Nx) for j in range(Ny)])
+    
     if len(bcs) == int(Nx):
         for i in range(Nx*Ny):
             cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_index = sum_num, impedance = impedance)
@@ -133,8 +135,9 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
     return cyls
 
 def rectangular_lattice_1bc(Nx, Ny, bc, radius, xspace, yspace, sum_num=None, impedance = None, center = None):
+    print('1bc imp', impedance)
     bcs = [bc for n in range(Nx)]
-    return rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center = None)
+    return rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance=impedance, center=center)
 
 def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center=None):
     cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)

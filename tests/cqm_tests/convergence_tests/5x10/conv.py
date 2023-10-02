@@ -49,22 +49,18 @@ Ny = 10
 
 np.random.seed(12345)
 
+#impedance definition
+alpha = np.exp(-1j*np.pi/4)
+eps = 0.01
+def imp(c, k, m): 
+    return -1/(eps*alpha*(k**0.5)) 
+
 if bc == 'i':
-    alpha = np.exp(-1j*np.pi/4)
-    eps = 0.01
-    imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
     cyls = example_setups.rectangular_lattice_1bc(Nx, Ny, bc, 1, 3, 3, impedance=imp)
-if bc == 'm':
-    alpha = np.exp(-1j*np.pi/4)
-    eps = 0.01
-    imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
+elif bc == 'm':
     bcs = random.choices(['d', 'n', 'i'], k=Nx)
     cyls = example_setups.rectangular_lattice(Nx, Ny, bcs, 1, 3, 3, impedance=imp)
-    print(bcs)
-if bc=='r':
-    alpha = np.exp(-1j*np.pi/4)
-    eps = 0.01
-    imp = lambda c, k, m: -1/(eps*alpha*(k**0.5)) 
+elif bc=='r':
     bcs = random.choices(['d', 'n', 'i'], k=Nx*Ny)
     cyls = example_setups.rectangular_lattice(Nx, Ny, bcs, 1, 3, 3, impedance=imp)
 else:

@@ -46,8 +46,9 @@ class cyl:
         self.pos = np.array(pos)
         self.radius = radius
         self.bc = bc
-        self.impedance = impedance #impedance is the impedance parameter xi, lambda = xi*k
+        self.impedance = impedance #impedance is a function handle for \eta
         if self.bc == 'i' and impedance == None:
+            print(impedance)
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
         
