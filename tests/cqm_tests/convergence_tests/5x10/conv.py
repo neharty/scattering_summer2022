@@ -11,7 +11,6 @@ import os
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('cylnum', help='number of cyls', type=int)
 parser.add_argument('bc', help='boundary condition')
 parser.add_argument('Nt', help = 'number of time samples', type=int)
 parser.add_argument('wvf', help='waveform')
@@ -23,7 +22,6 @@ args = parser.parse_args()
 
 print(args)
 
-cn = args.cylnum
 bc = args.bc
 Nt = args.Nt
 wvarg = args.wvf
@@ -37,17 +35,19 @@ elif tint == 'irk5':
 Nmodes = args.Nmodes
 dataout = args.fout
 
-tshift = 10
+tshift = 12
 
 if wvarg == 'g':
     wv = gaussian(time_shift=tshift)
 elif wvarg == 'dg':
     wv = gaussian_deriv(time_shift=tshift)
 
-end_time=20
+end_time=50
 
-Nx = 10
-Ny = 5
+Nx = 5
+Ny = 10
+
+np.random.seed(12345)
 
 if bc == 'i':
     alpha = np.exp(-1j*np.pi/4)
@@ -60,6 +60,7 @@ if bc == 'm':
     imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
     bcs = random.choices(['d', 'n', 'i'], k=Nx)
     cyls = example_setups.rectangular_lattice(Nx, Ny, bcs, 1, 3, 3, impedance=imp)
+    print(bcs)
 if bc=='r':
     alpha = np.exp(-1j*np.pi/4)
     eps = 0.01
@@ -69,9 +70,16 @@ if bc=='r':
 else:
     cyls = example_setups.rectangular_lattice_1bc(Nx, Ny, bc, 1, 3, 3)
 
+print(len(cyls))
+#make file path
+if not os.path.exists(dataout):
+    os.makedirs(dataout)
+
+#write out cylinder object
 outpfile = dataout+'/cyls.p'
 pickle.dump(cyls, open(outpfile, 'wb'))
 
+#compute the fields
 td = time_domain_scattering(cyls, 
                             wv, 
                             end_time, 
@@ -87,11 +95,8 @@ X, Y = np.meshgrid(xpts, ypts)
 U = td.make_U_sc(X, Y)
 
 #write out the data
-if not os.path.exists(dataout):
-    os.makedirs(dataout)
-
 for xpt in range(len(xpts)):
     for ypt in range(len(ypts)):
         arr = [[td.times[i], U[ypt, xpt, i]] for i in range(len(td.times))]
-        np.savetxt(dataout+'/'+'{:.3f}'.format(pts[xpt])+'_'+'{:.3f}'.format(pts[ypt])+'.dat', arr)
+        np.savetxt(dataout+'/'+'{:.3f}'.format(xpts[xpt])+'_'+'{:.3f}'.format(ypts[ypt])+'.dat', arr)
 

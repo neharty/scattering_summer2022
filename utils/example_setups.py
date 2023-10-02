@@ -123,7 +123,7 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
         origins = np.array([[xcoeffs[i]*xspace, ycoeffs[j]*yspace] for i in range(Nx) for j in range(Ny)])
     else:
         origins = np.array([[xcoeffs[i]*xspace+center[0], ycoeffs[j]*yspace+center[1]] for i in range(Nx) for j in range(Ny)])
-    if len(bcs) == Nx:
+    if len(bcs) == int(Nx):
         for i in range(Nx*Ny):
             cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_index = sum_num, impedance = impedance)
     else:
