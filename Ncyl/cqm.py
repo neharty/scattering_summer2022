@@ -785,45 +785,70 @@ class time_domain_scattering(scattering):
         ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
         pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
         
-        if self.waveform.src_type == 'planewave':
-            #initialize arrays
-            if bc == 'i':
-                ng = np.zeros((n, N))
-                dg = np.zeros((n, N))
-            else:
-                g = np.zeros((n, N))
-            
-            for i in range(N):
-                t = self.times[i]
-                if bc == 'd':
-                    g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
-                elif bc == 'n':
-                    dirvect = (pts[:] - p)/r
-                    g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
-                elif bc == 'i':
-                    #neumann part
-                    dirvect = (pts[:] - p)/r
-                    ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
-                    #dirichlet part
-                    dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
-        elif self.waveform.src_type=='pointsource':
+        #initialize arrays
+        #use only for plane waves
+        if bc == 'i':
+            ng = np.zeros((n, N))
+            dg = np.zeros((n, N))
+        else:
+            g = np.zeros((n, N))
+        
+        for i in range(N):
+            t = self.times[i]
             if bc == 'd':
-                g = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times+c*self.dt)
+                g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
             elif bc == 'n':
                 dirvect = (pts[:] - p)/r
-                g = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times+c*self.dt, dirvect)
+                g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
             elif bc == 'i':
                 #neumann part
                 dirvect = (pts[:] - p)/r
-                ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], self.times+c*self.dt, dirvect)
+                ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
                 #dirichlet part
-                dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], self.times+c*self.dt)
+                dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
                    
         if bc == 'i':
             return ng, dg
         else:
             return g
 
+    def fd_bdy(self, cyl, ks, c=0):
+        bc = cyl.bc
+        n = 2*self.modes
+        N = len(self.times)
+        r = cyl.radius
+        p = np.array(cyl.pos)
+        bc = cyl.bc
+        ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
+        pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
+        
+        #initialize arrays
+        #use only for pointsource waves
+        if bc == 'i':
+            ng = np.zeros((n, N))
+            dg = np.zeros((n, N))
+        else:
+            g = np.zeros((n, N))
+        
+        for i in range(N):
+            k = ks[i]
+            if bc == 'd':
+                g[:, i] = self.waveform.fd_wave(pts[:, 0], pts[:, 1], k, i)
+            elif bc == 'n':
+                dirvect = (pts[:] - p)/r
+                g[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect)
+            elif bc == 'i':
+                #neumann part
+                dirvect = (pts[:] - p)/r
+                ng[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect)
+                #dirichlet part
+                dg[:, i] = self.waveform.fd_wave(pts[:, 0], pts[:, 1], k, i)
+                   
+        if bc == 'i':
+            return ng, dg
+        else:
+            return g
+    
     def fzt_boundary_1cyl(self, cyl):
         n = 2*self.modes
         N = len(self.times)
@@ -833,15 +858,29 @@ class time_domain_scattering(scattering):
         if self.timeint is None:
             #BDF2
             # z-transform the boundary condition
-            if cyl.bc == 'i':
-                ng, dg = self.td_bdy(cyl) #discretize bdy
-                rhs_d = fft(-dg*self.lammat, axis=-1)
-                rhs_n = fft(-ng*self.lammat, axis=-1)
-                idxs = np.arange(-(n//2), n//2)
-                rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
+            if self.waveform.src_type == 'planewave':
+                if cyl.bc == 'i':
+                    ng, dg = self.td_bdy(cyl) #discretize bdy
+                    rhs_d = fft(-dg*self.lammat, axis=-1)
+                    rhs_n = fft(-ng*self.lammat, axis=-1)
+                    idxs = np.arange(-(n//2), n//2)
+                    rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
+                else:
+                    g = self.td_bdy(cyl) #discretize bdy
+                    rhs = fft(-g*self.lammat, axis=-1)    
             else:
-                g = self.td_bdy(cyl) #discretize bdy
-                rhs = fft(-g*self.lammat, axis=-1)    
+                #wave is a point souce
+                if cyl.bc == 'i':
+                    #TODO: fix this
+                    ng, dg = self.fd_bdy(cyl, self.ks) #discretize bdy
+                    rhs_d = fft(-dg*self.lammat, axis=-1)
+                    rhs_n = fft(-ng*self.lammat, axis=-1)
+                    idxs = np.arange(-(n//2), n//2)
+                    rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
+                else:
+                    g = N*ifft(self.fd_bdy(cyl, self.ks)) #discretize in the frequency domain
+                    #z transform is a convolution
+                    rhs = fft(-g*self.lammat, axis=-1)              
             
             #reset g
             if not self.fl:

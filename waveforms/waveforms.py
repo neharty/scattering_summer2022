@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.fft import fft, ifft, fftfreq
-from scipy.special import hankel1
+from scipy.special import hankel1, h1vp
 from abc import ABC, abstractmethod
 
 class waveform(ABC):
@@ -33,40 +33,44 @@ class waveform(ABC):
     
     def ptsrc_init(self, t):
         self.times = t
-        self.coeffs = ifft(self.profile(self.times - self.time_shift))
-        dt = self.times[1] - self.times[0]
-        self.freq = fftfreq(len(self.times), d=dt)
-        
-    def ptsrc(self, x, y, t):
-        G = self.coeffs
+        self.coeffs = len(self.times)*ifft(self.profile(self.times - self.time_shift))
+    
+    def fd_wave(self, x, y, k, idx):
         r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
-        u = 1j*np.zeros((*x.shape, len(self.times)))
-        for i in range(1,len(self.freq)//2):
-            u[:, i] = 1j*G[i]*hankel1(0, 2*np.pi*self.freq[i]*r)/4
-            u[:, len(self.times) - i] = u[:, i].conj()
-        #u[:, :, 0] = -G[0]*np.log(r)/(2*np.pi)
-        return fft(u).real
+        return 1j*self.coeffs[idx]*hankel1(0, k*r)/4
     
     def td_wave(self, x, y, t):
-        if self.src_type == 'planewave':
-            return self.profile(self.inparg(x, y, t))
-        elif self.src_type == 'pointsource':
-            return self.ptsrc(x, y, t)
-    
+        return self.profile(self.inparg(x, y, t))
+
     @abstractmethod
     def td_deriv(self, x, y, t, n):
         pass
+    
+    def fd_deriv(self, x, y, k, idx, n):
+        r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
+        tmp = 1j*self.coeffs[idx]*h1vp(0, k*r)*k/r/4
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = np.array([x[i], y[i]]).dot(n[i])
+        dg *= tmp
+        return dg
+        
 
 class gaussian(waveform):
     def __init__(
                  self, 
                  inc_angle = np.pi, 
                  time_shift=0, 
+                 r0 = [0,0],
+                 src_type = 'planewave',
                  sigma = 0.2, 
                  cutoff=1e-8,
                  amp=1
                 ):
-        super().__init__(time_shift=time_shift, inc_angle=inc_angle)
+        super().__init__(time_shift=time_shift, 
+                         inc_angle=inc_angle, 
+                         r0=r0,
+                         src_type=src_type)
         self.cutoff = 1e-8 #used to truncate signal
         self.sigma = sigma
         self.amp = amp
@@ -102,7 +106,7 @@ class gaussian_deriv(waveform):
                  src_type='planewave',
                  sigma = 0.2,
                  amp = 1, 
-                 cutoff=1e-8
+                 cutoff=1e-10
                 ):
         super().__init__(time_shift=time_shift, 
                          inc_angle=inc_angle,

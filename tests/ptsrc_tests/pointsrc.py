@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from Ncyl.cqm import time_domain_scattering, cyl
-from waveforms.waveforms import gaussian_deriv
+from waveforms.waveforms import gaussian_deriv, gaussian
 from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 #%%
@@ -31,7 +31,8 @@ Nsamp = 2**10
 
 #%%
 #point source
-wv = gaussian_deriv(time_shift=2,
+wv = gaussian(
+                    time_shift=2,
                     r0=[4, 0],
                     src_type='pointsource',
                     amp=50)
@@ -49,7 +50,7 @@ X, Y = np.meshgrid([6], [0])
 U = tds.make_U_sc(X, Y)
 
 #%%
-plt.plot(tds.times, wv.td_wave(np.array([1]), 0, tds.times)[0,:], label='incident')
+#plt.plot(tds.times, wv.td_wave(np.array([1]), 0, tds.times)[0,:], label='incident')
 plt.plot(tds.times, U[0,0,:], label='scattered')
 plt.legend()
 #plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example.pdf')
