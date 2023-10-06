@@ -4,13 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 #%%
 wave = 'g'
-bc = 'i'
+bc = 'm'
 modes = 16
 pos = (-6, 6)
 posstr = str(pos[0])+'.000_'+str(pos[1])+'.000.dat'
 
 for tmeth in ['bdf2', 'irk3', 'irk5']:
-    path = '/home/nick/scattering/data/cqm/convergence/'
+    path = '/home/nick/scattering/data/cqm/convergence/3x3/'
     fpath = path + tmeth +'/'+ wave+'/' + bc 
     
     maxpow = 15
@@ -50,4 +50,4 @@ plt.legend()
 plt.xlabel('dt')
 plt.ylabel('err')
 plt.title('(x,y)='+str(pos)+', bc='+bc)
-plt.savefig('/home/nick/scattering/data/cqm/convergence/'+str(pos)+'bc='+bc+'.pdf')
+#plt.savefig('/home/nick/scattering/data/cqm/convergence/'+str(pos)+'bc='+bc+'.pdf')
