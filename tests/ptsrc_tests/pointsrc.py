@@ -6,47 +6,41 @@ from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 #%%
 #init variables
-T = 10
-#cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
-cyls = [cyl('d', [0, 0], 1)]
+T = 24
+
+sig = 12
+mu = 0.459
+b = 0.632
+nu = 0.673
+q = 0.618
+kl = lambda k: k*(1+nu*(sig/-1j*k)**q)
+imp = lambda a, k, c: 1/(np.tanh(-1j*kl(k)*0.2)/(1+mu*(sig/(-1j*k))**b))
+
+cyls = [cyl('d', [0, 0], 1)]#, impedance=imp)]
 Nmode = 16
 Nsamp = 2**10
 
-# #%%plane wave
-# wv = gaussian_deriv(time_shift=4)
-
-# tds = time_domain_scattering(
-#                              cyls,
-#                              wv,
-#                              T,
-#                              modes=Nmode,
-#                              sampnum=Nsamp,
-#                              scargs={'method':'explicit'}
-#                              )
-
-# X, Y = np.meshgrid([6], [0])
-# U = tds.make_U_sc(X, Y)
-
-# plt.plot(tds.times, U[0,0,:])
 
 #%%
 #point source
 wv = gaussian(
-                    time_shift=2,
-                    r0=[4, 0],
-                    src_type='pointsource',
-                    amp=50)
-
+            time_shift=2,
+            r0=[4, 0],
+            sigma=0.2,
+            src_type='pointsource')
+#wv = gaussian(time_shift=8)
+tint = None
 tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
                              modes=Nmode,
                              sampnum=Nsamp,
+                             timeint=tint,
                              scargs={'method':'explicit'}
                              )
 
-X, Y = np.meshgrid([6], [0])
+X, Y = np.meshgrid([0], [4])
 U = tds.make_U_sc(X, Y)
 
 #%%

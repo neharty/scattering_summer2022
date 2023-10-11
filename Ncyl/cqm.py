@@ -772,8 +772,6 @@ class time_domain_scattering(scattering):
             self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])     
         
         self.lammat = self.lam**np.arange(0, len(self.times))
-        if self.waveform.src_type == 'pointsource':
-            self.waveform.ptsrc_init(self.times)
 
     def td_bdy(self, cyl, c=0):
         bc = cyl.bc
@@ -812,7 +810,7 @@ class time_domain_scattering(scattering):
         else:
             return g
 
-    def fd_bdy(self, cyl, ks, c=0):
+    def fd_bdy(self, cyl, c=0):
         bc = cyl.bc
         n = 2*self.modes
         N = len(self.times)
@@ -825,29 +823,104 @@ class time_domain_scattering(scattering):
         #initialize arrays
         #use only for pointsource waves
         if bc == 'i':
-            ng = np.zeros((n, N))
-            dg = np.zeros((n, N))
+            ng = 1j*np.zeros((n, N))
+            dg = 1j*np.zeros((n, N))
         else:
-            g = np.zeros((n, N))
+            g = 1j*np.zeros((n, N))
+        
+        #z transform the time signal
+        tshift = self.waveform.time_shift
+        ztf = self.ztrans(self.waveform.profile(self.times - tshift + c*self.dt))
+        r0 = self.waveform.r0
+        dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
+        grnmodes = lambda x, y, i: ztf[i]*1j*hankel1(0, self.ks[i]*dist(x, y))/4
+        dgrnmodes = lambda x, y, i: ztf[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/4/self.dist(x,y)
         
         for i in range(N):
-            k = ks[i]
+            k = self.ks[i]
             if bc == 'd':
-                g[:, i] = self.waveform.fd_wave(pts[:, 0], pts[:, 1], k, i)
+                g[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
             elif bc == 'n':
                 dirvect = (pts[:] - p)/r
-                g[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect)
+                g[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect, c)
             elif bc == 'i':
                 #neumann part
                 dirvect = (pts[:] - p)/r
-                ng[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect)
+                ng[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect, c)
                 #dirichlet part
-                dg[:, i] = self.waveform.fd_wave(pts[:, 0], pts[:, 1], k, i)
+                dg[:, i] = self.waveform.fd_wave(pts[:, 0], pts[:, 1], k, i, c)
                    
         if bc == 'i':
             return ng, dg
         else:
             return g
+    
+    def ztrans(self, x):
+        #z-transform of a time sequence
+        return fft(self.lammat*x)
+        
+    def ztrans_bdf2(self, cyl):
+        n = 2*self.modes
+        N = len(self.times)
+        bc = cyl.bc
+        imp = cyl.impedance
+        # z-transform the boundary condition
+        if self.waveform.src_type == 'planewave':
+            if cyl.bc == 'i':
+                ng, dg = self.td_bdy(cyl) #discretize bdy
+                rhs_d = fft(-dg*self.lammat, axis=-1)
+                rhs_n = fft(-ng*self.lammat, axis=-1)
+                idxs = np.arange(-(n//2), n//2)
+                rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
+            else:
+                g = self.td_bdy(cyl) #discretize bdy
+                rhs = fft(-g*self.lammat, axis=-1)    
+        else:
+            #wave is a point souce
+            if cyl.bc == 'i':
+                #TODO: fix this
+                ng, dg = self.fd_bdy(cyl, self.ks) #discretize bdy
+                ng = N*ifft(ng)
+                dg = N*ifft(dg)
+                rhs_d = fft(-dg*self.lammat, axis=-1)
+                rhs_n = fft(-ng*self.lammat, axis=-1)
+                idxs = np.arange(-(n//2), n//2)
+                rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
+            else:
+                g = self.fd_bdy(cyl) #discretize in the frequency domain
+                #z transform is a convolution
+                rhs = -g
+        return rhs
+    
+    def fourier_coeffs_bdy_bdf2(self, rhs):
+        n = 2*self.modes
+        N = len(self.times)
+        
+        if not self.fl:
+            g = 1j*np.zeros((n, N))
+        else:
+            # for foldy-lax approximations
+            # only uses 1 mode -- incorrect for Neumann case
+            g = 1j*np.zeros(N)
+                
+        for i in range(len(self.times)):
+            if self.fl:
+                gtmp = fftshift(fft(rhs[:, i]))/n
+                g[i] = gtmp[n//2]
+                #sparsify the rhs
+                tmp = np.abs(g[i])
+                if np.max(tmp) < self.fft_tol:
+                    g[i] = 0
+                    return g
+            else:
+                g[:, i] = fftshift(fft(rhs[:, i]))/n
+                #sparsify the rhs
+                tmp = np.abs(g[:, i])
+                if np.max(tmp) < self.fft_tol:
+                    g[:, i] = np.zeros(n)
+                    if self.use_conj:
+                        return g 
+        return g
     
     def fzt_boundary_1cyl(self, cyl):
         n = 2*self.modes
@@ -857,104 +930,73 @@ class time_domain_scattering(scattering):
         
         if self.timeint is None:
             #BDF2
-            # z-transform the boundary condition
-            if self.waveform.src_type == 'planewave':
-                if cyl.bc == 'i':
-                    ng, dg = self.td_bdy(cyl) #discretize bdy
-                    rhs_d = fft(-dg*self.lammat, axis=-1)
-                    rhs_n = fft(-ng*self.lammat, axis=-1)
-                    idxs = np.arange(-(n//2), n//2)
-                    rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
-                else:
-                    g = self.td_bdy(cyl) #discretize bdy
-                    rhs = fft(-g*self.lammat, axis=-1)    
-            else:
-                #wave is a point souce
-                if cyl.bc == 'i':
-                    #TODO: fix this
-                    ng, dg = self.fd_bdy(cyl, self.ks) #discretize bdy
-                    rhs_d = fft(-dg*self.lammat, axis=-1)
-                    rhs_n = fft(-ng*self.lammat, axis=-1)
-                    idxs = np.arange(-(n//2), n//2)
-                    rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
-                else:
-                    g = N*ifft(self.fd_bdy(cyl, self.ks)) #discretize in the frequency domain
-                    #z transform is a convolution
-                    rhs = fft(-g*self.lammat, axis=-1)              
-            
-            #reset g
-            if not self.fl:
-                g = 1j*np.zeros((n, N))
-            else:
-                # for foldy-lax approximations
-                # only uses 1 mode -- incorrect for Neumann case
-                g = 1j*np.zeros(N)
-                
-            # get the fourier coefficients on the boundary
-            for i in range(len(self.times)):
-                if self.fl:
-                    gtmp = fftshift(fft(rhs[:, i]))/n
-                    g[i] = gtmp[n//2]
-                    #sparsify the rhs
-                    tmp = np.abs(g[i])
-                    if np.max(tmp) < self.fft_tol:
-                        g[i] = 0
-                        return g
-                else:
-                    g[:, i] = fftshift(fft(rhs[:, i]))/n
-                    #sparsify the rhs
-                    tmp = np.abs(g[:, i])
-                    if np.max(tmp) < self.fft_tol:
-                        g[:, i] = np.zeros(n)
-                        if self.use_conj:
-                            return g
-            return g
+            rhs = self.ztrans_bdf2(cyl)
+            return self.fourier_coeffs_bdy_bdf2(rhs)
         
         else:
             # IRK methods
             # z-transform the boundary condition
             rhs = [None for c in self.timeint.c]
-            if bc == 'i':
-                rhs_d = [None for c in self.timeint.c]
-                rhs_n = [None for c in self.timeint.c]
-                rhs_d_tmp = [None for c in self.timeint.c]
-                for j in range(len(self.timeint.c)):
-                    c = self.timeint.c[j]
-                    ng, dg = self.td_bdy(cyl, c)
-                    #changed from rhs_d_tmp
-                    rhs_d[j] = fft(-dg*self.lammat, axis=-1)
-                    rhs_n[j] = fft(-ng*self.lammat, axis=-1)
-                
-                # #matrix multiply by the k matrix
-                # for j in range(len(self.timeint.c)):
-                #     rhsdtmp = 1j*np.zeros((n, N))
-                #     for i in range(len(self.timeint.c)):
-                #         rhsdtmp += (1j*imp(cyl, 0, 0)*self.gminv[:, j, i]/self.dt)*rhs_d_tmp[i]
-                #     rhs_d[j] = rhsdtmp
-                #     rhs[j] = rhs_n[j] + rhs_d[j]
+            if self.waveform.src_type == 'planewave':
+                if bc == 'i':
+                    rhs_d = [None for c in self.timeint.c]
+                    rhs_n = [None for c in self.timeint.c]
+                    rhs_d_tmp = [None for c in self.timeint.c]
+                    for j in range(len(self.timeint.c)):
+                        c = self.timeint.c[j]
+                        ng, dg = self.td_bdy(cyl, c)
+                        #changed from rhs_d_tmp
+                        rhs_d[j] = fft(-dg*self.lammat, axis=-1)
+                        rhs_n[j] = fft(-ng*self.lammat, axis=-1)
+                else:
+                    for j in range(len(self.timeint.c)):
+                        c = self.timeint.c[j]
+                        g = self.td_bdy(cyl, c)
+                        rhs[j] = fft(-g*self.lammat, axis=-1)
             else:
-                for j in range(len(self.timeint.c)):
-                    c = self.timeint.c[j]
-                    g = self.td_bdy(cyl, c)
-                    rhs[j] = fft(-g*self.lammat, axis=-1)
+                pass
+                #source is a pointsource
+                if bc == 'i':
+                    rhs_d = [None for c in self.timeint.c]
+                    rhs_n = [None for c in self.timeint.c]
+                    rhs_d_tmp = [None for c in self.timeint.c]
+                    for j in range(len(self.timeint.c)):
+                        c = self.timeint.c[j]
+                        ng, dg = self.td_bdy(cyl, c)
+                        #changed from rhs_d_tmp
+                        rhs_d[j] = fft(-dg*self.lammat, axis=-1)
+                        rhs_n[j] = fft(-ng*self.lammat, axis=-1)
+                else:
+                    for j in range(len(self.timeint.c)):
+                        c = self.timeint.c[j]
+                        ks = 1j*self.evals[:, j]/self.dt
+                        g = N*ifft(self.fd_bdy(cyl, ks, c*self.dt))
+                        rhs[j] = fft(-g*self.lammat, axis=-1)
             
             #form the boundary condition for the diagonalized system
             gret = [None for c in self.timeint.c]
             for i in range(len(self.timeint.c)):
-                if bc=='i':
-                    gdtmp = 1j*np.zeros((n, N))
-                    gntmp = 1j*np.zeros((n, N))
-                    for j in range(len(self.timeint.c)):
-                        gdtmp += self.pinvmats[:, i, j]*rhs_d[j]
-                        gntmp += self.pinvmats[:, i, j]*rhs_n[j]
-                    #TODO: fix 3rd argument
-                    gdtmp *= self.evals[:, i]*imp(cyl, 1j*self.evals[:, i]/self.dt, 0)/self.dt
-                    gret[i] = gntmp + gdtmp
-                else:           
-                    gtmp = 1j*np.zeros((n, N))
-                    for j in range(len(self.timeint.c)):
-                        gtmp += self.pinvmats[:, i, j]*rhs[j]
-                    gret[i] = gtmp
+                if self.waveform.src_type == 'planewave':
+                    if bc=='i':
+                        gdtmp = 1j*np.zeros((n, N))
+                        gntmp = 1j*np.zeros((n, N))
+                        for j in range(len(self.timeint.c)):
+                            gdtmp += self.pinvmats[:, i, j]*rhs_d[j]
+                            gntmp += self.pinvmats[:, i, j]*rhs_n[j]
+                        #TODO: fix 3rd argument
+                        gdtmp *= self.evals[:, i]*imp(cyl, 1j*self.evals[:, i]/self.dt, 0)/self.dt
+                        gret[i] = gntmp + gdtmp
+                    else:           
+                        gtmp = 1j*np.zeros((n, N))
+                        for j in range(len(self.timeint.c)):
+                            gtmp += self.pinvmats[:, i, j]*rhs[j]
+                        gret[i] = gtmp
+                else:
+                    if bc == 'i':
+                        pass
+                    else:
+                        #diagonalized eigenvalues?
+                        gret[i] = None
         
             # get the fourier coefficients on the boundary
             g = [1j*np.zeros((n, N)) for c in self.timeint.c]

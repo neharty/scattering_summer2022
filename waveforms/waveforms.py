@@ -31,13 +31,9 @@ class waveform(ABC):
     def profile(self, z):
         pass
     
-    def ptsrc_init(self, t):
+    def ptsrc_init(self, t, lammat):
         self.times = t
-        self.coeffs = len(self.times)*ifft(self.profile(self.times - self.time_shift))
-    
-    def fd_wave(self, x, y, k, idx):
-        r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
-        return 1j*self.coeffs[idx]*hankel1(0, k*r)/4
+        self.coeffs = fft(lammat*self.profile(self.times - self.time_shift))
     
     def td_wave(self, x, y, t):
         return self.profile(self.inparg(x, y, t))
@@ -45,16 +41,6 @@ class waveform(ABC):
     @abstractmethod
     def td_deriv(self, x, y, t, n):
         pass
-    
-    def fd_deriv(self, x, y, k, idx, n):
-        r = np.sqrt((x - self.r0[0])**2 + (y-self.r0[1])**2)
-        tmp = 1j*self.coeffs[idx]*h1vp(0, k*r)*k/r/4
-        dg = np.zeros(len(x))
-        for i in range(len(x)):
-            dg[i] = np.array([x[i], y[i]]).dot(n[i])
-        dg *= tmp
-        return dg
-        
 
 class gaussian(waveform):
     def __init__(
@@ -64,14 +50,14 @@ class gaussian(waveform):
                  r0 = [0,0],
                  src_type = 'planewave',
                  sigma = 0.2, 
-                 cutoff=1e-8,
+                 cutoff=1e-10,
                  amp=1
                 ):
         super().__init__(time_shift=time_shift, 
                          inc_angle=inc_angle, 
                          r0=r0,
                          src_type=src_type)
-        self.cutoff = 1e-8 #used to truncate signal
+        self.cutoff = cutoff #used to truncate signal
         self.sigma = sigma
         self.amp = amp
     
