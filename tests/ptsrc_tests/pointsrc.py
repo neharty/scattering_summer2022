@@ -6,7 +6,7 @@ from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 #%%
 #init variables
-T = 24
+T = 16
 
 sig = 12
 mu = 0.459
@@ -16,20 +16,21 @@ q = 0.618
 kl = lambda k: k*(1+nu*(sig/-1j*k)**q)
 imp = lambda a, k, c: 1/(np.tanh(-1j*kl(k)*0.2)/(1+mu*(sig/(-1j*k))**b))
 
-cyls = [cyl('d', [0, 0], 1)]#, impedance=imp)]
+cyls = [cyl('n', [0, 0], 0.5)]#, impedance=imp)]
 Nmode = 16
-Nsamp = 2**10
+Nsamp = 2**12
 
 
 #%%
 #point source
-wv = gaussian(
+wv = gaussian_deriv(
             time_shift=2,
             r0=[4, 0],
-            sigma=0.2,
+            sigma=0.04/np.log(2),
+            amp=1e-3,
             src_type='pointsource')
 #wv = gaussian(time_shift=8)
-tint = None
+tint = IRK3()
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -40,11 +41,11 @@ tds = time_domain_scattering(
                              scargs={'method':'explicit'}
                              )
 
-X, Y = np.meshgrid([0], [4])
-U = tds.make_U_sc(X, Y)
+X, Y = np.meshgrid([2], [0])
+U = tds.make_U_sc(X, Y)[0, 0, :] + tds.make_U_inc(X, Y)[0, :]
 
 #%%
 #plt.plot(tds.times, wv.td_wave(np.array([1]), 0, tds.times)[0,:], label='incident')
-plt.plot(tds.times, U[0,0,:], label='scattered')
+plt.plot(tds.times, -U, label='scattered')
 plt.legend()
 #plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example.pdf')

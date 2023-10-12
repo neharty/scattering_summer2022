@@ -296,7 +296,7 @@ class scattering(cyl):
         elif bc == 'n':
             st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
-            imp = cyl.impedance(cyl, self.k, m)
+            imp = cyl.impedance(self.k)
             st = self.k*(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))
         else:
             print('invalid bc')
@@ -344,7 +344,7 @@ class scattering(cyl):
         elif bc == 'n':
             hterm = self.k*h1vp(m, self.k*radius)
         elif bc == 'i':
-            imp = cyl.impedance(cyl, self.k, m)
+            imp = cyl.impedance(self.k)
             hterm = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
         else:
             print('invalid bc')
@@ -809,8 +809,20 @@ class time_domain_scattering(scattering):
             return ng, dg
         else:
             return g
-
-    def fd_bdy(self, cyl, c=0):
+        
+    def ptsrc_init(self, c):
+        #initialize the time profile for the point source
+        tshift = self.waveform.time_shift
+        ztf = self.ztrans(self.waveform.profile(self.times - tshift + c*self.dt))
+        return ztf
+    
+    def fd_inc_wave(self, x, y, coeff=1):
+        r0 = self.waveform.r0
+        dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
+        grnmode = lambda x, y: coeff*1j*hankel1(0, self.ks*dist(x, y))/4
+        return grnmode(x, y)
+    
+    def fd_bdy(self, cyl, coeffs):
         bc = cyl.bc
         n = 2*self.modes
         N = len(self.times)
@@ -829,27 +841,31 @@ class time_domain_scattering(scattering):
             g = 1j*np.zeros((n, N))
         
         #z transform the time signal
-        tshift = self.waveform.time_shift
-        ztf = self.ztrans(self.waveform.profile(self.times - tshift + c*self.dt))
         r0 = self.waveform.r0
         dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
-        grnmodes = lambda x, y, i: ztf[i]*1j*hankel1(0, self.ks[i]*dist(x, y))/4
-        dgrnmodes = lambda x, y, i: ztf[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/4/self.dist(x,y)
+        grnmodes = lambda x, y, i: coeffs[i]*1j*hankel1(0, self.ks[i]*dist(x, y))/4
+        dgrnmodes = lambda x, y, i: coeffs[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/4/dist(x,y)
         
         for i in range(N):
-            k = self.ks[i]
             if bc == 'd':
                 g[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
             elif bc == 'n':
                 dirvect = (pts[:] - p)/r
-                g[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect, c)
+                dotpdct = np.zeros(len(pts))
+                for j in range(len(pts)):
+                    ptmp = np.array([pts[j, 0] - r0[0], pts[j, 1]-r0[1]])
+                    dotpdct[j] = ptmp.dot(dirvect[j])                    
+                g[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
             elif bc == 'i':
+                #TODO: fix this
                 #neumann part
                 dirvect = (pts[:] - p)/r
-                ng[:, i] = self.waveform.fd_deriv(pts[:, 0], pts[:, 1], k, i, dirvect, c)
+                dotpdct = np.zeros(len(pts))
+                for j in range(len(pts)):
+                    dotpdct[j] = np.dot([pts[j, 0], pts[j, 1]], dirvect[j])  
+                ng[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
                 #dirichlet part
-                dg[:, i] = self.waveform.fd_wave(pts[:, 0], pts[:, 1], k, i, c)
-                   
+                dg[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
         if bc == 'i':
             return ng, dg
         else:
@@ -859,43 +875,40 @@ class time_domain_scattering(scattering):
         #z-transform of a time sequence
         return fft(self.lammat*x)
         
-    def ztrans_bdf2(self, cyl):
+    def ztrans_bdy_pw(self, cyl, c=0):
+        # z transform the boundary data for a planewave
         n = 2*self.modes
         N = len(self.times)
         bc = cyl.bc
         imp = cyl.impedance
         # z-transform the boundary condition
-        if self.waveform.src_type == 'planewave':
-            if cyl.bc == 'i':
-                ng, dg = self.td_bdy(cyl) #discretize bdy
-                rhs_d = fft(-dg*self.lammat, axis=-1)
-                rhs_n = fft(-ng*self.lammat, axis=-1)
-                idxs = np.arange(-(n//2), n//2)
-                rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
-            else:
-                g = self.td_bdy(cyl) #discretize bdy
-                rhs = fft(-g*self.lammat, axis=-1)    
+        if cyl.bc == 'i':
+            ng, dg = self.td_bdy(cyl, c) #discretize bdy
+            rhs_d = self.ztrans(dg)
+            rhs_n = self.ztrans(ng)
+            return rhs_d, rhs_n
         else:
-            #wave is a point souce
-            if cyl.bc == 'i':
-                #TODO: fix this
-                ng, dg = self.fd_bdy(cyl, self.ks) #discretize bdy
-                ng = N*ifft(ng)
-                dg = N*ifft(dg)
-                rhs_d = fft(-dg*self.lammat, axis=-1)
-                rhs_n = fft(-ng*self.lammat, axis=-1)
-                idxs = np.arange(-(n//2), n//2)
-                rhs = rhs_n + imp(cyl, self.ks, idxs)*self.sl*rhs_d
-            else:
-                g = self.fd_bdy(cyl) #discretize in the frequency domain
-                #z transform is a convolution
-                rhs = -g
+            g = self.td_bdy(cyl, c) #discretize bdy
+            rhs = self.ztrans(g)   
         return rhs
     
-    def fourier_coeffs_bdy_bdf2(self, rhs):
+    def make_zbc(self, cyl, zdat):
+        #form the z-domain, perhaps coupled, boundary conditions
+        bc = cyl.bc
+        imp = cyl.impedance
+        if bc == 'i':
+            z_d, z_n = zdat
+            z_d *= self.sl*imp(self.ks)
+            return -z_n - z_d
+        else:
+            return -zdat
+        
+    def fourier_coeffs_bdy(self, v):
+        #project the vector onto the fourier basis using ffts
         n = 2*self.modes
         N = len(self.times)
         
+        #for using foldy lax approx
         if not self.fl:
             g = 1j*np.zeros((n, N))
         else:
@@ -905,7 +918,7 @@ class time_domain_scattering(scattering):
                 
         for i in range(len(self.times)):
             if self.fl:
-                gtmp = fftshift(fft(rhs[:, i]))/n
+                gtmp = fftshift(fft(v[:, i]))/n
                 g[i] = gtmp[n//2]
                 #sparsify the rhs
                 tmp = np.abs(g[i])
@@ -913,7 +926,7 @@ class time_domain_scattering(scattering):
                     g[i] = 0
                     return g
             else:
-                g[:, i] = fftshift(fft(rhs[:, i]))/n
+                g[:, i] = fftshift(fft(v[:, i]))/n
                 #sparsify the rhs
                 tmp = np.abs(g[:, i])
                 if np.max(tmp) < self.fft_tol:
@@ -922,93 +935,112 @@ class time_domain_scattering(scattering):
                         return g 
         return g
     
+    def diag_loop(self, v):
+        #diagonalization loop
+        gret = [None for c in self.timeint.c]
+        for i in range(len(self.timeint.c)):
+            gtmp = 1j*np.zeros(v[i].shape)
+            for j in range(len(self.timeint.c)):
+                gtmp += self.pinvmats[:, i, j]*v[j]
+            gret[i] = gtmp
+        return gret
+    
+    def diag_bc(self, cyl, v_coup):
+        #uncouple the BCs, given the coupled data
+        n = 2*self.modes
+        N = len(self.times)
+        bc = cyl.bc
+        
+        gret = [None for c in self.timeint.c]
+        if bc == 'i':
+            v_d, v_n = v_coup
+            gdtmp = self.diag_loop(v_d)
+            gntmp = self.diag_loop(v_n)
+            for i in range(len(self.timeint.c)):
+                self.sl = self.evals[:, i]/self.dt
+                self.ks = 1j*self.sl
+                gret[i] = self.make_zbc(cyl, (gdtmp[i], gntmp[i]))
+        else:
+            for i in range(len(self.timeint.c)):
+                gret[i] = self.make_zbc(cyl, self.diag_loop(v_coup)[i])
+        
+        return gret
+    
+    def fourier_coeffs_bdy_ms(self, v):
+        #return the fourier coefficients for a multistep method
+        g = [1j*np.zeros(v[0].shape) for c in self.timeint.c]
+        for j in range(len(self.timeint.c)):
+            g[j] = self.fourier_coeffs_bdy(v[j])
+        return g
+    
     def fzt_boundary_1cyl(self, cyl):
+        #generates the fourier coefficients for 1 circle
+        #depending on the timestepping method used
         n = 2*self.modes
         N = len(self.times)
         bc = cyl.bc
         imp = cyl.impedance
         
-        if self.timeint is None:
-            #BDF2
-            rhs = self.ztrans_bdf2(cyl)
-            return self.fourier_coeffs_bdy_bdf2(rhs)
-        
-        else:
-            # IRK methods
-            # z-transform the boundary condition
-            rhs = [None for c in self.timeint.c]
-            if self.waveform.src_type == 'planewave':
-                if bc == 'i':
-                    rhs_d = [None for c in self.timeint.c]
-                    rhs_n = [None for c in self.timeint.c]
-                    rhs_d_tmp = [None for c in self.timeint.c]
-                    for j in range(len(self.timeint.c)):
-                        c = self.timeint.c[j]
-                        ng, dg = self.td_bdy(cyl, c)
-                        #changed from rhs_d_tmp
-                        rhs_d[j] = fft(-dg*self.lammat, axis=-1)
-                        rhs_n[j] = fft(-ng*self.lammat, axis=-1)
-                else:
-                    for j in range(len(self.timeint.c)):
-                        c = self.timeint.c[j]
-                        g = self.td_bdy(cyl, c)
-                        rhs[j] = fft(-g*self.lammat, axis=-1)
+        if self.waveform.src_type == 'planewave':
+            if self.timeint == None:
+                #z transform td data
+                zdat = self.ztrans_bdy_pw(cyl)
+                
+                #form the z-domain bcs
+                zbc = self.make_zbc(cyl, zdat)
+                
+                #make fourier coefficients
+                return self.fourier_coeffs_bdy(zbc)
             else:
-                pass
-                #source is a pointsource
-                if bc == 'i':
-                    rhs_d = [None for c in self.timeint.c]
-                    rhs_n = [None for c in self.timeint.c]
-                    rhs_d_tmp = [None for c in self.timeint.c]
-                    for j in range(len(self.timeint.c)):
-                        c = self.timeint.c[j]
-                        ng, dg = self.td_bdy(cyl, c)
-                        #changed from rhs_d_tmp
-                        rhs_d[j] = fft(-dg*self.lammat, axis=-1)
-                        rhs_n[j] = fft(-ng*self.lammat, axis=-1)
-                else:
-                    for j in range(len(self.timeint.c)):
-                        c = self.timeint.c[j]
-                        ks = 1j*self.evals[:, j]/self.dt
-                        g = N*ifft(self.fd_bdy(cyl, ks, c*self.dt))
-                        rhs[j] = fft(-g*self.lammat, axis=-1)
-            
-            #form the boundary condition for the diagonalized system
-            gret = [None for c in self.timeint.c]
-            for i in range(len(self.timeint.c)):
-                if self.waveform.src_type == 'planewave':
-                    if bc=='i':
-                        gdtmp = 1j*np.zeros((n, N))
-                        gntmp = 1j*np.zeros((n, N))
-                        for j in range(len(self.timeint.c)):
-                            gdtmp += self.pinvmats[:, i, j]*rhs_d[j]
-                            gntmp += self.pinvmats[:, i, j]*rhs_n[j]
-                        #TODO: fix 3rd argument
-                        gdtmp *= self.evals[:, i]*imp(cyl, 1j*self.evals[:, i]/self.dt, 0)/self.dt
-                        gret[i] = gntmp + gdtmp
-                    else:           
-                        gtmp = 1j*np.zeros((n, N))
-                        for j in range(len(self.timeint.c)):
-                            gtmp += self.pinvmats[:, i, j]*rhs[j]
-                        gret[i] = gtmp
-                else:
-                    if bc == 'i':
-                        pass
-                    else:
-                        #diagonalized eigenvalues?
-                        gret[i] = None
-        
-            # get the fourier coefficients on the boundary
-            g = [1j*np.zeros((n, N)) for c in self.timeint.c]
-            for j in range(len(self.timeint.c)):
-                for i in range(N):
-                    g[j][:, i] = fftshift(fft(gret[j][:, i]))/n
-                    #sparsify the rhs
-                    if np.max(np.abs(g[j][:, i])) < self.fft_tol:
-                        g[j][:, i] = np.zeros(n)
-                        if self.use_conj:
-                            break
-            return g
+                zbc = [None for c in self.timeint.c]
+                for i in range(len(self.timeint.c)):
+                    #z-transform the time-domain boundary data
+                    c = self.timeint.c[i]
+                    zbc[i]= self.ztrans_bdy_pw(cyl, c)
+                
+                #make diagonalized bcs
+                dbc = self.diag_bc(cyl, zbc)
+                
+                #return  fourier coeffs
+                return self.fourier_coeffs_bdy_ms(dbc)
+        else:
+            #wave is pointsource
+            if self.timeint == None:
+                #z transform td data (time profile)
+                zdat = self.ptsrc_init(0)
+                
+                #form freq-domain solutions with hankel fns
+                fds = self.fd_bdy(cyl, zdat)
+                
+                #make freq-domain bcs
+                zbc = self.make_zbc(cyl, fds)
+                
+                #make fourier coeffs
+                return self.fourier_coeffs_bdy(zbc)
+                
+            else:
+                #z transform td data
+                zdat = [None for c in self.timeint.c]
+                for i in range(len(self.timeint.c)):
+                    #z-transform the time-domain boundary data
+                    c = self.timeint.c[i]
+                    zdat[i] = self.ptsrc_init(c)
+                
+                #diagonalize td data
+                diag_zdat = self.diag_loop(zdat)
+                
+                #form freq-domain bcs with hankel fns
+                zdat = [None for c in self.timeint.c]
+                for i in range(len(self.timeint.c)):
+                    self.sl = self.evals[:, i]/self.dt
+                    self.ks = 1j*self.sl
+                    zdat[i] = self.make_zbc(cyl, self.fd_bdy(cyl, diag_zdat[i]))
+                
+                #return fourier coeffs
+                return self.fourier_coeffs_bdy_ms(zdat)
+            #BDF2
+            rhs = self.ztrans_bdy(cyl)
+            return self.fourier_coeffs_bdy(rhs)
                      
     def fzt_boundary_allcyls(self):
         #only works for BDF2
@@ -1200,11 +1232,42 @@ class time_domain_scattering(scattering):
         self.U_sc = self.U_sc.real 
         return self.U_sc
 
+    def make_U_inc(self, x, y):
+        #for the point source solution at a point
+        #form z-domain solution
+        if self.timeint is None:
+            coeffs = self.ptsrc_init(0)
+            w = self.fd_inc_wave(x, y, coeffs)
+            return (1/self.lammat)*ifft(w)
+        else:
+            wmat = [None for c in self.timeint.c]
+            for i in range(len(self.timeint.c)):
+                self.ks = 1j*self.evals[:, i]/self.dt
+                c = self.timeint.c[i]
+                coeffs = self.ptsrc_init(c)
+                wmat[i] = self.fd_inc_wave(x, y, coeffs)
+
+            rmat = 1j*np.zeros(wmat[0].shape)
+            for i in range(len(self.timeint.c)):
+                rmat += self.pmats[:, -1, i]*wmat[i]
+
+            rmat = self.zs*rmat
+            self.U_inc = (1/self.lammat)*ifft(rmat)
+            return self.U_inc
+
     def make_U(self, x, y):
         self.make_U_sc(x, y)
         self.U = np.zeros(self.U_sc.shape)
         for i in range(len(self.times)):
-            self.U[:, :, i] = self.U_sc[:, :, i] + (scattering.mask(self, x, y)*self.waveform.td_wave(x, y, self.times[i]))
+            if self.waveform.src_type == 'planewave':
+                self.U[:, :, i] = self.U_sc[:, :, i] + \
+                    (scattering.mask(self, x, y)*\
+                     self.waveform.td_wave(x, y, self.times[i]))
+            else:
+                #point source wave
+                self.U[:, :, i] = self.U_sc[:, :, i] + \
+                        self.make_U_inc(x, y)
+                
         return self.U
 
     

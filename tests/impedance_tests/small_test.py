@@ -10,7 +10,9 @@ from integrators.integrators import IRK3, IRK5
 
 #%%
 #initialize
-wv = gaussian_deriv(time_shift=4)
+wv = gaussian_deriv(time_shift=4,
+                    r0 = [3, 0], 
+                    src_type='pointsource')
 r = 6
 ang = 0
 x, y = (r*np.cos(ang), r*np.sin(ang))
@@ -32,13 +34,13 @@ kmin = min(kmin2, kmin3)
 
 alpha = np.exp(-1j*np.pi/4)
 eps = 0.01
-imp = lambda c, k, m: -1/(eps*alpha*(k**0.5))
-realkimp = lambda k: 1j*imp(0, k, 0)
+imp = lambda k: -1/(eps*alpha*(k**0.5))
+#realkimp = lambda k: 1j*imp(0, k, 0)
 #cyls_cq = [cyl('i', [0,0], 1, impedance=imp)]
 #cyls = [tds_cyl('i', [0,0], 1, impedance=realkimp)]
 Ncyl = 2
 cyls_cq = example_setups.uniform_grid_NxN(Ncyl, 'i', 1, 3, impedance=imp)
-cyls = example_setups.uniform_grid_NxN(Ncyl, 'i', 1, 3, impedance=realkimp)
+cyls = example_setups.uniform_grid_NxN(Ncyl, 'i', 1, 3, impedance=imp)
 
 #%%
 #cq using BDF2
@@ -84,18 +86,18 @@ u_irk5 = tds_irk5.make_U_sc(X, Y)
 
 #%%
 #real wave code
-tds = tds_legacy(cyls, 
-                wv, 
-                16*T, 
-                sampnum = Nsamp*16
-                )
-u = tds.make_U_sc(X, Y)
+# tds = tds_legacy(cyls, 
+#                 wv, 
+#                 16*T, 
+#                 sampnum = Nsamp*16
+#                 )
+# u = tds.make_U_sc(X, Y)
 
 #%%
 plt.plot(tds_bdf2.times, u_bdf2[0,0,:], label='bdf2')
 plt.plot(tds_irk3.times, u_irk3[0,0,:], label='irk3')
 plt.plot(tds_irk5.times, u_irk5[0,0,:], label='irk5')
-plt.plot(tds.times[:Nsamp+1], u[0,0,:Nsamp+1], label='real k')
+#plt.plot(tds.times[:Nsamp+1], u[0,0,:Nsamp+1], label='real k')
 plt.legend()
 plt.title(r'$\eta=-1/\alpha\epsilon \sqrt{k}$')
 plt.xlabel('t')
