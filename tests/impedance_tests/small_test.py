@@ -43,6 +43,14 @@ cyls_cq = example_setups.uniform_grid_NxN(Ncyl, 'i', 1, 3, impedance=imp)
 cyls = example_setups.uniform_grid_NxN(Ncyl, 'i', 1, 3, impedance=imp)
 
 #%%
+#graph the impedance with the BDF2 wavenumbers
+tdstmp = time_domain_scattering(cyls, wv, T, sampnum=Nsamp)
+print(Nsamp, len(tdstmp.ks))
+ks = tdstmp.ks[:len(tdstmp.ks)//2]
+plt.plot(imp(ks).real, imp(ks).imag)
+plt.show()
+
+#%%
 #cq using BDF2
 tint = None
 tds_bdf2 = time_domain_scattering(

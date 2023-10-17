@@ -99,7 +99,7 @@ class gaussian_deriv(waveform):
                          r0 = r0,
                          src_type=src_type
                          )
-        self.cutoff = 1e-8 #used to truncate signal
+        self.cutoff = cutoff #used to truncate signal
         self.sigma = sigma
         self.amp = amp
     

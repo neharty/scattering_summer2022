@@ -13,9 +13,10 @@ x = [-3, 0, 3]
 y=[0]
 X, Y = np.meshgrid(x, y)
 
-Nmodes = 8
-Nsamp = 2**14
+Nmodes = 16
 T = 12
+Nsamp = 2**14
+
 #%%
 alpha = np.exp(-1j*np.pi/4)
 epsvect = 10.0**(-np.arange(0, 8))

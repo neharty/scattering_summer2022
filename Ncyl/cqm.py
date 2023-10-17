@@ -331,7 +331,7 @@ class scattering(cyl):
                 return self.neumann_asymptotic(cyl, n, m, b, theta)
             elif cyl.bc == 'i':
                 #TODO: implement
-                imp = cyl.impedance(cyl, k, m)
+                imp = cyl.impedance(k)
                 return (self.neumann_asymptotic(cyl, n, m, b, theta) -\
                           1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b, theta))
         return tmp
@@ -857,12 +857,12 @@ class time_domain_scattering(scattering):
                     dotpdct[j] = ptmp.dot(dirvect[j])                    
                 g[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
             elif bc == 'i':
-                #TODO: fix this
                 #neumann part
                 dirvect = (pts[:] - p)/r
                 dotpdct = np.zeros(len(pts))
                 for j in range(len(pts)):
-                    dotpdct[j] = np.dot([pts[j, 0], pts[j, 1]], dirvect[j])  
+                    ptmp = np.array([pts[j, 0] - r0[0], pts[j, 1]-r0[1]])
+                    dotpdct[j] = ptmp.dot(dirvect[j])  
                 ng[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
                 #dirichlet part
                 dg[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
@@ -886,7 +886,7 @@ class time_domain_scattering(scattering):
             ng, dg = self.td_bdy(cyl, c) #discretize bdy
             rhs_d = self.ztrans(dg)
             rhs_n = self.ztrans(ng)
-            return rhs_d, rhs_n
+            return [rhs_d, rhs_n]
         else:
             g = self.td_bdy(cyl, c) #discretize bdy
             rhs = self.ztrans(g)   
@@ -953,7 +953,11 @@ class time_domain_scattering(scattering):
         
         gret = [None for c in self.timeint.c]
         if bc == 'i':
-            v_d, v_n = v_coup
+            v_d = [None for c in self.timeint.c]
+            v_n = [None for c in self.timeint.c]
+            for i in range(len(self.timeint.c)):
+                v_d[i] = v_coup[i][0]
+                v_n[i] = v_coup[i][1]
             gdtmp = self.diag_loop(v_d)
             gntmp = self.diag_loop(v_n)
             for i in range(len(self.timeint.c)):

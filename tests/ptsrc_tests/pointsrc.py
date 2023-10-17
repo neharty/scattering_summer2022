@@ -6,28 +6,45 @@ from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 #%%
 #init variables
-T = 16
+T = 30
 
 sig = 12
 mu = 0.459
 b = 0.632
 nu = 0.673
 q = 0.618
-kl = lambda k: k*(1+nu*(sig/-1j*k)**q)
-imp = lambda a, k, c: 1/(np.tanh(-1j*kl(k)*0.2)/(1+mu*(sig/(-1j*k))**b))
+#kl = lambda k: k*(1+nu*(sig/(1j*k))**q)
+#imp = lambda k: -(np.tan(kl(k)*0.2)/(1+mu*(sig/(1j*k))**b))
 
-cyls = [cyl('n', [0, 0], 0.5)]#, impedance=imp)]
+def imp(k):
+    A = np.array([1.4144, 1.0013, -3.3360, 5.2545, 30.317])*1e6
+    lam = np.array([52.330, 494.61, 1702.5, 1832.7, 34000])
+    tmp = 0j
+    for i in range(len(A)):
+        tmp += A[i]/(lam[i] - 1j*k)
+    return -tmp
+
+print(imp(1))
+print(imp(-1))
+
+cyls = [cyl('i', [0, 0], 1, impedance=imp)]
 Nmode = 16
 Nsamp = 2**12
 
-
+#%%
+#graph the impedance with the BDF2 wavenumbers
+tdstmp = time_domain_scattering(cyls, gaussian_deriv(), T, sampnum=Nsamp)
+print(Nsamp, len(tdstmp.ks))
+ks = tdstmp.ks[:len(tdstmp.ks)//2]
+plt.plot(imp(ks).real, imp(ks).imag)
+plt.show()
 #%%
 #point source
 wv = gaussian_deriv(
             time_shift=2,
-            r0=[4, 0],
-            sigma=0.04/np.log(2),
-            amp=1e-3,
+            r0=[8, 0],
+            sigma=0.4**2/np.log(2),
+            amp = -1,
             src_type='pointsource')
 #wv = gaussian(time_shift=8)
 tint = IRK3()
@@ -41,11 +58,18 @@ tds = time_domain_scattering(
                              scargs={'method':'explicit'}
                              )
 
-X, Y = np.meshgrid([2], [0])
-U = tds.make_U_sc(X, Y)[0, 0, :] + tds.make_U_inc(X, Y)[0, :]
+X, Y = np.meshgrid([0], [10])
+#%%
+Uinc = 2*tds.make_U_inc(X, Y)[0, :]
+Usc = tds.make_U_sc(X, Y)[0, 0, :]
+#%%
+U = Uinc-Usc
 
 #%%
 #plt.plot(tds.times, wv.td_wave(np.array([1]), 0, tds.times)[0,:], label='incident')
-plt.plot(tds.times, -U, label='scattered')
+plt.plot(tds.times, U, label='total field')
+plt.xlabel('t')
+plt.ylabel('U')
 plt.legend()
-#plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example.pdf')
+plt.tight_layout()
+#plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example_impedance.pdf')
