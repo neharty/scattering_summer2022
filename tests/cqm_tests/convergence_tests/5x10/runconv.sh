@@ -1,10 +1,10 @@
 for TI in bdf2 irk3 irk5
 do
-for BC in d n i m r
+for BC in i m r
 do
 for WV in dg g
 do
-for NT in 15
+for NT in 15 
 do
     for NM in 32 
     do
