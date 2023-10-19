@@ -72,4 +72,4 @@ plt.xlabel('t')
 plt.ylabel('U')
 plt.legend()
 plt.tight_layout()
-#plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example_impedance_dl_finite.pdf')#
+plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example_impedance_dl_finite_fineres.pdf')#
