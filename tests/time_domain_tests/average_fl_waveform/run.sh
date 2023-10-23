@@ -1,12 +1,15 @@
-for EPS in 1 1e-1 1e-2 1e-3
-do
 for WV in g
 do
-for NT in {10..30}
+for NC in 500
 do
-        DO=/home/n/nh287/scattering/data/cqm/impedance/eps_converge/${WV}/${EPS}/${NT}/
-        export WV EPS NT DO
-        sbatch --job-name=epc_${WV}_${EPS}_${NT} convdriver.slurm
+for NT in 10
+do
+for SD in {1..30}
+do
+        DO=/home/n/nh287/scattering/data/time_domain_tests/average_fl_waveform/${WV}/${NC}/${NT}/${SD}
+        export WV NC NT SD
+        sbatch --job-name=epc_${WV}_${NC}_${NT}_${SD} setup.slurm
+done
 done
 done
 done

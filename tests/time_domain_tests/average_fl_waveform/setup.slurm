@@ -14,4 +14,4 @@
 #SBATCH -e /home/n/nh287/scattering/tests/impedance_tests/logs/%j.out
 #SBATCH --open-mode=append
 
-python3 -u /home/n/nh287/scattering/tests/impedance_tests/eps_convergence/conv.py ${EPS} ${NT} ${WV} ${DO}
+python3 -u /home/n/nh287/scattering/tests/time_domain_tests/average_fl_waveform/exec.py ${NT} ${NC} ${WV} ${SD} ${DO}

@@ -22,7 +22,7 @@ print(args)
 Nt = args.Nt
 Nsamp = 2**Nt
 wvarg = args.wvf
-tint = IRK5()
+tint = None
 fout = args.fout
 
 Nmodes = 16
@@ -40,9 +40,9 @@ elif wvarg == 'dg':
 
 T = 35
 
-alpha = np.exp(-1j*np.pi/4)
-imp = lambda k: -1/(eps*alpha*(k**0.5))
-cyls = example_setups.random_circ(20, 1600, 'd', 0.05)
+#alpha = np.exp(-1j*np.pi/4)
+#imp = lambda k: -1/(eps*alpha*(k**0.5))
+cyls = example_setups.random_circ(20, 500, 'd', 0.05)
 tds = time_domain_scattering(
                         cyls, 
                         wv, 
