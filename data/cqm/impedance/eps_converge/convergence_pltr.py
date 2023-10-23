@@ -3,13 +3,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 #%%
-pows = np.arange(5, 14)
-maxpow = 14
-pos = (-3, 0)
+pows = np.arange(10, 17)
+maxpow = 17
+pos = (0, 0)
 posstr = str(pos[0])+'_'+str(pos[1])+'.dat'
 
-for eps in [1, 1e-1, 1e-2, 1e-3]:
-    path = '/home/nick/scattering/data/cqm/impedance/eps_converge/'
+for eps in [1, '1e-1', '1e-2', '1e-3']:
+    path = '/home/nick/scattering/data/cqm/impedance/eps_converge/g/'
     fpath = path + str(eps) + '/'
     Nsamps = (2**pows)
     
@@ -31,11 +31,11 @@ for eps in [1, 1e-1, 1e-2, 1e-3]:
         err[i] = np.amax(np.abs(samepoints - u)) #infinity norm
         print(err[i])
     
-    plt.loglog(dt, err, '.-', label = str(eps))
+    plt.loglog(dt, err, '.-', label = 'eps='+str(eps))
     
 plt.legend()
 plt.xlabel('dt')
 plt.ylabel('err')
 #plt.title('(x,y)='+str(pos)+', bc='+bc)
 plt.tight_layout()
-plt.savefig('/home/nick/scattering/data/cqm/impedance/eps_converge/'+str(pos)+'.pdf')
+#plt.savefig('/home/nick/scattering/data/cqm/impedance/eps_converge/'+str(pos)+'.pdf')

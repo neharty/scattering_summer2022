@@ -145,7 +145,7 @@ def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impeda
     return cyls_main + cyls_off
 
 def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, impedance=None):
-    #fully random position placer
+    #fully random position placer in a box
     allowed_domain_x = (Lxmin+radius, Lxmax-radius)
     allowed_domain_y = (Lymin+radius, Lymax-radius)
 
@@ -243,7 +243,7 @@ def all_random_hexagon(N, bcs, radius, dist, sum_num = None, impedance = None, c
             cyls[c].impedance = impedance
     return cyls
 
-def vol_frac_allrandom(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxtries=10, sum_num = None, impedance = None):
+def vol_frac_allrandom_box(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxtries=10, sum_num = None, impedance = None):
     Vbox = (Lxmax-Lxmin)*(Lymax - Lymin)
     N = int(np.floor(Vfrac*Vbox/(radius**2*np.pi)))
     print(N, 'volume fraction is ' + str(N*radius**2*np.pi/Vbox))
@@ -251,6 +251,45 @@ def vol_frac_allrandom(Vfrac, Lxmin, Lxmax, Lymin, Lymax, bc, radius, dist, maxt
 
 def vol_frac_hexagon():
     pass
+
+def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None):
+    #fully random position placer in a circle
+    allowed_r = rmax-radius
+    
+    dist = 2*radius
+    
+    xpos = np.zeros(N)
+    ypos = np.zeros(N)
+    
+    def pos_fn():
+        r = np.sqrt(np.random.uniform(0, allowed_r**2))
+        ang = np.random.uniform(0, np.pi*2)
+        return r*np.cos(ang), r*np.sin(ang)
+    
+    xpos[0], ypos[0] = pos_fn()
+    for i in range(1, N):
+        #generate a new point
+        xtest, ytest = pos_fn()
+        ztest = xtest + 1j*ytest
+        #print(i)
+        for j in range(i):
+            #test new point against all previous points
+            z = xpos[:i] + 1j*ypos[:i]
+            allpoints = np.all(np.abs(z - ztest) > dist)
+            while not allpoints:
+                #if the new point doesnt work, retry until it does
+                xtest, ytest = pos_fn()
+                ztest = xtest + 1j*ytest
+                allpoints = np.all(np.abs(z - ztest) > dist)
+        xpos[i], ypos[i] = xtest, ytest
+
+    origins = np.array([[xpos[i], ypos[i]] for i in range(N)])
+
+    cyls = [None for i in range(N)]
+    for i in range(N):
+        cyls[i] = cyl(bc, origins[i], radius, sum_index=sum_num, impedance = impedance)
+
+    return cyls
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None, clusterdir=True):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')

@@ -2,11 +2,11 @@ import numpy as np
 from collections import OrderedDict
 from utils import example_setups
 import matplotlib.pyplot as plt
-from Ncyl.tds import cyl, scattering
+from Ncyl.cqm import cyl, scattering
 
 def plot_cyls(cyls):
     fig, ax = plt.subplots()
-    pos = np.array([cyls[i].get_pos() for i in range(len(cyls))])
+    pos = np.array([cyls[i].pos for i in range(len(cyls))])
     angs = np.linspace(0, 2*np.pi, num = 20)
     for n in range(len(cyls)):
         r = cyls[n].radius
@@ -39,10 +39,14 @@ def plot_cyls(cyls):
     #    plt.show()
     #else:
     #    plt.savefig(fname)
-
-L = 5
-np.random.seed(12345)
-cyls = example_setups.random_pos(-L, L, -L, L, 9, 'd', 1, 2.5)
+#%%
+np.random.seed(100)
+Rmax = 20
+N = 1600
+radius = 0.1
+cyls = example_setups.random_circ(Rmax, N, 'd', radius)
+#%%
+print(len(cyls)*(radius**2)/Rmax**2)
 fig, ax = plot_cyls(cyls)
 plt.show()
 

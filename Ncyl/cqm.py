@@ -1240,6 +1240,13 @@ class time_domain_scattering(scattering):
         #for the point source solution at a point
         #form z-domain solution
         if self.timeint is None:
+            #hacky solution
+            useconjtmp = self.use_conj
+            self.use_conj = True
+            self.init_vars()
+            self.use_conj = useconjtmp
+            self.init_vars()
+            
             coeffs = self.ptsrc_init(0)
             w = self.fd_inc_wave(x, y, coeffs)
             return (1/self.lammat)*ifft(w)
@@ -1261,6 +1268,7 @@ class time_domain_scattering(scattering):
 
     def make_U(self, x, y):
         self.make_U_sc(x, y)
+        
         self.U = np.zeros(self.U_sc.shape)
         for i in range(len(self.times)):
             if self.waveform.src_type == 'planewave':

@@ -14,22 +14,24 @@ b = 0.632
 nu = 0.673
 q = 0.618
 kl = lambda k: k*(1+nu*(sig/(-1j*k))**q)
-imp = lambda k: -np.tanh(-1j*kl(k)*0.2)/(1+mu*(sig/(-1j*k))**b)
+#imp = lambda k: -np.tanh(-1j*kl(k)*0.2)/(1+mu*(sig/(-1j*k))**b)
+imp = lambda k: -1/(1+mu*(sig/(-1j*k))**b)
 
-# def imp(k):
-#     A = np.array([1.4144, 1.0013, -3.3360, 5.2545, 30.317])*1e6
-#     lam = np.array([52.330, 494.61, 1702.5, 1832.7, 34000])
-#     tmp = 0j
-#     for i in range(len(A)):
-#         tmp += A[i]/(lam[i] - 1j*k)
-#     return -tmp
+
+def impr(k):
+    A = np.array([1.4144, 1.0013, -3.3360, 5.2545, 30.317])*1e6
+    lam = np.array([52.330, 494.61, 1702.5, 1832.7, 34000])
+    tmp = 0j
+    for i in range(len(A)):
+        tmp += A[i]/(lam[i] - 1j*k)
+    return -tmp
 
 print(imp(1))
 print(imp(-1))
 
 cyls = [cyl('i', [0, 0], 1, impedance=imp)]
-Nmode = 16
-Nsamp = 2**17
+Nmode = 32
+Nsamp = 2**12
 
 #%%
 #graph the impedance with the BDF2 wavenumbers
@@ -37,6 +39,7 @@ tdstmp = time_domain_scattering(cyls, gaussian_deriv(), T, sampnum=Nsamp)
 print(Nsamp, len(tdstmp.ks))
 ks = tdstmp.ks[:len(tdstmp.ks)]
 plt.plot(imp(ks).real, imp(ks).imag)
+plt.plot(impr(ks).real, impr(ks).imag)
 plt.show()
 #%%
 #point source
@@ -46,8 +49,8 @@ wv = gaussian_deriv(
             sigma=0.4**2/np.log(2),
             amp = -1,
             src_type='pointsource')
-#wv = gaussian(time_shift=8)
-tint = IRK5()
+#wv = gaussian(time_shift=8, amp =-1)
+tint = None
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -63,7 +66,7 @@ X, Y = np.meshgrid([0], [10])
 Uinc = 2*tds.make_U_inc(X, Y)[0, :]
 Usc = tds.make_U_sc(X, Y)[0, 0, :]
 #%%
-U = Uinc+Usc
+U = Uinc + Usc
 
 #%%
 #plt.plot(tds.times, wv.td_wave(np.array([1]), 0, tds.times)[0,:], label='incident')
@@ -72,4 +75,4 @@ plt.xlabel('t')
 plt.ylabel('U')
 plt.legend()
 plt.tight_layout()
-plt.savefig('/home/nick/scattering/tests/ptsrc_tests/ptsrc_example_impedance_dl_finite_fineres.pdf')#
+#plt.savefig('/home/nick/scattering/tests/ptsrc_tests/dragna_M120.pdf')
