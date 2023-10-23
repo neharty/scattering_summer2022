@@ -7,7 +7,7 @@
 #SBATCH --threads-per-core=1
 #SBATCH --hint=nomultithread
 #SBATCH --nodes=1
-#SBATCH --time=1-0
+#SBATCH --time=5-0
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=neharty.slurm@gmail.com
 #SBATCH -o /home/n/nh287/scattering/tests/impedance_tests/logs/%j.out

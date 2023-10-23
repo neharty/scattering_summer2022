@@ -4,7 +4,7 @@ for BC in m
 do
 for WV in dg g
 do
-for NT in 5 6 7 8 9 10 11 12 13 14 15
+for NT in {16..20}
 do
     for NM in 8 16 32 
     do
