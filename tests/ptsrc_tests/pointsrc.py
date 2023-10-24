@@ -8,23 +8,30 @@ from integrators.integrators import IRK3, IRK5
 #init variables
 T = 30
 
-sig = 12
+sig = 10000
 mu = 0.459
 b = 0.632
 nu = 0.673
 q = 0.618
+rho=1.21
 kl = lambda k: k*(1+nu*(sig/(-1j*k))**q)
-#imp = lambda k: -np.tanh(-1j*kl(k)*0.2)/(1+mu*(sig/(-1j*k))**b)
-imp = lambda k: -1/(1+mu*(sig/(-1j*k))**b)
+imp = lambda k: -np.tanh(-1j*kl(k)*0.1)/(1+mu*(sig/(-1j*k))**b)/rho
+#imp = lambda k: -1/(1+mu*(sig/(-1j*k))**b)
 
 
 def impr(k):
-    A = np.array([1.4144, 1.0013, -3.3360, 5.2545, 30.317])*1e6
-    lam = np.array([52.330, 494.61, 1702.5, 1832.7, 34000])
+    #M120
+    #A = np.array([1.4144, 1.0014, -3.336, 5.2545, 3.0317e1])*1e6
+    #lam = np.array([52.33, 494.61, 1702.5, 1832.7, 34000])
+    
+    #M12L02
+    A = np.array([-2.3877e5, 1.3051e6, 91175, -4.4016e6, 2.7118e7])
+    lam = np.array([1.4464, 2.1303, 1263.8, 6531.1, 27199])
+    
     tmp = 0j
     for i in range(len(A)):
         tmp += A[i]/(lam[i] - 1j*k)
-    return -tmp
+    return -1/tmp
 
 print(imp(1))
 print(imp(-1))
@@ -47,10 +54,10 @@ wv = gaussian_deriv(
             time_shift=2,
             r0=[8, 0],
             sigma=0.4**2/np.log(2),
-            amp = -1,
+            amp = 2,
             src_type='pointsource')
 #wv = gaussian(time_shift=8, amp =-1)
-tint = None
+tint = IRK3()
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -63,7 +70,7 @@ tds = time_domain_scattering(
 
 X, Y = np.meshgrid([0], [10])
 #%%
-Uinc = 2*tds.make_U_inc(X, Y)[0, :]
+Uinc = tds.make_U_inc(X, Y)[0, :]
 Usc = tds.make_U_sc(X, Y)[0, 0, :]
 #%%
 U = Uinc + Usc

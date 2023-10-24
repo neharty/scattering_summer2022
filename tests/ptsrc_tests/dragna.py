@@ -49,7 +49,7 @@ def make_data(x, y, bc):
                 time_shift=2,
                 r0=[8, 0],
                 sigma=0.4**2/np.log(2),
-                amp = -1,
+                amp = 1,
                 src_type='pointsource')
     
     tint = IRK3()
@@ -64,7 +64,7 @@ def make_data(x, y, bc):
                                  )
     
     X, Y = np.meshgrid([x], [y])
-    Uinc = 2*tds.make_U_inc(X, Y)[0, :]
+    Uinc = tds.make_U_inc(X, Y)[0, :]
     Usc = tds.make_U_sc(X, Y)[0, 0, :]
     U = Uinc+Usc
     U = U.real

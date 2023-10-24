@@ -819,7 +819,7 @@ class time_domain_scattering(scattering):
     def fd_inc_wave(self, x, y, coeff=1):
         r0 = self.waveform.r0
         dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
-        grnmode = lambda x, y: coeff*1j*hankel1(0, self.ks*dist(x, y))/4
+        grnmode = lambda x, y: -coeff*1j*hankel1(0, self.ks*dist(x, y))/4
         return grnmode(x, y)
     
     def fd_bdy(self, cyl, coeffs):
@@ -843,8 +843,8 @@ class time_domain_scattering(scattering):
         #z transform the time signal
         r0 = self.waveform.r0
         dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
-        grnmodes = lambda x, y, i: coeffs[i]*1j*hankel1(0, self.ks[i]*dist(x, y))/4
-        dgrnmodes = lambda x, y, i: coeffs[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/4/dist(x,y)
+        grnmodes = lambda x, y, i: -coeffs[i]*1j*hankel1(0, self.ks[i]*dist(x, y))/4
+        dgrnmodes = lambda x, y, i: -coeffs[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/4/dist(x,y)
         
         for i in range(N):
             if bc == 'd':
