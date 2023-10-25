@@ -330,7 +330,6 @@ class scattering(cyl):
             elif cyl.bc == 'n':
                 return self.neumann_asymptotic(cyl, n, m, b, theta)
             elif cyl.bc == 'i':
-                #TODO: implement
                 imp = cyl.impedance(k)
                 return (self.neumann_asymptotic(cyl, n, m, b, theta) -\
                           1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b, theta))
@@ -355,8 +354,8 @@ class scattering(cyl):
             elif bc == 'n':
                 tmp = h1vp(m, self.k*radius)
             elif bc == 'i':
-                imp = cyl.impedance(cyl, self.k, m)
-                tmp = h1vp(m, self.k*radius) + 1j*imp*hankel1(m, self.k*radius)
+                imp = cyl.impedance(self.k)
+                tmp = h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius)
                 
             if np.max(np.abs(tmp)) < self.mat_tol:
                 return 1j*np.zeros(tmp.shape)
@@ -816,7 +815,7 @@ class time_domain_scattering(scattering):
         ztf = self.ztrans(self.waveform.profile(self.times - tshift + c*self.dt))
         return ztf
     
-    def fd_inc_wave(self, x, y, coeff=1):
+    def fd_inc_wave(self, x, y, coeff):
         r0 = self.waveform.r0
         dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
         grnmode = lambda x, y: -coeff*1j*hankel1(0, self.ks*dist(x, y))/4
@@ -844,7 +843,7 @@ class time_domain_scattering(scattering):
         r0 = self.waveform.r0
         dist = lambda x, y: np.sqrt((x - r0[0])**2 + (y-r0[1])**2)
         grnmodes = lambda x, y, i: -coeffs[i]*1j*hankel1(0, self.ks[i]*dist(x, y))/4
-        dgrnmodes = lambda x, y, i: -coeffs[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/4/dist(x,y)
+        dgrnmodes = lambda x, y, i: -coeffs[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/(4*dist(x,y))
         
         for i in range(N):
             if bc == 'd':
@@ -853,7 +852,7 @@ class time_domain_scattering(scattering):
                 dirvect = (pts[:] - p)/r
                 dotpdct = np.zeros(len(pts))
                 for j in range(len(pts)):
-                    ptmp = np.array([pts[j, 0] - r0[0], pts[j, 1]-r0[1]])
+                    ptmp = np.array([pts[j, 0]-r0[0], pts[j, 1]-r0[1]])
                     dotpdct[j] = ptmp.dot(dirvect[j])                    
                 g[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
             elif bc == 'i':
@@ -864,10 +863,11 @@ class time_domain_scattering(scattering):
                     ptmp = np.array([pts[j, 0] - r0[0], pts[j, 1]-r0[1]])
                     dotpdct[j] = ptmp.dot(dirvect[j])  
                 ng[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
+                
                 #dirichlet part
                 dg[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
         if bc == 'i':
-            return ng, dg
+            return dg, ng
         else:
             return g
     
@@ -886,7 +886,7 @@ class time_domain_scattering(scattering):
             ng, dg = self.td_bdy(cyl, c) #discretize bdy
             rhs_d = self.ztrans(dg)
             rhs_n = self.ztrans(ng)
-            return [rhs_d, rhs_n]
+            return (rhs_d, rhs_n)
         else:
             g = self.td_bdy(cyl, c) #discretize bdy
             rhs = self.ztrans(g)   
@@ -899,7 +899,8 @@ class time_domain_scattering(scattering):
         if bc == 'i':
             z_d, z_n = zdat
             z_d *= self.sl*imp(self.ks)
-            return -z_n - z_d
+            #TODO: this is possibly wrong
+            return -z_n - z_d 
         else:
             return -zdat
         
@@ -980,13 +981,10 @@ class time_domain_scattering(scattering):
     def fzt_boundary_1cyl(self, cyl):
         #generates the fourier coefficients for 1 circle
         #depending on the timestepping method used
-        n = 2*self.modes
-        N = len(self.times)
-        bc = cyl.bc
-        imp = cyl.impedance
         
         if self.waveform.src_type == 'planewave':
             if self.timeint == None:
+                #BDF2
                 #z transform td data
                 zdat = self.ztrans_bdy_pw(cyl)
                 
@@ -996,6 +994,7 @@ class time_domain_scattering(scattering):
                 #make fourier coefficients
                 return self.fourier_coeffs_bdy(zbc)
             else:
+                #IRK methods
                 zbc = [None for c in self.timeint.c]
                 for i in range(len(self.timeint.c)):
                     #z-transform the time-domain boundary data
@@ -1010,10 +1009,11 @@ class time_domain_scattering(scattering):
         else:
             #wave is pointsource
             if self.timeint == None:
+                #BDF2 algorithm
                 #z transform td data (time profile)
                 zdat = self.ptsrc_init(0)
                 
-                #form freq-domain solutions with hankel fns
+                #form freq-domain BCs with hankel fns
                 fds = self.fd_bdy(cyl, zdat)
                 
                 #make freq-domain bcs
@@ -1023,14 +1023,15 @@ class time_domain_scattering(scattering):
                 return self.fourier_coeffs_bdy(zbc)
                 
             else:
-                #z transform td data
+                #IRK methods
+                #z transform incident td data
                 zdat = [None for c in self.timeint.c]
                 for i in range(len(self.timeint.c)):
                     #z-transform the time-domain boundary data
                     c = self.timeint.c[i]
                     zdat[i] = self.ptsrc_init(c)
                 
-                #diagonalize td data
+                #diagonalize z-domain incident data
                 diag_zdat = self.diag_loop(zdat)
                 
                 #form freq-domain bcs with hankel fns
@@ -1042,10 +1043,7 @@ class time_domain_scattering(scattering):
                 
                 #return fourier coeffs
                 return self.fourier_coeffs_bdy_ms(zdat)
-            #BDF2
-            rhs = self.ztrans_bdy(cyl)
-            return self.fourier_coeffs_bdy(rhs)
-                     
+
     def fzt_boundary_allcyls(self):
         #only works for BDF2
         rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
@@ -1237,6 +1235,9 @@ class time_domain_scattering(scattering):
         return self.U_sc
 
     def make_U_inc(self, x, y):
+        if self.waveform.src_type == 'planewave':
+            self.waveform.td_wave(x, y, self.times)
+        
         #for the point source solution at a point
         #form z-domain solution
         if self.timeint is None:
@@ -1252,11 +1253,20 @@ class time_domain_scattering(scattering):
             return (1/self.lammat)*ifft(w)
         else:
             wmat = [None for c in self.timeint.c]
+            
+            zdat = [None for c in self.timeint.c]
+            for i in range(len(self.timeint.c)):
+                #z-transform the time-domain boundary data
+                c = self.timeint.c[i]
+                zdat[i] = self.ptsrc_init(c)
+            
+            #diagonalize z-domain incident data
+            diag_zdat = self.diag_loop(zdat)
+            
             for i in range(len(self.timeint.c)):
                 self.ks = 1j*self.evals[:, i]/self.dt
                 c = self.timeint.c[i]
-                coeffs = self.ptsrc_init(c)
-                wmat[i] = self.fd_inc_wave(x, y, coeffs)
+                wmat[i] = self.fd_inc_wave(x, y, diag_zdat[i])
 
             rmat = 1j*np.zeros(wmat[0].shape)
             for i in range(len(self.timeint.c)):
