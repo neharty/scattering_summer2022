@@ -40,10 +40,10 @@ def plot_cyls(cyls):
     #else:
     #    plt.savefig(fname)
 #%%
-np.random.seed(100)
+np.random.seed(33)
 Rmax = 20
-N = 1600
-radius = 0.1
+N = 1000
+radius = 0.05
 cyls = example_setups.random_circ(Rmax, N, 'd', radius)
 #%%
 print(len(cyls)*(radius**2)/Rmax**2)

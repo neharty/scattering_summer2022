@@ -8,26 +8,26 @@ from integrators.integrators import IRK3, IRK5
 #init variables
 T = 30
 
-sig = 10000
+sig = 12
 mu = 0.459
 b = 0.632
 nu = 0.673
 q = 0.618
 rho=1
 kl = lambda k: k*(1+nu*(sig/(-1j*rho*k))**q)
-#imp = lambda k: -np.tanh(-1j*kl(k)*0.1)/(1+mu*(sig/(-1j*rho*k))**b)/rho
-imp = lambda k: -1/(1+mu*(sig/(-1j*rho*k))**b)
+tmp = lambda k : np.tanh(-1j*kl(k)*0.2) 
+impinf = lambda k: -1/(1+mu*(sig/(-1j*rho*k))**b)
 
-imp = lambda k: 0
+imp = lambda k: tmp(k)*impinf(k)
 
 def impr(k):
     #M120
-    A = np.array([1.4144, 1.0014, -3.336, 5.2545, 3.0317e1])*1e6
-    lam = np.array([52.33, 494.61, 1702.5, 1832.7, 34000])
+    #A = np.array([1.4144, 1.0014, -3.336, 5.2545, 3.0317e1])*1e6
+    #lam = np.array([52.33, 494.61, 1702.5, 1832.7, 34000])
     
     #M12L02
-    #A = np.array([-2.3877e5, 1.3051e6, 91175, -4.4016e6, 2.7118e7])
-    #lam = np.array([1.4464, 2.1303, 1263.8, 6531.1, 27199])120
+    A = np.array([-2.3877e5, 1.3051e6, 91175, -4.4016e6, 2.7118e7])
+    lam = np.array([1.4464, 2.1303, 1263.8, 6531.1, 27199])
     
     tmp = 0j
     for i in range(len(A)):
@@ -38,21 +38,22 @@ def impr(k):
 print(imp(1))
 print(imp(-1))
 
-cyls = [cyl('i', [0, 0], 1, impedance=imp)]
+cyls = [cyl('i', [0, 0], 1, impedance=impinf)]
 Nmode = 32
 Nsamp = 2**13
 
-# #%%
-# #graph the impedance with the BDF2 wavenumbers
-# tdstmp = time_domain_scattering(cyls, gaussian_deriv(), T, sampnum=Nsamp)
-# print(Nsamp, len(tdstmp.ks))
-# ks = tdstmp.ks[:len(tdstmp.ks)]
-# plt.plot(imp(ks).real, imp(ks).imag)
-# plt.plot(imp(ks).real, impr(ks).imag)
-# #k0 = impr(ks[0:2])
-# #dk = k0[1] - k0[0]
-# #plt.arrow(k0[0].real, k0[0].imag, dk.real, dk.imag, {'width':dk.real})
-# plt.show()
+#%%
+#graph the impedance with the BDF2 wavenumbers
+tdstmp = time_domain_scattering(cyls, gaussian_deriv(), T, sampnum=Nsamp)
+print(Nsamp, len(tdstmp.ks))
+ks = tdstmp.ks[:len(tdstmp.ks)]
+plt.plot(impinf(ks).real, impinf(ks).imag)
+plt.plot(impr(ks).real, impr(ks).imag)
+
+print('exact max', np.max(np.abs(imp(ks))))
+print('rational max', np.max(np.abs(impr(ks))))
+
+plt.show()
 #%%
 #point source
 wv = gaussian_deriv(
