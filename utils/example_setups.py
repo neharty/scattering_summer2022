@@ -5,6 +5,12 @@ import os
 #from Ncyl.tds import scattering, cyl
 from Ncyl.cqm import cyl
 
+def make_bcs(pos, bc):
+    # uniform bcs
+    # permuted bcs
+    # all random
+    pass
+
 def uniform_grid_3x3(radius, spacing):
     # 3x3 grid of cylinders
     bcs=np.array([None for i in range(9)])
@@ -125,12 +131,16 @@ def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, imped
     else:
         origins = np.array([[xcoeffs[i]*xspace+center[0], ycoeffs[j]*yspace+center[1]] for i in range(Nx) for j in range(Ny)])
     
-    if len(bcs) == int(Nx):
-        for i in range(Nx*Ny):
-            cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_index = sum_num, impedance = impedance)
+    
+    if type(bcs) is list:
+        if len(bcs) == int(Nx):
+            for i in range(Nx*Ny):
+                cyls[i] = cyl(bcs[i%Nx], origins[i], radius, sum_index = sum_num, impedance = impedance)
+        else:
+            for i in range(Nx*Ny):
+                cyls[i] = cyl(bcs[i], origins[i], radius, sum_index = sum_num, impedance = impedance)
     else:
-        for i in range(Nx*Ny):
-            cyls[i] = cyl(bcs[i], origins[i], radius, sum_index = sum_num, impedance = impedance)
+        cyls[i] = cyl(bcs, origins[i], radius, sum_index = sum_num, impedance = impedance)
 
     return cyls
 
@@ -140,7 +150,11 @@ def rectangular_lattice_1bc(Nx, Ny, bc, radius, xspace, yspace, sum_num=None, im
     return rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance=impedance, center=center)
 
 def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center=None):
+    print(bcs)
+    if type(bcs) is str:
+        bcs=[bcs for i in range(Nx)]
     cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
+    del bcs[-1]
     cyls_off = rectangular_lattice(Nx-1, Ny-1, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
     return cyls_main + cyls_off
 
@@ -177,8 +191,7 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 
     return cyls
 
-def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None, center=None):
-
+def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=None, center=None):
     #compute the initial grid to perturb
     #TODO: algorithm to find max num Nx and Ny
     ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None, center=center)
@@ -191,40 +204,42 @@ def random_hexagon(N, bc, radius, dist, sum_num=None, impedance=None, center=Non
     paverage = np.inf
     pvariance = np.inf
     
+    def perturb():
+        for i in range(cnum):            
+            #generate a perturbation of the ith point
+            r = np.sqrt(np.random.uniform(0, (np.sqrt(2)*dist - 2*radius-minspace)**2))
+            theta = np.random.uniform(0, 2*np.pi)
+            ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
+    
+            #test new point against all other points
+            idx = np.delete(np.arange(cnum), i)
+            z = xpos[idx] + 1j*ypos[idx]
+            allpoints = np.all(np.abs(z - ztest) > (2*radius + minspace))
+
+            while not allpoints:
+                #if the new point doesnt work, retry until it does
+                #this distribution is clustered more heavily around the center of the circle
+                #that is, we tend to small perturbations here
+                r = np.sqrt(np.random.uniform(0, np.sqrt(2)*dist - 2*radius-minspace))
+                theta = np.random.uniform(0, 2*np.pi)
+                ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
+                allpoints = np.all(np.abs(z - ztest) > (2*radius + minspace))
+        
+            
+            #set the ith point
+            xpos[i], ypos[i] = ztest.real, ztest.imag
+    
+    #do while loop
+    perturb()
     caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
     cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
     print(caverage, cvariance)
-
-    for i in range(cnum):
+    while np.abs(paverage - caverage) >= 1e-3 and np.abs(pvariance - cvariance) >= 1e-3:
         paverage, pvariance = caverage, cvariance
-        
-        #generate a perturbation of the ith point
-        r = np.random.uniform(0, np.sqrt(2)*dist-(radius/2))
-        theta = np.random.uniform(0, 2*np.pi)
-        ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
-
-        #test new point against all other points
-        idx = np.delete(np.arange(cnum), i)
-        z = xpos[idx] + 1j*ypos[idx]
-        allpoints = np.all(np.abs(z - ztest) > dist)
-        while not allpoints:
-            #if the new point doesnt work, retry until it does
-            r = np.random.uniform(0, dist - radius)
-            theta = np.random.uniform(0, 2*np.pi)
-            ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
-            allpoints = np.all(np.abs(z - ztest) > dist)
-        
-        #set the ith point
-        xpos[i], ypos[i] = ztest.real, ztest.imag
-        
-        #compute the new average and variance
+        perturb()
         caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
         cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
-        
-        #check if sufficiently uniform
-        #print(np.abs(paverage - caverage), np.abs(pvariance - cvariance))
-        if np.abs(paverage - caverage) < 1e-4 and np.abs(pvariance - cvariance) < 1e-4:
-            break
+        print(caverage, cvariance)
 
     origins = np.array([[xpos[i], ypos[i]] for i in range(cnum)])
 
@@ -290,6 +305,14 @@ def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None):
         cyls[i] = cyl(bc, origins[i], radius, sum_index=sum_num, impedance = impedance)
 
     return cyls
+
+def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, center=None):
+    spc = initspace
+    N = int((2*rmax - 2*radius)/spc)
+    ctmp = random_hexagon(N, bc, radius, spc, 0, sum_num, impedance, center)
+    rmask = [np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp]
+    cctmp = np.asarray(ctmp)[rmask]
+    return ctmp, cctmp.tolist()
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None, clusterdir=True):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')
