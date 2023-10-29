@@ -218,9 +218,7 @@ def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=No
 
             while not allpoints:
                 #if the new point doesnt work, retry until it does
-                #this distribution is clustered more heavily around the center of the circle
-                #that is, we tend to small perturbations here
-                r = np.sqrt(np.random.uniform(0, np.sqrt(2)*dist - 2*radius-minspace))
+                r = np.sqrt(np.random.uniform(0, (np.sqrt(2)*dist - 2*radius-minspace))**2)
                 theta = np.random.uniform(0, 2*np.pi)
                 ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
                 allpoints = np.all(np.abs(z - ztest) > (2*radius + minspace))
@@ -309,10 +307,17 @@ def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None):
 def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, center=None):
     spc = initspace
     N = int((2*rmax - 2*radius)/spc)
+    print(N)
     ctmp = random_hexagon(N, bc, radius, spc, 0, sum_num, impedance, center)
-    rmask = [np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp]
-    cctmp = np.asarray(ctmp)[rmask]
-    return ctmp, cctmp.tolist()
+    rmask = np.array([np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp])
+    rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
+    cctmp = np.asarray(ctmp)[rmask*rmask2]
+    return cctmp.tolist()
+
+def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center=None):
+    N = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
+    spc = (2*R - 2*r)/(N-1)
+    return random_circ_hex(R, bc, r, spc, sum_num, impedance, center)
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None, clusterdir=True):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')

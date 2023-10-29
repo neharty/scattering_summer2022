@@ -41,15 +41,12 @@ def plot_cyls(cyls):
     #    plt.savefig(fname)
 #%%
 np.random.seed(100)
-Rmax = 20
+Rmax = 10
 radius = 0.05
-initspace = 0.4
-oyls, cyls = example_setups.random_circ_hex(Rmax, 'd', radius, initspace)
+cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.2)
 #%%
-Nt = len(oyls)
-print(np.pi**2*Nt*radius**2/(8*Rmax**2))
-print(len(cyls), len(cyls)/len(oyls), len(cyls)*(radius**2)/Rmax**2)
-fig, ax = plot_cyls(oyls)
+print(len(cyls), len(cyls)*(radius**2)/Rmax**2)
+fig, ax = plot_cyls(cyls)
 plt.show()
 
 

@@ -2,7 +2,6 @@
 import numpy as np
 from Ncyl.tds import time_domain_scattering
 from utils import example_setups
-from waveforms import waveforms as wv
 import pickle
 import argparse
 import os
@@ -20,13 +19,12 @@ np.random.seed(args.seed)
 
 Rmax = args.rmax
 radius = args.rc
-initspace = 0.2 #hardcoded for now
-oyls, cyls = example_setups.random_circ_hex(Rmax, 'd', radius, initspace)
+cyls = example_setups.random_circ_hex(Rmax, args.bc, radius, args.rho)
 
 #data path
 datapath = os.path.join(args.dout, args.seed)
 if not os.path.exists(datapath):
     os.makedirs(datapath)
 
-pickle.dump(cyls, open(datapath+"/cyls.p", "wb"))
+pickle.dump(cyls, open(os.path.join(datapath, "/cyls.p"), "wb"))
 
