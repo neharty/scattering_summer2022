@@ -10,8 +10,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('seed', help='seed for random placement', type=int)
 parser.add_argument('bc', help='boundary condtion type')
 parser.add_argument('rmax', help='radius of the large circle', type=float)
-parser.add_argument('rc', help='particle radius', type='float')
-parser.add_argument('rho', help='packing density', type='float')
+parser.add_argument('rc', help='particle radius', type=float)
+parser.add_argument('rho', help='packing density', type=float)
 parser.add_argument('dout', help='data output path')
 
 args = parser.parse_args()
@@ -19,12 +19,13 @@ np.random.seed(args.seed)
 
 Rmax = args.rmax
 radius = args.rc
-cyls = example_setups.random_circ_hex(Rmax, args.bc, radius, args.rho)
+cyls = example_setups.random_circ_hex_vol_frac(Rmax, args.bc, radius, args.rho)
+print('cyls generated')
 
 #data path
-datapath = os.path.join(args.dout, args.seed)
+datapath = args.dout
 if not os.path.exists(datapath):
     os.makedirs(datapath)
 
-pickle.dump(cyls, open(os.path.join(datapath, "/cyls.p"), "wb"))
-
+pickle.dump(cyls, open(os.path.join(datapath, "cyls.p"), "wb"))
+print('done')

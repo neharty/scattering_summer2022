@@ -1,16 +1,14 @@
-for WV in g
+for BC in d
 do
-for NC in 500
+for RM in 10
 do
-for NT in 10
+for RC in 0.05
 do
-for SD in {1..30}
+for VF in 0.05 0.1 0.15 0.20
 do
-        DO=/home/n/nh287/scattering/data/time_domain_tests/average_fl_waveform/${WV}/${NC}/${NT}/${SD}
-        export WV NC NT SD
-        sbatch --job-name=epc_${WV}_${NC}_${NT}_${SD} setup.slurm
+    export BC RM RC VF DO
+    sbatch --job-name=avg_${BC}_${RM}_${VF}_${RC} setup.slurm
 done
 done
 done
 done
-
