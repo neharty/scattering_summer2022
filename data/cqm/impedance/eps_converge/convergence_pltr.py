@@ -3,9 +3,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 #%%
-pows = np.arange(10, 17)
-maxpow = 17
-pos = (0, 0)
+maxpow = 20
+pows = np.arange(5, maxpow)
+pos = (-3, 0)
 posstr = str(pos[0])+'_'+str(pos[1])+'.dat'
 
 for eps in [1, '1e-1', '1e-2', '1e-3']:
@@ -38,4 +38,4 @@ plt.xlabel('dt')
 plt.ylabel('err')
 #plt.title('(x,y)='+str(pos)+', bc='+bc)
 plt.tight_layout()
-#plt.savefig('/home/nick/scattering/data/cqm/impedance/eps_converge/'+str(pos)+'.pdf')
+plt.savefig('/home/nick/scattering/data/cqm/impedance/eps_converge/'+str(pos)+'.pdf')

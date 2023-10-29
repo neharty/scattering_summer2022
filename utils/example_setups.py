@@ -194,7 +194,7 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=None, center=None):
     #compute the initial grid to perturb
     #TODO: algorithm to find max num Nx and Ny
-    ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, 2*dist, 2*dist, sum_num=None, impedance=None, center=center)
+    ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, dist, dist, sum_num=None, impedance=None, center=center)
     
     cnum = len(ctemp)
     pos = np.array([c.pos for c in ctemp])
