@@ -1,8 +1,12 @@
+BC=d
+RM=10
+RC=0.05
 WV=g
-NC=500
-NT=10
-SD=666
-DO=/home/n/nh287/scattering/data/time_domain_tests/average_fl_waveform/${WV}/${NC}/${NT}/${SD}/
-export WV NC NT SD DO
-sbatch --job-name=avg_${WV}_${NC}_${NT}_${SD} setup.slurm
+VF=0.1
+NT=12
+SD=1
+CP=/home/n/nh287/scattering/tests/time_domain_tests/average_fl_waveform/cyls/${BC}/${RM}/${VF}/${RC}/${SD}/
+DO=/home/n/nh287/scattering/data/time_domain_tests/average_fl_waveform/${WV}/${BC}/${NT}/${RM}/${VF}/${RC}/${SD}/
+export BC RM RC WV NC NT SD CP
+sbatch --job-name=epc_${WV}_${NC}_${NT}_${SD} setup.slurm
 

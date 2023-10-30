@@ -1,9 +1,9 @@
 import numpy as np
 
 from Ncyl.cqm import cyl, time_domain_scattering
-from utils import example_setups
 from waveforms.waveforms import gaussian, gaussian_deriv
 from integrators.integrators import IRK3, IRK5
+import pickle
 
 import argparse
 import os
@@ -11,9 +11,8 @@ import os
 parser = argparse.ArgumentParser()
 
 parser.add_argument('Nt', help = 'number of time samples', type=int)
-parser.add_argument('Ncyl', help='number of cylinders', type=int)
 parser.add_argument('wvf', help='waveform')
-parser.add_argument('seed', help='random cyl seed', type=int)
+parser.add_argument('cylpath', help='path to cyl pickle')
 parser.add_argument('fout', help='full data output path')
 
 args = parser.parse_args()
@@ -24,17 +23,17 @@ Nt = args.Nt
 Ncyl = args.Ncyl
 Nsamp = 2**Nt
 wvarg = args.wvf
-tint = None
+tint = IRK5()
 fout = args.fout
 
 Nmodes = 16
 dataout = args.fout
 
-x = 20*np.cos(np.arange(8)*np.pi/4)
-y = 20*np.sin(np.arange(8)*np.pi/4)
+x = 10*np.cos(np.arange(8)*np.pi/4)
+y = 10*np.sin(np.arange(8)*np.pi/4)
 X, Y = np.meshgrid(x, y)
 
-tshift=23
+tshift=15
 if wvarg == 'g':
     wv = gaussian(time_shift=tshift)
 elif wvarg == 'dg':
@@ -42,10 +41,8 @@ elif wvarg == 'dg':
 
 T = 40
 
-#alpha = np.exp(-1j*np.pi/4)
-#imp = lambda k: -1/(eps*alpha*(k**0.5))
 np.random.seed(args.seed)
-cyls = example_setups.random_circ(20, Ncyl, 'd', 0.05)
+cyls = pickle.load(args.cylpath+'cyls.p')
 tds = time_domain_scattering(
                         cyls, 
                         wv, 
