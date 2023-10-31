@@ -20,29 +20,46 @@ args = parser.parse_args()
 print(args)
 
 Nt = args.Nt
-Ncyl = args.Ncyl
 Nsamp = 2**Nt
 wvarg = args.wvf
 tint = IRK5()
 fout = args.fout
 
-Nmodes = 16
+Nmodes = 2
 dataout = args.fout
 
-x = 10*np.cos(np.arange(8)*np.pi/4)
-y = 10*np.sin(np.arange(8)*np.pi/4)
+thetas = np.arange(8)*np.pi/4
+x = 10*np.cos(thetas)
+y = 10*np.sin(thetas)
 X, Y = np.meshgrid(x, y)
 
-tshift=15
+tshift=5
 if wvarg == 'g':
-    wv = gaussian(time_shift=tshift)
+    wv = gaussian(
+            time_shift=tshift, 
+            src_type='pointsource')
 elif wvarg == 'dg':
-    wv = gaussian_deriv(time_shift=tshift)
+    wv = gaussian_deriv(
+            time_shift=tshift,
+            src_type='pointsource')
 
 T = 40
 
-np.random.seed(args.seed)
-cyls = pickle.load(args.cylpath+'cyls.p')
+#impedance function
+def imp(k):
+    sig = 12
+    mu = 0.459
+    b = 0.632
+    nu = 0.673
+    q = 0.618
+    kl = k*(1+nu*(sig/(-1j*k))**q)
+    tmp = np.tanh(-1j*kl*0.2)
+    impinf = -1/(1+mu*(sig/(-1j*k))**b)
+    return tmp*impinf
+
+
+cyls = pickle.load(open(args.cylpath+'cyls.p','rb'))
+print('num of cyls:', len(cyls))
 tds = time_domain_scattering(
                         cyls, 
                         wv, 
@@ -50,7 +67,7 @@ tds = time_domain_scattering(
                         sampnum = Nsamp, 
                         modes=Nmodes,
                         timeint=tint,
-                        use_foldy_lax=True,
+                        use_foldy_lax=False,
                         scargs={'method':'explicit'}
                         )
 t = tds.times
@@ -61,7 +78,6 @@ if not os.path.exists(dataout):
     os.makedirs(dataout)
 
 for xidx in range(len(x)):
-    xpt = x[xidx]
-    fname = str(xpt) + '_' + str(y[0]) + '.dat'
-    arr = [[t[i], U[0, xidx, i]] for i in range(len(t))]
+    fname = str(thetas[xidx])+'.dat'
+    arr = [[t[i], U[xidx, xidx, i]] for i in range(len(t))]
     np.savetxt(fout+fname, arr)

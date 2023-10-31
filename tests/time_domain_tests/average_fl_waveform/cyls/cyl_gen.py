@@ -19,7 +19,22 @@ np.random.seed(args.seed)
 
 Rmax = args.rmax
 radius = args.rc
-cyls = example_setups.random_circ_hex_vol_frac(Rmax, args.bc, radius, args.rho)
+
+def imp(k):
+    sig = 12
+    mu = 0.459
+    b = 0.632
+    nu = 0.673
+    q = 0.618
+    kl = k*(1+nu*(sig/(-1j*k))**q)
+    tmp = np.tanh(-1j*kl*0.2) 
+    impinf = -1/(1+mu*(sig/(-1j*k))**b)
+    return tmp*impinf
+
+if args.bc == 'i':
+    cyls = example_setups.random_circ_hex_vol_frac(Rmax, args.bc, radius, args.rho, impedance=imp)
+else:
+    cyls = example_setups.random_circ_hex_vol_frac(Rmax, args.bc, radius, args.rho)
 print('cyls generated')
 
 #data path
