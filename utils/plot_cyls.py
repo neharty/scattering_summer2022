@@ -40,13 +40,17 @@ def plot_cyls(cyls):
     #else:
     #    plt.savefig(fname)
 #%%
-np.random.seed(100)
+np.random.seed(194)
 Rmax = 10
 radius = 0.05
-cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.2)
+cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.01)
 #%%
 print(len(cyls), len(cyls)*(radius**2)/Rmax**2)
 fig, ax = plot_cyls(cyls)
 plt.show()
+
+#%%
+pos = [np.linalg.norm(c.pos) for c in cyls]
+print(np.min(pos))
 
 

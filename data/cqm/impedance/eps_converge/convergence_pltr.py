@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 #%%
 maxpow = 20
 pows = np.arange(5, maxpow)
-pos = (-3, 0)
+pos = (3, 0)
 posstr = str(pos[0])+'_'+str(pos[1])+'.dat'
 
-for eps in [1, '1e-1', '1e-2', '1e-3']:
+for eps in [1, '1e-1', '1e-2']:
     path = '/home/nick/scattering/data/cqm/impedance/eps_converge/g/'
     fpath = path + str(eps) + '/'
     Nsamps = (2**pows)
