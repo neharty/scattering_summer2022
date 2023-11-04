@@ -2,7 +2,7 @@ BC=i
 RM=10
 RC=0.05
 WV=g
-for VF in 0.01
+for VF in 0.05
 do
 for NT in 12
 do
