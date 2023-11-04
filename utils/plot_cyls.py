@@ -51,6 +51,7 @@ plt.show()
 
 #%%
 pos = [np.linalg.norm(c.pos) for c in cyls]
-print(np.min(pos))
+pos.sort()
+print(pos)
 
 
