@@ -3,6 +3,7 @@ import numpy as np
 from Ncyl.cqm import cyl, time_domain_scattering
 from waveforms.waveforms import gaussian, gaussian_deriv
 from integrators.integrators import IRK3, IRK5
+from impedance import M12L02 as imp
 import pickle
 
 import argparse
@@ -22,18 +23,14 @@ print(args)
 Nt = args.Nt
 Nsamp = 2**Nt
 wvarg = args.wvf
-tint = IRK5()
+tint = IRK3()
 fout = args.fout
 
 Nmodes = 2
 dataout = args.fout
 
-thetas = np.arange(8)*np.pi/4
-x = 10*np.cos(thetas)
-y = 10*np.sin(thetas)
-X, Y = np.meshgrid(x, y)
-
 tshift=5
+
 if wvarg == 'g':
     wv = gaussian(
             time_shift=tshift, 
@@ -43,22 +40,25 @@ elif wvarg == 'dg':
             time_shift=tshift,
             src_type='pointsource')
 
-T = 40
-
-#impedance function
-def imp(k):
-    sig = 12
-    mu = 0.459
-    b = 0.632
-    nu = 0.673
-    q = 0.618
-    kl = k*(1+nu*(sig/(-1j*k))**q)
-    tmp = np.tanh(-1j*kl*0.2)
-    impinf = -1/(1+mu*(sig/(-1j*k))**b)
-    return tmp*impinf
-
-
+T = 60
 cyls = pickle.load(open(args.cylpath+'cyls.p','rb'))
+
+# measurement points
+thetas = np.arange(8)*np.pi/4
+r = np.array([2.5, 5, 7.5, 10])
+R, ANG = np.meshgrid(r, thetas)
+X = R*np.cos(ANG)
+Y = R*np.sin(ANG)
+
+# remove particles that overlap the measurement points
+for c in cyls:
+    p = c.pos
+    rad = c.radius # only works for uniformly distributed points
+    dist = np.sqrt((x - p[0])**2 + (y - p[1])**2) 
+    mask = dist > rad
+    if mask.any():
+        del c
+
 print('num of cyls:', len(cyls))
 tds = time_domain_scattering(
                         cyls, 
@@ -70,6 +70,7 @@ tds = time_domain_scattering(
                         use_foldy_lax=False,
                         scargs={'method':'explicit'}
                         )
+
 t = tds.times
 U = tds.make_U_sc(X, Y)
 
@@ -77,7 +78,8 @@ U = tds.make_U_sc(X, Y)
 if not os.path.exists(dataout):
     os.makedirs(dataout)
 
-for xidx in range(len(x)):
-    fname = str(thetas[xidx])+'.dat'
-    arr = [[t[i], U[xidx, xidx, i]] for i in range(len(t))]
-    np.savetxt(fout+fname, arr)
+for ang in range(len(thetas)):
+    for rdx in range(len(r)):
+        fname = '{r[rdx]: .3f}_{thetas[ang]: .3f}.dat'
+        arr = [[t[i], U[ang, rdx, i]] for i in range(len(t))]
+        np.savetxt(fout+fname, arr)
