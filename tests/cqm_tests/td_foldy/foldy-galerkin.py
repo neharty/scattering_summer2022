@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from Ncyl.cqm import time_domain_scattering, cyl
-from waveforms.waveforms import gaussian, kachanovska
+from waveforms.waveforms import kachanovska
 import warnings
 import os
 
@@ -19,6 +19,7 @@ tds_fl = time_domain_scattering(
                              cyls,
                              wv,
                              T,
+                             timeint=None,
                              modes=4,
                              sampnum=2**12,
                              use_foldy_lax=True,
@@ -28,6 +29,7 @@ tds_fl = time_domain_scattering(
 X, Y = np.meshgrid([0.2], [0.2])
 U_fl = tds_fl.make_U_sc(X, Y)
 
+#%%
 #actual solution
 tds = time_domain_scattering(
                              cyls,
@@ -65,9 +67,10 @@ plt.xlabel('t')
 plt.ylabel('U_sc')
 plt.savefig('/home/nick/scattering/tests/cqm_tests/td_foldy/foldy-galerkin.pdf')
 
-#darr = [[t[i], U[0,0,i]] for i in range(len(t))]
-#dataout = '/home/nick/scattering/data/cqm/td_fl/'
-#np.savetxt(os.path.join(dataout, 'td_fl_fig_2-2_d_foldy-galerkin.dat'), darr)
+#%%
+darr = [[tds_fl.times[i], U_fl[0,0,i]] for i in range(len(tds_fl.times))]
+dataout = '/home/nick/scattering/data/cqm/td_fl/'
+np.savetxt(os.path.join(dataout, 'td_fl_fig_2-2_d_foldy-galerkin.dat'), darr)
 print('done')
 #neumann
 # cyls = [cyl('n', [-0.105, 0], 0.1), 

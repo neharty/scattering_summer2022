@@ -1,0 +1,18 @@
+This is the Dragna data using the exact formulas for the impedance. The data is normalized to 1. To match Dragna's data, use the following factors.
+
+Rigid:
+    M1: 0.061288284475514
+    M2: 0.054115645867849
+    M3: 0.044431804434930
+
+M120:
+    M1: 0.061288279660961
+    M2: 0.053598204967277
+    M3: 0.042972430266763
+
+M12L02:
+    M1: 0.061288285864639
+    M2: 0.053286528141016
+    M3: 0.037037957385750
+
+

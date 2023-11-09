@@ -117,11 +117,12 @@ end
 
 times = (c0*(0:Nfft-1)*dt/(Rc))+2;
 U = 2*real(sum(p_dpropa_fin(:,:)))/epsilon;
-m = max(U);
-U = U/m;
-T = [times; U];
-fl = fopen(append('dragna/analytic/', bc, '/M1.dat'),'w');
-fprintf(fl, '%f %f\n', T);
+format long
+m1 = max(U)
+% U = U/m;
+% T = [times; U];
+% fl = fopen(append('dragna/analytic/', bc, '/M1.dat'),'w');
+% fprintf(fl, '%f %f\n', T);
  %% theta = 3pi/4
 
 theta_rec = 3*pi/4;
@@ -180,11 +181,12 @@ end
  
 times = c0*(0:Nfft-1)*dt/(Rc)+2;
 U = 2*real(sum(p_dpropa_fin(:,:)))/epsilon;
-m = max(U);
-U = U/m;
-T = [times; U];
-fl = fopen(append('dragna/analytic/', bc, '/M2.dat'),'w');
-fprintf(fl, '%f %f\n', T);
+format long
+m2 = max(U)
+% U = U/m;
+% T = [times; U];
+% fl = fopen(append('dragna/analytic/', bc, '/M2.dat'),'w');
+% fprintf(fl, '%f %f\n', T);
  
 %% theta = pi
 
@@ -244,8 +246,9 @@ end
 
 times = c0*(0:Nfft-1)*dt/(Rc)+2;
 U = 2*real(sum(p_dpropa_fin(:,:)))/epsilon;
-m = max(U);
-U = U/m;
-T = [times; U];
-fl = fopen(append('dragna/analytic/', bc, '/M3.dat'),'w');
-fprintf(fl, '%f %f\n', T);
+format long
+m3 = max(U)
+% U = U/m;
+% T = [times; U];
+% fl = fopen(append('dragna/analytic/', bc, '/M3.dat'),'w');
+% fprintf(fl, '%f %f\n', T);

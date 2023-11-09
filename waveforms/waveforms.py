@@ -141,6 +141,26 @@ class kachanovska(waveform):
         dg *= dv
         return dg
 
+class kachanovska_6_3(waveform):
+    #another wave from kachanovska 
+    def __init__(self, inc_angle = np.pi/2, time_shift=2):
+        super().__init__(inc_angle, time_shift)
+        
+    def profile(self, z):
+        return -np.sin(8*z)/(1+np.exp(-20*z))
+    
+    def dprofile(self, z):
+        tmp1 = (1 + np.exp(-20*z))
+        return -((tmp1*8*np.cos(8*z))+np.sin(8*z)*np.exp(-20*z))/(tmp1)**2
+    
+    def td_deriv(self, x, y, t, n):
+        dv = self.dprofile(self.inparg(x, y, t))
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= dv
+        return dg
+
 class sine_pulse(waveform):
     def __init__(
                  self, 
