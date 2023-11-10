@@ -166,7 +166,8 @@ class scattering(cyl):
             gmres_maxiter = None,
             fast_matrix_build = True,
             use_2cyl_modes = False,
-            use_foldy_lax = False
+            use_foldy_lax = False,
+            balanced_system=False
             ):
  
         self.cyls = cyls
@@ -193,6 +194,7 @@ class scattering(cyl):
         self.fast_matrix_build = fast_matrix_build
         self.use_2cyl_modes = use_2cyl_modes
         self.fl = use_foldy_lax
+        self.balanced_system = balanced_system
 
         self.precond = precond
         self.precond_dist = precond_dist
@@ -242,9 +244,15 @@ class scattering(cyl):
             if self.fl:
                 self.lengths = np.arange(len(self.cyls))
             else:
-                self.lengths[i+1] = 2*self.cyls[i].sum_index + self.lengths[i]
-
-        self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
+                if self.balanced_system:
+                    self.lengths[i+1] = 2*self.cyls[i].sum_index + 1 + self.lengths[i]
+                else:
+                    self.lengths[i+1] = 2*self.cyls[i].sum_index + self.lengths[i]
+        
+        if self.balanced_system:
+            self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
+        else:
+            self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
        
         # default gmres to unrestarted (restart = dim of matrix)
         if self.gmres_restart is None:
@@ -449,8 +457,12 @@ class scattering(cyl):
             cyl_i = self.cyls[i]
             cyl_sc = self.cyls[sc]
             b = cyl_i.pos - cyl_sc.pos
-            idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
-            idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)[::-1]
+            if self.balanced_system:
+                idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
+                idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)[::-1]
+            else:
+                idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
+                idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)[::-1]
             jS1 = [self.S(n, idxa_p[0], b) for n in idxd_q]
             jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
             return np.hstack((jS1, jS2))
@@ -468,10 +480,16 @@ class scattering(cyl):
         return self.ST
 
     def make_direct_scattering_block(self, cyl):
-        idxa = np.arange(
-            -cyl.sum_index, 
-            cyl.sum_index
-            )
+        if self.balanced_system:
+            idxa = np.arange(
+                -cyl.sum_index, 
+                cyl.sum_index+1
+                )
+        else:
+            idxa = np.arange(
+                -cyl.sum_index, 
+                cyl.sum_index
+                )
         hvec = self.directscat_term(cyl, idxa)
         return np.diag(hvec)
 
@@ -483,8 +501,12 @@ class scattering(cyl):
         scm = 1j*np.zeros((2*cyl_i.sum_index, 2*cyl_sc.sum_index))
         
         b = cyl_i.pos - cyl_sc.pos
-        idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
-        idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)
+        if self.balanced_system:
+            idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
+            idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)
+        else:
+            idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
+            idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)
 
         for i in range(len(idxa_i)):
             for j in range(len(idxa_sc)):
@@ -496,8 +518,12 @@ class scattering(cyl):
         rv = self.make_root_vect_1cyl(cyl_i.label, cyl_sc.label)
         Nq = cyl_sc.sum_index
         Np = cyl_i.sum_index
-        col = np.flip(rv[:2*Nq])
-        row = rv[2*Nq-1:]
+        if self.balanced_system:
+            col = np.flip(rv[:2*Nq+1])
+            row = rv[2*Nq:]
+        else:
+            col = np.flip(rv[:2*Nq])
+            row = rv[2*Nq-1:]
         S = toeplitz(row, col)
         D = np.diag(self.jhm[cyl_i.label])
         return D @ S
@@ -535,10 +561,16 @@ class scattering(cyl):
         if self.jhm is None:
             self.jhm = [None for p in self.labels]
             for p in self.labels:
-                idxa_p = np.arange(
-                    -self.cyls[p].sum_index, 
-                    self.cyls[p].sum_index
-                    )
+                if self.balanced_system:
+                    idxa_p = np.arange(
+                        -self.cyls[p].sum_index, 
+                        self.cyls[p].sum_index+1
+                        )
+                else:
+                    idxa_p = np.arange(
+                        -self.cyls[p].sum_index, 
+                        self.cyls[p].sum_index
+                        )
                 self.jhm[p] = self.jh(self.cyls[p], idxa_p)
         return self.jhm
 
@@ -682,9 +714,14 @@ class scattering(cyl):
             if self.fl:
                 u_sc += cs[self.lengths[l]]*self.phi(0, R)
             else:
-                for j in range(2*self.cyls[l].sum_index):
-                    idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
-                    u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
+                if self.balanced_system:
+                    for j in range(2*self.cyls[l].sum_index + 1):
+                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index+1)
+                        u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
+                else:
+                    for j in range(2*self.cyls[l].sum_index):
+                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
+                        u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
 
         self.u_sc = u_sc*self.mask(x,y)
         return self.u_sc
@@ -715,6 +752,7 @@ class time_domain_scattering(scattering):
                  use_conj = True,
                  use_foldy_lax=False,
                  timeint = None,
+                 balanced_system = False, 
                  wvargs={},
                  scargs = {}
                  ):
@@ -734,6 +772,7 @@ class time_domain_scattering(scattering):
         self.use_conj = use_conj
         self.fl = use_foldy_lax
         self.timeint = timeint
+        self.balanced_system = balanced_system
         
         self.init_vars()
         
@@ -748,7 +787,8 @@ class time_domain_scattering(scattering):
             self.lam = max(self.dt**(3/self.sampnum), eps**(1/(2*self.sampnum)))
         else:
             #IRK methods
-            self.lam = max(self.dt**((self.timeint.order + 1)/self.sampnum), eps**(1/(2*self.sampnum)))
+            self.lam = max(self.dt**((self.timeint.order + 1)/self.sampnum), 
+                           eps**(1/(2*self.sampnum)))
         
         zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
         self.zs = zN*self.lam
@@ -774,7 +814,10 @@ class time_domain_scattering(scattering):
 
     def td_bdy(self, cyl, c=0):
         bc = cyl.bc
-        n = 2*self.modes
+        if self.balanced_system:
+            n = 2*self.modes + 1
+        else:
+            n = 2*self.modes
         N = len(self.times)
         r = cyl.radius
         p = np.array(cyl.pos)
@@ -823,7 +866,10 @@ class time_domain_scattering(scattering):
     
     def fd_bdy(self, cyl, coeffs):
         bc = cyl.bc
-        n = 2*self.modes
+        if self.balanced_system:
+            n = 2*self.modes + 1
+        else:
+            n = 2*self.modes
         N = len(self.times)
         r = cyl.radius
         p = np.array(cyl.pos)
@@ -877,10 +923,6 @@ class time_domain_scattering(scattering):
         
     def ztrans_bdy_pw(self, cyl, c=0):
         # z transform the boundary data for a planewave
-        n = 2*self.modes
-        N = len(self.times)
-        bc = cyl.bc
-        imp = cyl.impedance
         # z-transform the boundary condition
         if cyl.bc == 'i':
             ng, dg = self.td_bdy(cyl, c) #discretize bdy
@@ -906,7 +948,10 @@ class time_domain_scattering(scattering):
         
     def fourier_coeffs_bdy(self, v):
         #project the vector onto the fourier basis using ffts
-        n = 2*self.modes
+        if self.balanced_system:
+            n = 2*self.modes + 1
+        else:
+            n = 2*self.modes
         N = len(self.times)
         
         #for using foldy lax approx
@@ -948,8 +993,6 @@ class time_domain_scattering(scattering):
     
     def diag_bc(self, cyl, v_coup):
         #uncouple the BCs, given the coupled data
-        n = 2*self.modes
-        N = len(self.times)
         bc = cyl.bc
         
         gret = [None for c in self.timeint.c]
@@ -1061,7 +1104,6 @@ class time_domain_scattering(scattering):
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         klen = range(len(self.ks))
         cpus = self.cpus
-        N = len(self.times)
         
         if self.use_conj:
             self.ks = self.ks[:self.sampnum//2]
@@ -1089,6 +1131,7 @@ class time_domain_scattering(scattering):
                     k=k_block[i],
                     use_foldy_lax = self.fl,
                     sum_index=self.modes,
+                    balanced_system=self.balanced_system,
                     **self.scargs
                 ) 
                 for i in range(len(k_block))]
@@ -1123,6 +1166,7 @@ class time_domain_scattering(scattering):
                         self.rhsmat[i], 
                         k=self.ks[i],
                         sum_index=self.modes,
+                        balanced_system=self.balanced_system,
                         **self.scargs
                     )
                 self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
@@ -1151,6 +1195,7 @@ class time_domain_scattering(scattering):
                     self.rhsmat[i][idx], 
                     k=ks[i],
                     sum_index=self.modes,
+                    balanced_system=self.balanced_system,
                     **self.scargs
                 )
             wmat[i] = sc.make_u_sc(x, y)

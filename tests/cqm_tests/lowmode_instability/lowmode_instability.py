@@ -18,22 +18,37 @@ cyls = [cyl(bc, [-d/2, 0], r),
         cyl(bc, [d/2, 0], r),
         cyl(bc, [0, np.sqrt(3)*d/2], r)]
 
-T = 30
+T = 10
 
 wvf=gaussian(time_shift=2)
+X, Y = np.meshgrid([0.1], [0])
+#%%
+tdl = time_domain_scattering(
+        cyls, 
+        wvf, 
+        T, 
+        sampnum=2**12, 
+        modes=2,
+        scargs={'method':'explicit'}
+        )
+Ul = tdl.make_U_sc(X, Y)
 
 #%%
-#foldy soln
 td = time_domain_scattering(
         cyls, 
         wvf, 
         T, 
         sampnum=2**12, 
         modes=1,
+        balanced_system=True,
         scargs={'method':'explicit'}
         )
-X, Y = np.meshgrid([0.1], [0])
 U = td.make_U_sc(X, Y)
 
 #%%
-plt.semilogy(td.times, U[0,0,:])
+plt.plot(tdl.times, Ul[0,0,:], label='n=-2, -1, 0, 1')
+plt.plot(td.times, U[0,0,:], label='n=-1, 0, 1')
+plt.legend()
+plt.xlabel('t')
+plt.ylabel('U')
+plt.savefig('/home/nick/scattering/tests/cqm_tests/lowmode_instability/instability_ex.pdf')
