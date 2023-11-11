@@ -1147,6 +1147,7 @@ class time_domain_scattering(scattering):
                 self.u_sc[:, :, a+i] = q[i].get()
                 
             [p[i].join() for i in kbrange]
+            [p[i].close() for i in kbrange]
 
         if self.use_par:
             #parallel algorithm
@@ -1247,6 +1248,7 @@ class time_domain_scattering(scattering):
                 self.u_sc[:, :, a+i] = q[i].get()
                 
             [p[i].join() for i in kbrange]
+            [p[i].close() for i in kbrange]
 
         if self.use_par:
             #parallel algorithm
