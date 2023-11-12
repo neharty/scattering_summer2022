@@ -10,8 +10,8 @@
 #SBATCH --time=3-0
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=neharty.slurm@gmail.com
-#SBATCH -o /home/n/nh287/scattering/tests/time_domain_tests/average_fl_waveform/logs/%j.out
-#SBATCH -e /home/n/nh287/scattering/tests/time_domain_tests/average_fl_waveform/logs/%j.out
+#SBATCH -o /home/n/nh287/scattering/tests/mem_tests/logs/%j.out
+#SBATCH -e /home/n/nh287/scattering/tests/mem_tests/logs/%j.out
 #SBATCH --open-mode=append
 
 python3 -u /home/n/nh287/scattering/tests/mem_tests/exec.py 12 g ${CP} ${DO}

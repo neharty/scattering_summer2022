@@ -1,5 +1,4 @@
 import numpy as np
-
 from Ncyl.cqm import cyl, time_domain_scattering
 from waveforms.waveforms import gaussian, gaussian_deriv
 from integrators.integrators import IRK3, IRK5
@@ -54,7 +53,7 @@ Y = R*np.sin(ANG)
 for c in cyls:
     p = c.pos
     rad = c.radius # only works for uniformly distributed points
-    dist = np.sqrt((x - p[0])**2 + (y - p[1])**2) 
+    dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
     mask = dist > rad
     if mask.any():
         del c
@@ -67,7 +66,7 @@ tds = time_domain_scattering(
                         sampnum = Nsamp, 
                         modes=Nmodes,
                         timeint=tint,
-                        use_foldy_lax=False,
+                        balanced_system=True,
                         scargs={'method':'explicit'}
                         )
 
@@ -80,6 +79,6 @@ if not os.path.exists(dataout):
 
 for ang in range(len(thetas)):
     for rdx in range(len(r)):
-        fname = '{r[rdx]: .3f}_{thetas[ang]: .3f}.dat'
+        fname = f'{r[rdx]: .3f}_{thetas[ang]: .3f}.dat'
         arr = [[t[i], U[ang, rdx, i]] for i in range(len(t))]
         np.savetxt(fout+fname, arr)

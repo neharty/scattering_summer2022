@@ -1,4 +1,4 @@
-for BC in i
+for BC in d n i
 do
 for RM in 10
 do

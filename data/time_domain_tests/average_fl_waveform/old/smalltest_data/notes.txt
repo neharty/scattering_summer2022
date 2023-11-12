@@ -1,0 +1,9 @@
+Results of averaging 193 realizations of a 'uniform' distribution of particles of radius 0.05 in a circle of radius 10. The particle fill is set to ~1%. The incident waveform is a point source gaussian placed at the origin, 
+
+g(t) = exp(-t^2/0.2)
+
+which has width ~1. 
+
+The 8 measurement points are distributed along the perimeter of the circle. the averaged trace files are labeled by angle. 
+
+The random distribution seeds were set to 1-200, however at seed 194 the neumann and impedance BC tests failed, due to a circle being placed too close to, but not overlapping, the point source. The traces for seed 194 are included in the i and n folders.
