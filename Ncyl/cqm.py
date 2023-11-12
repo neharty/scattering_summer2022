@@ -8,6 +8,7 @@ from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
 from multiprocessing import Process, Queue, cpu_count
 import copy
+import gc
 
 class cyl:
     '''
@@ -1149,6 +1150,7 @@ class time_domain_scattering(scattering):
             [p[i].join() for i in kbrange]
             del q
             del p
+            gc.collect()
 
         if self.use_par:
             #parallel algorithm
@@ -1251,6 +1253,7 @@ class time_domain_scattering(scattering):
             [p[i].join() for i in kbrange]
             del q
             del p
+            gc.collect()
 
         if self.use_par:
             #parallel algorithm
