@@ -1,5 +1,4 @@
 import numpy as np
-
 from Ncyl.cqm import cyl, time_domain_scattering
 from waveforms.waveforms import gaussian, gaussian_deriv
 from integrators.integrators import IRK3, IRK5
@@ -9,8 +8,6 @@ import tracemalloc
 
 import argparse
 import os
-
-tracemalloc.start()
 
 parser = argparse.ArgumentParser()
 
@@ -57,7 +54,7 @@ Y = R*np.sin(ANG)
 for c in cyls:
     p = c.pos
     rad = c.radius # only works for uniformly distributed points
-    dist = np.sqrt((x - p[0])**2 + (y - p[1])**2) 
+    dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
     mask = dist > rad
     if mask.any():
         del c
@@ -70,6 +67,7 @@ tds = time_domain_scattering(
                         sampnum = Nsamp, 
                         modes=Nmodes,
                         timeint=tint,
+                        balanced_system=True,
                         scargs={'method':'explicit'}
                         )
 
