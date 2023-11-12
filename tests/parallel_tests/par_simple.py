@@ -4,8 +4,11 @@ from Ncyl.cqm import time_domain_scattering, cyl
 from waveforms.waveforms import gaussian_deriv, gaussian
 from utils import example_setups
 from integrators.integrators import IRK3, IRK5
+import tracemalloc
 #%%
 #init variables
+tracemalloc.start()
+
 tau=1
 n = 2/tau
 T = 32
@@ -19,7 +22,7 @@ wv = gaussian(
             sigma=1/n**2,
             amp = n/np.sqrt(np.pi))
 
-tint = IRK3()
+tint = None
 
 #%%
 # fig 6a
@@ -41,6 +44,12 @@ y = R*np.sin(thetas)
 X, Y = np.meshgrid(x, y)
 
 Usc = tds.make_U_sc(X, Y)
+
+snapshot = tracemalloc.take_snapshot()
+top_stats = snapshot.statistics('lineno')
+
+print("[ Top 10 ]")
+for stat in top_stats[:10]:
+    print(stat)
 #%%
 plt.plot(tds.times, Usc[0,0,:])
-
