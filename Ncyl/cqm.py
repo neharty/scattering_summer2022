@@ -251,7 +251,7 @@ class scattering(cyl):
                     self.lengths[i+1] = 2*self.cyls[i].sum_index + self.lengths[i]
         
         if self.balanced_system:
-            self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
+            self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index + 1 for l in self.labels]))
         else:
             self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
        
@@ -498,14 +498,14 @@ class scattering(cyl):
         # makes 1 off-diagonal block, 
         # cyl_i = incident cylinder, 
         # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
-
-        scm = 1j*np.zeros((2*cyl_i.sum_index, 2*cyl_sc.sum_index))
-        
+      
         b = cyl_i.pos - cyl_sc.pos
         if self.balanced_system:
+            scm = 1j*np.zeros((2*cyl_i.sum_index + 1, 2*cyl_sc.sum_index + 1))
             idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
             idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)
         else:
+            scm = 1j*np.zeros((2*cyl_i.sum_index, 2*cyl_sc.sum_index))
             idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
             idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)
 
@@ -1148,9 +1148,6 @@ class time_domain_scattering(scattering):
                 self.u_sc[:, :, a+i] = q[i].get()
             
             [p[i].join() for i in kbrange]
-            del q
-            del p
-            gc.collect()
 
         if self.use_par:
             #parallel algorithm
@@ -1251,9 +1248,6 @@ class time_domain_scattering(scattering):
                 self.u_sc[:, :, a+i] = q[i].get()
             
             [p[i].join() for i in kbrange]
-            del q
-            del p
-            gc.collect()
 
         if self.use_par:
             #parallel algorithm
