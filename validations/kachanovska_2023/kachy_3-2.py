@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from utils import example_setups
 from Ncyl.cqm import time_domain_scattering, cyl
 from waveforms.waveforms import kachanovska, gaussian, kachanovska_6_3
+from impedance import nguyen
 import warnings
 import os
 #%%
@@ -42,6 +43,7 @@ tds = time_domain_scattering(
                              T,
                              modes=8,
                              sampnum=2**12,
+                             balanced_system=True,
                              scargs={'method':'explicit'}
                              )
 
@@ -67,8 +69,9 @@ tds_fl = time_domain_scattering(
                              wv,
                              T,
                              timeint=None,
-                             modes=2,
+                             modes=1,
                              sampnum=2**12,
+                             balanced_system=True,
                              scargs={'method':'explicit'}
                              )
 
@@ -88,6 +91,7 @@ tds = time_domain_scattering(
                              T,
                              modes=8,
                              sampnum=2**12,
+                             balanced_system=True,
                              scargs={'method':'explicit'}
                              )
 
@@ -97,3 +101,53 @@ U = tds.make_U_sc(X, Y)
 darr = [[tds.times[i], U[0,0,i]] for i in range(len(tds.times))]
 dataout = '/home/nick/scattering/validations/kachanovska_2023/data/fig_3-2/'
 np.savetxt(os.path.join(dataout, 'fig_3-2_n.dat'), darr)
+
+#%%
+#impedance fig 3-2
+#initialization
+wv = kachanovska()
+T = 4.4 
+eps = 1e-2
+imp = lambda k : nguyen(k, eps)
+cyls = [cyl('i', [-0.105, 0], 0.1, impedance=imp), 
+        cyl('i', [0.105, 0], 0.1, impedance=imp), 
+        cyl('i', [0, 0.1819], 0.1, impedance=imp)]
+
+#foldy lax solution
+tds_fl = time_domain_scattering(
+                             cyls,
+                             wv,
+                             T,
+                             timeint=None,
+                             modes=1,
+                             sampnum=2**12,
+                             balanced_system=True,
+                             scargs={'method':'explicit'}
+                             )
+
+X, Y = np.meshgrid([0.2], [0.2])
+U_fl = tds_fl.make_U_sc(X, Y)
+
+darr = [[tds_fl.times[i], U_fl[0,0,i]] for i in range(len(tds_fl.times))]
+dataout = '/home/nick/scattering/validations/kachanovska_2023/data/fig_3-2/'
+np.savetxt(os.path.join(dataout, 'fig_3-2_i_foldy-galerkin.dat'), darr)
+
+
+#%%
+#actual solution
+tds = time_domain_scattering(
+                             cyls,
+                             wv,
+                             T,
+                             modes=8,
+                             sampnum=2**12,
+                             balanced_system=True,
+                             scargs={'method':'explicit'}
+                             )
+
+X, Y = np.meshgrid([0.2], [0.2])
+U = tds.make_U_sc(X, Y)
+
+darr = [[tds.times[i], U[0,0,i]] for i in range(len(tds.times))]
+dataout = '/home/nick/scattering/validations/kachanovska_2023/data/fig_3-2/'
+np.savetxt(os.path.join(dataout, 'fig_3-2_i.dat'), darr)
