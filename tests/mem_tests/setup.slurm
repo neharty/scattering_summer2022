@@ -14,4 +14,4 @@
 #SBATCH -e /home/n/nh287/scattering/tests/mem_tests/logs/%j.out
 #SBATCH --open-mode=append
 
-python3 -u /home/n/nh287/scattering/tests/mem_tests/exec.py 12 g ${CP} ${DO}
+python3 -u /home/n/nh287/scattering/tests/mem_tests/exec.py 

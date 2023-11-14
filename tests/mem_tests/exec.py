@@ -1,8 +1,8 @@
 import numpy as np
 from Ncyl.cqm import cyl, time_domain_scattering
 from waveforms.waveforms import gaussian, gaussian_deriv
-from integrators.integrators import IRK3, IRK5
-from impedance import M12L02 as imp
+from utils import example_setups
+from integrators import IRK3
 import pickle
 import tracemalloc
 
@@ -11,34 +11,16 @@ import os
 
 tracemalloc.start()
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument('Nt', help = 'number of time samples', type=int)
-parser.add_argument('wvf', help='waveform')
-parser.add_argument('cylpath', help='path to cyl pickle')
-parser.add_argument('fout', help='full data output path')
-
-args = parser.parse_args()
-
-print(args)
-
-Nt = args.Nt
-Nsamp = 2**Nt
-wvarg = args.wvf
+Nsamp = 2**12
 tint = IRK3()
-fout = args.fout
 
-Nmodes = 2
-dataout = args.fout
+tshift= 7
 
-tshift=5
-
-if wvarg == 'g':
-    wv = gaussian(
-            time_shift=tshift, 
-            src_type='pointsource')
+wv = gaussian(
+        time_shift=tshift, 
+        src_type='pointsource')
 T = 30
-cyls = example_setups.uniform_grid_NxN()
+cyls = example_setups.uniform_grid_NxN(4, 'd', 1, 3)
 
 print('num of cyls:', len(cyls))
 tds = time_domain_scattering(
@@ -46,13 +28,14 @@ tds = time_domain_scattering(
                         wv, 
                         T, 
                         sampnum = Nsamp, 
-                        modes=Nmodes,
+                        modes=5,
                         timeint=tint,
                         balanced_system=True,
                         scargs={'method':'explicit'}
                         )
 
 t = tds.times
+X, Y = np.meshgrid([7], [0])
 U = tds.make_U_sc(X, Y)
 
 #write out the data
