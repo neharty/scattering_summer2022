@@ -9,6 +9,8 @@ import tracemalloc
 import argparse
 import os
 
+tracemalloc.start()
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('Nt', help = 'number of time samples', type=int)
@@ -35,29 +37,8 @@ if wvarg == 'g':
     wv = gaussian(
             time_shift=tshift, 
             src_type='pointsource')
-elif wvarg == 'dg':
-    wv = gaussian_deriv(
-            time_shift=tshift,
-            src_type='pointsource')
-
-T = 60
-cyls = pickle.load(open(args.cylpath+'cyls.p','rb'))
-
-# measurement points
-thetas = np.arange(8)*np.pi/4
-r = np.array([2.5, 5, 7.5, 10])
-R, ANG = np.meshgrid(r, thetas)
-X = R*np.cos(ANG)
-Y = R*np.sin(ANG)
-
-# remove particles that overlap the measurement points
-for c in cyls:
-    p = c.pos
-    rad = c.radius # only works for uniformly distributed points
-    dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
-    mask = dist > rad
-    if mask.any():
-        del c
+T = 30
+cyls = example_setups.uniform_grid_NxN()
 
 print('num of cyls:', len(cyls))
 tds = time_domain_scattering(
@@ -77,3 +58,4 @@ U = tds.make_U_sc(X, Y)
 #write out the data
 snapshot = tracemalloc.take_snapshot()
 snapshot.dump('/home/n/nh287/scattering/tests/mem_tests/snap.dat')
+tracemalloc.stop()
