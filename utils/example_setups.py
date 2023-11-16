@@ -315,9 +315,27 @@ def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, c
     return cctmp.tolist()
 
 def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center=None):
-    N = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
-    spc = (2*R - 2*r)/(N-1)
-    return random_circ_hex(R, bc, r, spc, sum_num, impedance, center)
+    #actual number of circles needed
+    n_act = int(rho*R**2/r**2) + 1
+    
+    ncurr = 0
+    while ncurr < n_act:
+        #overfill the circle with higher rho
+        rho = rho*1.05
+        
+        N = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
+        spc = (2*R - 2*r)/(N-1)
+        tmp = random_circ_hex(R, bc, r, spc, sum_num, impedance, center)
+        ncurr = len(tmp)
+    
+    if ncurr > n_act:
+        #delete the unneeded circles
+        darr = np.random.randint(0, len(tmp), ncurr - n_act)
+        darr.sort()
+        darr = darr[::-1]
+        for i in darr:
+            del tmp[i]
+    return tmp
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None, clusterdir=True):
     #pos = np.loadtxt(os.environ.get('PYTHONPATH')+'utils/fig17_points.csv', delimiter=',')

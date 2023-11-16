@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 #%%
 wave = 'g'
-bc = 'i'
+bc = 'd'
 Nsamp = 12
 R = 10
 vf = 0.01
@@ -37,8 +37,8 @@ for seed in range(1, end+1):
 trace = trace/(end-1)
 for ridx in range(len(r)):
     plt.plot(times, trace[:, ridx])
-    
-arr = [[times[i], trace[i]] for i in range(len(trace))]
-#np.savetxt(os.path.join(path, dpath, posstr), arr)
+    arr = [[times[i], trace[i, ridx]] for i in range(len(trace))]
+    posstr = str(r[ridx])+'_'+str(theta)+'.dat'
+    np.savetxt(os.path.join(path, dpath, posstr), arr)
 
 
