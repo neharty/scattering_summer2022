@@ -2,7 +2,7 @@ import numpy as np
 from Ncyl.cqm import cyl, time_domain_scattering
 from waveforms.waveforms import gaussian, gaussian_deriv
 from utils import example_setups
-from integrators import IRK3
+from integrators.integrators import IRK3
 import pickle
 import tracemalloc
 
@@ -40,5 +40,15 @@ U = tds.make_U_sc(X, Y)
 
 #write out the data
 snapshot = tracemalloc.take_snapshot()
-snapshot.dump('/home/n/nh287/scattering/tests/mem_tests/snap.dat')
+ln = snapshot.statistics('lineno')
+tr = snapshot.statistics('traceback')
+
+with open('lineno.out', 'w') as f:
+        for line in ln:
+                    f.write(f"{line}\n")
+
+with open('traceback.out', 'w') as f:
+        for line in tr:
+                    f.write(f"{line}\n")
+
 tracemalloc.stop()
