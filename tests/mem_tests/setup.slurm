@@ -1,8 +1,8 @@
 #!/bin/bash -l
 #SBATCH --partition=public
-#SBATCH --mem=8GB
+#SBATCH --mem=4GB
 #SBATCH --ntasks=1
-#SBATCH --sockets-per-node=1
+#SBATCH --sockets-per-node=2
 #SBATCH --cores-per-socket=8
 #SBATCH --threads-per-core=1
 #SBATCH --hint=nomultithread
