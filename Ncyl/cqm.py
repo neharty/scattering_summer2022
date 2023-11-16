@@ -6,7 +6,7 @@ from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
 from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
-from multiprocessing import Process, Queue, cpu_count
+from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 
@@ -1109,56 +1109,28 @@ class time_domain_scattering(scattering):
         if self.use_conj:
             self.ks = self.ks[:self.sampnum//2]
         
-        def compute_block(a, b=None):
-            if b is None:
-                k_block = self.ks[a:]
-            else:
-                k_block = self.ks[a: b]
-            
-            if len(k_block) > 1:
-                print('fblk:', k_block[0], k_block[-1], len(k_block))
-            else:
-                print('fblk:', k_block, len(k_block))
-
-            kbrange = range(len(k_block))
-            
-            for c in self.cyls:
-                c.sum_index = None
-            
-            #find frequencies in parallel
-            sc = [scattering(
-                    copy.deepcopy(self.cyls), 
-                    self.rhsmat[a+i], 
-                    k=k_block[i],
-                    use_foldy_lax = self.fl,
-                    sum_index=self.modes,
-                    balanced_system=self.balanced_system,
-                    **self.scargs
-                ) 
-                for i in range(len(k_block))]
-            q = np.array([Queue() for i in kbrange])
-            p = np.array([
-                    Process(
-                            target=sc[i].make_u_sc_parallel, 
-                            args=(x, y, q[i])
-                        ) for i in kbrange
-                    ])
-            [p[i].start() for i in kbrange]
-            for i in kbrange:
-                self.u_sc[:, :, a+i] = q[i].get()
-            
-            [p[i].join() for i in kbrange]
-
+        def comp(idx):
+            sc = scattering(
+                copy.deepcopy(self.cyls), 
+                self.rhsmat[idx], 
+                k=self.ks[idx],
+                use_foldy_lax = self.fl,
+                sum_index=self.modes,
+                balanced_system=self.balanced_system,
+                **self.scargs
+            )
+            return sc.make_u_sc(x, y)
+        
         if self.use_par:
-            #parallel algorithm
-            rem = len(klen)%cpus
-            blocks = len(klen)//cpus
-            for b in range(blocks):
-                compute_block(b*cpus, (b+1)*cpus)
-            if rem > 0:
-                #finish remaining blocks
-                b = blocks*cpus
-                compute_block(b)
+            #spawn process pool
+            pool = Pool(processes = cpus)
+            #compute using the pool
+            tmp = pool.map(comp, range(len(self.ks)))
+            pool.close()
+            pool.join()
+            for i in range(len(self.ks)):
+                self.u_sc[:, :, i] = tmp[i]
+            del tmp
         else:
             #serial algorithm
             for i in klen:
@@ -1206,9 +1178,6 @@ class time_domain_scattering(scattering):
             rmat += self.pmats[idx][-1, i]*wmat[i]
 
         return self.zs[idx]*rmat
-            
-    def highorder_solve_par(self, idx, x, y, q):
-        q.put(self.highorder_solve(idx, x, y))
     
     def make_time_harmonic_soln_highorder(self, x, y):
         self.fzt_boundary_allcyls_highorder()
@@ -1220,45 +1189,19 @@ class time_domain_scattering(scattering):
         else:
             idxs = np.arange(len(self.times))
         
-        def compute_block(a, b=None):
-            if b is None:
-                idx_block = idxs[a:]
-            else:
-                idx_block = idxs[a: b]
-            
-            if len(idx_block) > 1:
-                print('fblk:', idx_block[0], idx_block[-1], len(idx_block))
-            else:
-                print('fblk:', idx_block, len(idx_block))
-
-            kbrange = range(len(idx_block))
-            
-            for c in self.cyls:
-                c.sum_index = None
-            
-            q = np.array([Queue() for i in kbrange])
-            p = np.array([
-                    Process(
-                            target=self.highorder_solve_par, 
-                            args=(idx_block[i], x, y, q[i])
-                        ) for i in kbrange
-                    ])
-            [p[i].start() for i in kbrange]
-            for i in kbrange:
-                self.u_sc[:, :, a+i] = q[i].get()
-            
-            [p[i].join() for i in kbrange]
-
+        def comp(idx):
+            return self.highorder_solve(idx, x, y)
+        
         if self.use_par:
-            #parallel algorithm
-            rem = len(klen)%cpus
-            blocks = len(klen)//cpus
-            for b in range(blocks):
-                compute_block(b*cpus, (b+1)*cpus)
-            if rem > 0:
-                #finish remaining blocks
-                b = blocks*cpus
-                compute_block(b)
+            #spawn process pool
+            pool = Pool(processes = cpus)
+            #compute using the pool
+            tmp = pool.map(comp, idxs)
+            pool.close()
+            pool.join()
+            for i in idxs:
+                self.u_sc[:, :, i] = tmp[i]
+            del tmp
         else:
             #serial algorithm
             for i in idxs:
