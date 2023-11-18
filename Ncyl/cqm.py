@@ -17,32 +17,6 @@ class cyl:
     '''
     Class to build 1 cylinder. Cylinders are identified by a
     number label, set by the user or by the scattering class.
-
-    Attributes
-    ----------
-
-    bc : char
-        boundary condition for the cylinder, d = Dirichlet,
-        n = Neumann, i = Impedance. If the BC is impedance,
-        then the impedance must be specified.
-
-    pos : 2D array
-        2D position of the cylinder
-
-    radius : int
-        radius of the cylinder
-
-    sum_index : int
-        related to the number of modes in the sum,
-        for a given value, the cylinder will have
-        2*sum_index modes
-
-    impedance : complex
-        impedance for the cylinder -- needed for
-        the impedance boundary condition
-
-    label : int
-        identifier for the cylinder, 0 by default
     '''
 
     def __init__(self, bc, pos, radius, sum_index = None, impedance = None):
@@ -65,86 +39,7 @@ class scattering(cyl):
     Class to solve the Helmholtz equation for an
     assortment of scatterers by constructing a
     scattering matrix system.
-
-    Attributes
-    ----------
-    
-    sum_index: int
-        index for all circles, if N_l is 
-        the sum idex, then the scatterer will
-        have 2N_l+1 modes.
-
-    sum_tol: float
-        Tolerance for the sum index formula.
-
-    gmres_tol: float
-        Tolerance for GMRES (see SciPy documentation).
-
-    freq: float or complex
-        Input frequency. 
-
-    wavespeed: float
-        Material wavespeed.
-
-    inc_angle: float
-        Angle between 0 and 2pi, as measured from the x-axis
-
-    precond: preconditioner
-        Class handle for the preconditioner, default is 
-        unpreconditioned.
-
-    precond_dist: float
-        Cutoff distance for the preconditioner. We assume a 
-        geometrically-motivated preconditioner to use in 
-        multiple scattering problems.
-
-    precond_matrix: np.array
-        Depricated, use the preconditioner class instead.
-    
-    pargs: dict
-        keyword arguments for preconditioner.
-
-    make_scat_matrix: bool
-        Option to make the full scattering matrix in the 
-        __init__() function.
-    
-    method: str, 'gmres' or 'explicit'
-        Method to compute the scattering coefficients. 
-        Either GMREs or an explicit LU solver (think
-        MATLAB's backslash function).
-
-    use_mat: bool
-        Use the explicit matrix instead of our fast
-        FFT convolution MVP function.
-
-    force_method: bool
-        Force using a particular method, regardless
-        of the input frequency.
-
-    gmres_restart: int
-        GMRES restart parameter. See SciPy documentation.
-
-    gmres_maxiter: int
-        GMRES maximum iteration parameter. See SciPy
-        documentation.
-
-    fast_matrix_build: bool
-        Build the explicit matrix using the root vector. 
-        This cuts down on the number of function evaluations,
-        instead exploiting the Toeplitz structure of the matrix
-        to copy entries.
-
-    use_2cyl_modes: bool
-        Use the matrix mode number a la Rohfritsch. Start with 
-        Antoine's formula, then keep increasing the modes in an 
-        auxiliary problem until a tolerance (sum_tol) is met.
-
-    Methods
-    -------
-
-
     '''
-
     
     def __init__(
             self, 
