@@ -1,21 +1,25 @@
+import tracemalloc
+tracemalloc.start(25)
+
 import numpy as np
 from Ncyl.cqm import cyl, time_domain_scattering
 from waveforms.waveforms import gaussian, gaussian_deriv
 from utils import example_setups
-from integrators.integrators import IRK3
+from integrators.integrators import IRK3, IRK5
 import pickle
-import tracemalloc
+import pympler
 
 import argparse
 import os
 
-tracemalloc.start()
+parser = argparse.ArgumentParser()
+parser.add_argument('Nt', type=int)
+args = parser.parse_args()
 
-Nsamp = 2**12
-tint = IRK3()
+Nsamp = 2**args.Nt
+tint = None
 
 tshift= 7
-
 wv = gaussian(
         time_shift=tshift, 
         src_type='pointsource')
@@ -43,11 +47,14 @@ snapshot = tracemalloc.take_snapshot()
 ln = snapshot.statistics('lineno')
 tr = snapshot.statistics('traceback')
 
-with open('lineno.out', 'w') as f:
+dpath='/home/n/nh287/scattering/tests/mem_tests/outp/' + str(args.Nt)
+os.makedirs(dpath, exist_ok=True)
+
+with open(dpath+'/lineno.out', 'w') as f:
         for line in ln:
                     f.write(f"{line}\n")
 
-with open('traceback.out', 'w') as f:
+with open(dpath+'/traceback.out', 'w') as f:
         for line in tr:
                     f.write(f"{line}\n")
 

@@ -10,6 +10,9 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 
+#set up process pool
+pool = Pool(processes = cpu_count())
+
 class cyl:
     '''
     Class to build 1 cylinder. Cylinders are identified by a
@@ -775,6 +778,10 @@ class time_domain_scattering(scattering):
         self.timeint = timeint
         self.balanced_system = balanced_system
         
+        #set up process pool
+        #if self.use_par:
+        #    self.pool = Pool(processes = self.cpus)
+
         self.init_vars()
         
     def init_vars(self):
@@ -1122,8 +1129,6 @@ class time_domain_scattering(scattering):
             return sc.make_u_sc(x, y)
         
         if self.use_par:
-            #spawn process pool
-            pool = Pool(processes = cpus)
             #compute using the pool
             tmp = pool.map(comp, range(len(self.ks)))
             pool.close()
@@ -1133,7 +1138,7 @@ class time_domain_scattering(scattering):
             del tmp
         else:
             #serial algorithm
-            for i in klen:
+            for i in range(len(self.ks)):
                 sc = scattering(
                         copy.deepcopy(self.cyls), 
                         self.rhsmat[i], 

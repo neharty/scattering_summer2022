@@ -2,8 +2,9 @@ BC=n
 RM=10
 RC=0.05
 WV=g
-VF=0.01
 NT=12
+for VF in 0.01 0.05 0.1 0.2 0.3
+do
 for SD in {900..905}
 do
     CP=/home/n/nh287/scattering/tests/time_domain_tests/average_fl_waveform/cyls/${BC}/${RM}/${VF}/${RC}/${SD}/
@@ -11,4 +12,4 @@ do
     export BC RM RC WV NC NT SD CP DO
     sbatch --job-name=avg_${WV}_${BC}_${VF}_${SD} setup.slurm
 done
-
+done
