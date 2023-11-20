@@ -992,15 +992,16 @@ class time_domain_scattering(scattering):
 
     def fzt_boundary_allcyls(self):
         #only works for BDF2
+        global rhsmat
         rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-        self.rhsmat = [None for n in range(len(self.times))]
+        rhsmat = [None for n in range(len(self.times))]
         for i in range(len(self.times)):
             if self.fl:
-                self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
+                rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
             else:
-                self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+                rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
         
-        return self.rhsmat
+        return rhsmat
     
     def make_time_harmonic_soln(self, x, y):
         self.fzt_boundary_allcyls()
@@ -1014,7 +1015,7 @@ class time_domain_scattering(scattering):
         def comp(idx):
             sc = scattering(
                 copy.deepcopy(self.cyls), 
-                self.rhsmat[idx], 
+                rhsmat[idx], 
                 k=self.ks[idx],
                 use_foldy_lax = self.fl,
                 sum_index=self.modes,
@@ -1025,18 +1026,19 @@ class time_domain_scattering(scattering):
         
         if self.use_par:
             #compute using the pool
-            tmp = pool.map(comp, range(len(self.ks)))
+            pool = Pool(processes=cpus)
+            tmp = pool.imap(comp, range(len(self.ks)))
             pool.close()
             pool.join()
-            for i in range(len(self.ks)):
-                self.u_sc[:, :, i] = tmp[i]
+            for res in tmp:
+                self.u_sc[:, :, i] = res
             del tmp
         else:
             #serial algorithm
             for i in range(len(self.ks)):
                 sc = scattering(
                         copy.deepcopy(self.cyls), 
-                        self.rhsmat[i], 
+                        rhsmat[i], 
                         k=self.ks[i],
                         sum_index=self.modes,
                         balanced_system=self.balanced_system,
@@ -1053,11 +1055,12 @@ class time_domain_scattering(scattering):
     
     def fzt_boundary_allcyls_highorder(self):
         rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-        self.rhsmat = [[None for n in range(len(self.times))] for c in range(len(self.timeint.c))]
+        global rhsmat
+        rhsmat = [[None for n in range(len(self.times))] for c in range(len(self.timeint.c))]
         for j in range(len(self.timeint.c)):
             for i in range(len(self.times)):
-                self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
-        return self.rhsmat
+                rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
+        return rhsmat
     
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt
@@ -1065,7 +1068,7 @@ class time_domain_scattering(scattering):
         for i in range(len(ks)):
             sc = scattering(
                     copy.deepcopy(self.cyls), 
-                    self.rhsmat[i][idx], 
+                    rhsmat[i][idx], 
                     k=ks[i],
                     sum_index=self.modes,
                     balanced_system=self.balanced_system,

@@ -49,15 +49,6 @@ R, ANG = np.meshgrid(r, thetas)
 X = R*np.cos(ANG)
 Y = R*np.sin(ANG)
 
-# remove particles that overlap the measurement points
-for c in cyls:
-    p = c.pos
-    rad = c.radius # only works for uniformly distributed points
-    dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
-    mask = dist > rad
-    if mask.any():
-        del c
-
 print('num of cyls:', len(cyls))
 tds = time_domain_scattering(
                         cyls, 

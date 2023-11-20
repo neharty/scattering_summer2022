@@ -304,17 +304,28 @@ def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None):
 
     return cyls
 
-def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, center=None):
+def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, center=None, measurement_points=None):
     spc = initspace
     N = int((2*rmax - 2*radius)/spc)
     print(N)
     ctmp = random_hexagon(N, bc, radius, spc, 0, sum_num, impedance, center)
+    
+    if measurement_points is not None:
+        X, Y = measurement_points
+        for c in ctmp:
+            p = c.pos
+            rad = c.radius
+            dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
+            mask = dist > rad
+            if mask.any():
+                del c
+    
     rmask = np.array([np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp])
     rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
     cctmp = np.asarray(ctmp)[rmask*rmask2]
     return cctmp.tolist()
 
-def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center=None):
+def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center=None, measurement_points=None):
     #actual number of circles needed
     n_act = int(rho*R**2/r**2) + 1
     
@@ -325,7 +336,7 @@ def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center
         
         N = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
         spc = (2*R - 2*r)/(N-1)
-        tmp = random_circ_hex(R, bc, r, spc, sum_num, impedance, center)
+        tmp = random_circ_hex(R, bc, r, spc, sum_num, impedance, center, measurement_points)
         ncurr = len(tmp)
     
     if ncurr > n_act:

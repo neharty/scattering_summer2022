@@ -22,7 +22,7 @@ wv = gaussian(
             sigma=1/n**2,
             amp = n/np.sqrt(np.pi))
 
-tint = IRK3()
+tint = None
 
 #%%
 # fig 6a

@@ -31,10 +31,25 @@ def imp(k):
     impinf = -1/(1+mu*(sig/(-1j*k))**b)
     return tmp*impinf
 
+thetas = np.arange(8)*np.pi/4
+r = np.array([Rmax/4, Rmax/2, 3*Rmax/4, Rmax])
+R, ANG = np.meshgrid(r, thetas)
+X = R*np.cos(ANG)
+Y = R*np.sin(ANG)
+
 if args.bc == 'i':
-    cyls = example_setups.random_circ_hex_vol_frac(Rmax, args.bc, radius, args.rho, impedance=imp)
+    cyls = example_setups.random_circ_hex_vol_frac(Rmax, 
+                                                   args.bc, 
+                                                   radius, 
+                                                   args.rho, 
+                                                   impedance=imp,
+                                                   measurement_points=(X, Y))
 else:
-    cyls = example_setups.random_circ_hex_vol_frac(Rmax, args.bc, radius, args.rho)
+    cyls = example_setups.random_circ_hex_vol_frac(Rmax, 
+                                                   args.bc, 
+                                                   radius, 
+                                                   args.rho,
+                                                   measurement_points=(X, Y))
 print('cyls generated')
 
 #data path
