@@ -576,7 +576,7 @@ class scattering(cyl):
             try:
                 soln = np.linalg.solve(self.scat_mat, self.rhs)
             except:
-                print('singular matrix', np.linalg.norm(rhs))
+                print('singular matrix', np.linalg.norm(self.rhs))
                 return np.zeros(len(self.rhs))
             print('k done:', self.k)
             return soln
