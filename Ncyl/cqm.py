@@ -568,13 +568,13 @@ class scattering(cyl):
                 self.scat_mat = self.make_scattering_blocks()
 
             #sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
-            rhs = np.array(self.rhs, dtype=np.complex128)
+            #rhs = np.array(self.rhs, dtype=np.complex128)
             if not np.isfinite(self.scat_mat).all():
                 self.fast_matrix_build = False
                 self.scat_mat = self.make_scattering_blocks()
             
             try:
-                soln = np.linalg.solve(self.scat_mat, rhs)
+                soln = np.linalg.solve(self.scat_mat, self.rhs)
             except:
                 print('singular matrix', np.linalg.norm(rhs))
                 return np.zeros(len(self.rhs))
