@@ -5,9 +5,9 @@ from waveforms.waveforms import gaussian_deriv, gaussian
 from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 import tracemalloc
+
 #%%
 #init variables
-tracemalloc.start()
 
 tau=1
 n = 2/tau
@@ -22,11 +22,21 @@ wv = gaussian(
             sigma=1/n**2,
             amp = n/np.sqrt(np.pi))
 
-tint = None
+tint = IRK3()
 
+thetas = np.arange(8)*np.pi/4
+r = np.array([2.5, 5, 7.5, 10])
+R, ANG = np.meshgrid(r, thetas)
+X = R*np.cos(ANG)
+Y = R*np.sin(ANG)
+
+np.random.seed(195)
+Rmax = 10
+radius = 0.05
+cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.005, measurement_points=(X, Y))
+print(len(cyls))
 #%%
-# fig 6a
-cyls = [cyl('n', [-1.5, 0], 1), cyl('n', [1.5, 0], 1)]
+#run sim
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -34,22 +44,8 @@ tds = time_domain_scattering(
                              modes=Nmode,
                              sampnum=Nsamp,
                              timeint=tint,
+                             use_par=False,
                              scargs={'method':'explicit'}
                              )
 
-R = 10
-thetas = np.arange(7)*np.pi/6
-x = R*np.cos(thetas)
-y = R*np.sin(thetas)
-X, Y = np.meshgrid(x, y)
-
 Usc = tds.make_U_sc(X, Y)
-
-snapshot = tracemalloc.take_snapshot()
-top_stats = snapshot.statistics('lineno')
-
-print("[ Top 10 ]")
-for stat in top_stats[:10]:
-    print(stat)
-#%%
-plt.plot(tds.times, Usc[0,0,:])

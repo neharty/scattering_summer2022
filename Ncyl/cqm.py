@@ -10,9 +10,6 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 
-#set up process pool
-pool = Pool(processes = cpu_count())
-
 class cyl:
     '''
     Class to build 1 cylinder. Cylinders are identified by a
@@ -570,18 +567,14 @@ class scattering(cyl):
             if self.scat_mat is None:
                 self.scat_mat = self.make_scattering_blocks()
 
-            sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
+            #sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
             rhs = np.array(self.rhs, dtype=np.complex128)
-            # if self.precond:
-            #     pc_mat = self.precond(self).inv_mat
-            #     return np.linalg.solve(pc_mat @ sm, pc_mat @ rhs)
-            # else:
-            if not np.isfinite(sm).all():
+            if not np.isfinite(self.scat_mat).all():
                 self.fast_matrix_build = False
-                sm = self.make_scattering_blocks()
+                self.scat_mat = self.make_scattering_blocks()
             
             try:
-                soln = np.linalg.solve(sm, rhs)
+                soln = np.linalg.solve(self.scat_mat, rhs)
             except:
                 print('singular matrix', np.linalg.norm(rhs))
                 return np.zeros(len(self.rhs))
