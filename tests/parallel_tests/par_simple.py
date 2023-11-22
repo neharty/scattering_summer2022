@@ -13,14 +13,13 @@ tau=1
 n = 2/tau
 T = 32
 
-Nmode = 2
-Nsamp = 2**10
+Nmode = 1
+Nsamp = 2**15
 
 #point source
 wv = gaussian(
-            time_shift=4,
-            sigma=1/n**2,
-            amp = n/np.sqrt(np.pi))
+            time_shift=5,
+            src_type='pointsource')
 
 tint = IRK3()
 
@@ -45,6 +44,7 @@ tds = time_domain_scattering(
                              sampnum=Nsamp,
                              timeint=tint,
                              use_par=False,
+                             balanced_system=True,
                              scargs={'method':'explicit'}
                              )
 

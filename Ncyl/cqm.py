@@ -6,7 +6,7 @@ from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
 from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
-from multiprocess import Process, Pool, cpu_count
+from multiprocessing import Process, Pool, cpu_count
 import copy
 import gc
 
@@ -437,7 +437,8 @@ class scattering(cyl):
                     else:
                         scat_mat[i][j] = self.make_mul_scattering_block(self.cyls[i], self.cyls[j])
         return scat_mat
-
+    
+    @profile
     def make_scattering_blocks(self):
         if self.fl:
             self.scat_mat = 1j*np.zeros((len(self.cyls), len(self.cyls)))
@@ -508,6 +509,7 @@ class scattering(cyl):
         self.gmres_res[self.iter] = nrm
         self.iter += 1
 
+    @profile
     def scattering_coeffs(self):
         if self.method == 'gmres':
             #check if rhs is zero-ish
@@ -639,7 +641,7 @@ class time_domain_scattering(scattering):
                  fft_tol = 1e-10,
                  sampnum = None,
                  modes = 8,
-                 use_par = True,
+                 use_par = False,
                  cpus = None,
                  use_conj = True,
                  use_foldy_lax=False,
@@ -760,6 +762,7 @@ class time_domain_scattering(scattering):
         grnmode = lambda x, y: -coeff*1j*hankel1(0, self.ks*dist(x, y))/4
         return grnmode(x, y)
     
+    @profile
     def fd_bdy(self, cyl, coeffs):
         bc = cyl.bc
         if self.balanced_system:
@@ -841,7 +844,8 @@ class time_domain_scattering(scattering):
             return -z_n - z_d 
         else:
             return -zdat
-        
+    
+    @profile
     def fourier_coeffs_bdy(self, v):
         #project the vector onto the fourier basis using ffts
         if self.balanced_system:
@@ -1055,6 +1059,7 @@ class time_domain_scattering(scattering):
                 rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
         return rhsmat
     
+    @profile
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt
         wmat = [None for k in ks]
@@ -1075,6 +1080,7 @@ class time_domain_scattering(scattering):
 
         return self.zs[idx]*rmat
     
+    @profile
     def make_time_harmonic_soln_highorder(self, x, y):
         self.fzt_boundary_allcyls_highorder()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
