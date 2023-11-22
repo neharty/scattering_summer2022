@@ -13,7 +13,7 @@ tau=1
 n = 2/tau
 T = 32
 
-Nmode = 16
+Nmode = 2
 Nsamp = 2**10
 
 #point source
@@ -33,7 +33,7 @@ Y = R*np.sin(ANG)
 np.random.seed(195)
 Rmax = 10
 radius = 0.05
-cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.005, measurement_points=(X, Y))
+cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.05, measurement_points=(X, Y))
 print(len(cyls))
 #%%
 #run sim
