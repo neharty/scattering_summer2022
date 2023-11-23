@@ -4,7 +4,7 @@ import os
 #%%
 wave = 'g'
 bc = 'd'
-Nsamp = 12
+Nsamp = 15
 R = 10
 vf = 0.01
 r = 0.05
@@ -15,14 +15,13 @@ dpath = os.path.join('waveform_'+wave,
                      'R_'+str(R),
                      'vf_'+str(vf),
                      'rc_'+str(r))
-
-theta = ' 0.785'
+thetas = np.arange(8)*np.pi/4
+thetas = [f'{t: .3f}' for t in thetas]
+theta = thetas[7]
 r = [' 2.500', ' 5.000', ' 7.500', ' 10.000']
-end = 150
+end = 200
 trace = np.zeros((2**Nsamp + 1, 4))
 for seed in range(1, end+1):
-    if seed == 170:
-        continue
     for ridx in range(len(r)):
         posstr = str(r[ridx])+'_'+str(theta)+'.dat'
         fpath = os.path.join(path, 
