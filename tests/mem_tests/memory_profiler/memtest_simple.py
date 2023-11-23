@@ -29,10 +29,17 @@ R, ANG = np.meshgrid(r, thetas)
 X = R*np.cos(ANG)
 Y = R*np.sin(ANG)
 
-np.random.seed(195)
-Rmax = 10
-radius = 0.05
-cyls = example_setups.random_circ_hex_vol_frac(Rmax, 'd', radius, 0.05, measurement_points=(X, Y))
+# np.random.seed(195)
+# Rmax = 10
+# radius = 0.05
+# cyls = example_setups.random_circ_hex_vol_frac(
+#     Rmax, 
+#     'd', 
+#     radius, 
+#     0.005, 
+#     measurement_points=(X, Y)
+#     )
+cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
 print(len(cyls))
 #%%
 #run sim
@@ -43,8 +50,9 @@ tds = time_domain_scattering(
                              modes=Nmode,
                              sampnum=Nsamp,
                              timeint=tint,
-                             use_par=False,
+                             use_par=True,
                              balanced_system=True,
+                             use_disk=True,
                              scargs={'method':'explicit'}
                              )
 

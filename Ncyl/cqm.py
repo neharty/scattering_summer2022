@@ -6,9 +6,10 @@ from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
 from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
-from multiprocessing import Process, Pool, cpu_count
+from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
+import uuid
 
 class cyl:
     '''
@@ -26,6 +27,7 @@ class cyl:
             print(impedance)
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
+        self.uid = None #used for disk writes
         
     def get_label(self):
         return self.label
@@ -69,11 +71,7 @@ class scattering(cyl):
         self.cyls = cyls
         self.rhs = rhs
 
-        # create 0-indexed labels for cylinders
-        for i in range(len(self.cyls)):
-            self.cyls[i].label = i
-
-        self.labels = np.array([int(self.cyls[i].label) for i in range(len(self.cyls))])
+        self.labels = np.arange(len(self.cyls))
         self.sum_tol = sum_tol
 
         self.wavespeed = wavespeed
@@ -133,7 +131,7 @@ class scattering(cyl):
         else:
             for l in self.labels:
                 self.cyls[l].sum_index = sum_index
-
+                
         # make lengths of coefficient vector blocks for MVP algorithm
         self.lengths = np.zeros(len(self.cyls) + 1, dtype=int)
         for i in self.labels:
@@ -438,7 +436,6 @@ class scattering(cyl):
                         scat_mat[i][j] = self.make_mul_scattering_block(self.cyls[i], self.cyls[j])
         return scat_mat
     
-    @profile
     def make_scattering_blocks(self):
         if self.fl:
             self.scat_mat = 1j*np.zeros((len(self.cyls), len(self.cyls)))
@@ -509,7 +506,6 @@ class scattering(cyl):
         self.gmres_res[self.iter] = nrm
         self.iter += 1
 
-    @profile
     def scattering_coeffs(self):
         if self.method == 'gmres':
             #check if rhs is zero-ish
@@ -647,6 +643,7 @@ class time_domain_scattering(scattering):
                  use_foldy_lax=False,
                  timeint = None,
                  balanced_system = False, 
+                 use_disk = False,
                  wvargs={},
                  scargs = {}
                  ):
@@ -667,14 +664,25 @@ class time_domain_scattering(scattering):
         self.fl = use_foldy_lax
         self.timeint = timeint
         self.balanced_system = balanced_system
+        self.use_disk = use_disk
         
-        #set up process pool
-        #if self.use_par:
-        #    self.pool = Pool(processes = self.cpus)
-
+        # create 0-indexed labels for cylinders
+        i = 0
+        for c in self.cyls:
+            c.label = i
+            i+=1
+            
         self.init_vars()
         
     def init_vars(self):
+        if self.use_disk:
+            import os
+            outpath = os.getcwd()
+            self.outpath = outpath+'/tmp/'
+            print('writing rhs data to ', self.outpath)
+            self.uid = str(uuid.uuid4()) #uid for disk writing
+            os.makedirs(self.outpath, exist_ok=True)
+            
         #setup cqm variables
         self.dt = self.end_time/self.sampnum
         self.times = np.linspace(0, self.end_time, self.sampnum+1)
@@ -687,7 +695,7 @@ class time_domain_scattering(scattering):
             #IRK methods
             self.lam = max(self.dt**((self.timeint.order + 1)/self.sampnum), 
                            eps**(1/(2*self.sampnum)))
-        
+            
         zN = np.exp(-2*1j*np.pi*np.arange(0, self.sampnum+1)/(self.sampnum+1))
         self.zs = zN*self.lam
         
@@ -762,7 +770,6 @@ class time_domain_scattering(scattering):
         grnmode = lambda x, y: -coeff*1j*hankel1(0, self.ks*dist(x, y))/4
         return grnmode(x, y)
     
-    @profile
     def fd_bdy(self, cyl, coeffs):
         bc = cyl.bc
         if self.balanced_system:
@@ -845,7 +852,6 @@ class time_domain_scattering(scattering):
         else:
             return -zdat
     
-    @profile
     def fourier_coeffs_bdy(self, v):
         #project the vector onto the fourier basis using ffts
         if self.balanced_system:
@@ -989,17 +995,29 @@ class time_domain_scattering(scattering):
 
     def fzt_boundary_allcyls(self):
         #only works for BDF2
-        global rhsmat
-        rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-        rhsmat = [None for n in range(len(self.times))]
-        for i in range(len(self.times)):
-            if self.fl:
-                rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
+        def writeout(c):
+            tmp = self.fzt_boundary_1cyl(c)
+            outstr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
+            np.savetxt(outstr, tmp)
+            
+        if self.use_disk:
+            if self.use_par:
+                pool = Pool(processes=self.cpus)
+                pool.map(writeout, [c for c in self.cyls])
+                pool.close()
+                pool.join()
             else:
-                rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
-        
-        return rhsmat
-    
+                for c in self.cyls:
+                    writeout(c)
+        else:
+            rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+            self.rhsmat = [None for n in range(len(self.times))]
+            for i in range(len(self.times)):
+                if self.fl:
+                    self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
+                else:
+                    self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+   
     def make_time_harmonic_soln(self, x, y):
         self.fzt_boundary_allcyls()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
@@ -1010,9 +1028,19 @@ class time_domain_scattering(scattering):
             self.ks = self.ks[:self.sampnum//2]
         
         def comp(idx):
+            if self.use_disk:
+                rhs = []
+                for c in self.cyls:
+                    instr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
+                    tmp = np.loadtxt(instr, dtype=np.complex128)
+                    rhs += [tmp[:, idx]]
+                rhs = np.hstack(rhs)
+            else:
+                rhs = self.rhsmat[idx]
+                
             sc = scattering(
                 copy.deepcopy(self.cyls), 
-                rhsmat[idx], 
+                rhs, 
                 k=self.ks[idx],
                 use_foldy_lax = self.fl,
                 sum_index=self.modes,
@@ -1024,24 +1052,16 @@ class time_domain_scattering(scattering):
         if self.use_par:
             #compute using the pool
             pool = Pool(processes=cpus)
-            tmp = pool.imap(comp, range(len(self.ks)))
+            tmp = pool.map(comp, range(len(self.ks)))
             pool.close()
             pool.join()
-            for res in tmp:
-                self.u_sc[:, :, i] = res
+            for i in range(len(tmp)):
+                self.u_sc[:, :, i] = tmp[i]
             del tmp
         else:
             #serial algorithm
             for i in range(len(self.ks)):
-                sc = scattering(
-                        copy.deepcopy(self.cyls), 
-                        rhsmat[i], 
-                        k=self.ks[i],
-                        sum_index=self.modes,
-                        balanced_system=self.balanced_system,
-                        **self.scargs
-                    )
-                self.u_sc[:, :, i] = sc.make_u_sc(x[:, :], y[:, :])
+                self.u_sc[:, :, i] = comp(i)
         
         #copy solutions as conjugates for negative frequency components
         if self.use_conj:
@@ -1051,22 +1071,46 @@ class time_domain_scattering(scattering):
         return self.u_sc
     
     def fzt_boundary_allcyls_highorder(self):
-        rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-        global rhsmat
-        rhsmat = [[None for n in range(len(self.times))] for c in range(len(self.timeint.c))]
-        for j in range(len(self.timeint.c)):
-            for i in range(len(self.times)):
-                rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
-        return rhsmat
+        def writeout(c):
+            tmp = self.fzt_boundary_1cyl(c)
+            for j in range(len(self.timeint.c)):
+                outstr = self.outpath+str(c.label)+'_'+str(j)+'_'+self.uid+'.rhs'
+                np.savetxt(outstr, tmp[j])
+            
+        if self.use_disk:
+            if self.use_par:
+                pool = Pool(processes=self.cpus)
+                pool.map(writeout, [c for c in self.cyls])
+                pool.close()
+                pool.join()
+            else:
+                for c in self.cyls:
+                    writeout(c)
+        else:
+            rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+            self.rhsmat = [[None for n in range(len(self.times))] for c in range(len(self.timeint.c))]
+            for j in range(len(self.timeint.c)):
+                for i in range(len(self.times)):
+                    self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
     
-    @profile
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt
         wmat = [None for k in ks]
+                 
         for i in range(len(ks)):
+            if self.use_disk:
+                rhs = []
+                for c in self.cyls:
+                    instr = self.outpath+str(c.label)+'_'+str(i)+'_'+self.uid+'.rhs'
+                    tmp = np.loadtxt(instr, dtype=np.complex128)
+                    rhs += [tmp[:, idx]]
+                rhs = np.hstack(rhs)
+            else:
+                rhs = self.rhsmat[idx]
+                
             sc = scattering(
                     copy.deepcopy(self.cyls), 
-                    rhsmat[i][idx], 
+                    rhs, 
                     k=ks[i],
                     sum_index=self.modes,
                     balanced_system=self.balanced_system,
@@ -1080,7 +1124,6 @@ class time_domain_scattering(scattering):
 
         return self.zs[idx]*rmat
     
-    @profile
     def make_time_harmonic_soln_highorder(self, x, y):
         self.fzt_boundary_allcyls_highorder()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
