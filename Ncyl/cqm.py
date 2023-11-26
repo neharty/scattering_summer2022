@@ -1184,7 +1184,7 @@ class time_domain_scattering(scattering):
             
             coeffs = self.ptsrc_init(0)
             w = self.fd_inc_wave(x, y, coeffs)
-            return (1/self.lammat)*ifft(w)
+            self.U_inc = (1/self.lammat)*ifft(w)
         else:
             wmat = [None for c in self.timeint.c]
             
@@ -1208,7 +1208,8 @@ class time_domain_scattering(scattering):
 
             rmat = self.zs*rmat
             self.U_inc = (1/self.lammat)*ifft(rmat)
-            return self.U_inc
+        
+        return self.U_inc.real
 
     def make_U(self, x, y):
         self.make_U_sc(x, y)
