@@ -3,7 +3,7 @@ RM=10
 RC=0.05
 WV=g
 NT=15
-for VF in 0.05 0.1 
+for VF in 0.01 0.05 0.1 
 do
 for SD in {900..905}
 do
