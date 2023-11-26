@@ -11,10 +11,11 @@ import os
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('seed', help='random number gen seed', type=int)
 parser.add_argument('Nt', help = 'number of time samples', type=int)
 parser.add_argument('wvf', help='waveform, g or dg')
 parser.add_argument('rho', help='volume fill percentage', type=float)
-parser.add_argument('usedisk', help='flag to write data to disk', type=bool)
+parser.add_argument('usedisk', help='flag to write data to disk')
 parser.add_argument('fout', help='full data output path')
 
 args = parser.parse_args()
@@ -52,11 +53,18 @@ Y = R*np.sin(ANG)
 
 radius = 0.05 #small circ radius
 rho = args.rho #volume fraction
+np.random.seed(args.seed)
 cyls = example_setups.random_circ_hex_vol_frac(
     10, 
     'd', 
     radius, 
+    rho,
     measurement_points=(X, Y))
+
+if args.usedisk == 'False':
+    usedisk=False
+else:
+    usedisk=True
 
 print('num of cyls:', len(cyls))
 tds = time_domain_scattering(
@@ -68,7 +76,7 @@ tds = time_domain_scattering(
                         timeint=tint,
                         balanced_system=True,
                         use_par=True,
-                        use_disk=args.usedisk,
+                        use_disk=usedisk,
                         scargs={'method':'explicit'}
                         )
 
