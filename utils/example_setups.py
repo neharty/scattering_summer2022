@@ -231,13 +231,13 @@ def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=No
     perturb()
     caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
     cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
-    print(caverage, cvariance)
+    #print(caverage, cvariance)
     while np.abs(paverage - caverage) >= 1e-3 and np.abs(pvariance - cvariance) >= 1e-3:
         paverage, pvariance = caverage, cvariance
         perturb()
         caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
         cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
-        print(caverage, cvariance)
+        #print(caverage, cvariance)
 
     origins = np.array([[xpos[i], ypos[i]] for i in range(cnum)])
 
@@ -341,11 +341,14 @@ def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center
     
     if ncurr > n_act:
         #delete the unneeded circles
-        darr = np.random.randint(0, len(tmp), ncurr - n_act)
+        darr = np.arange(0, len(tmp))
+        np.random.shuffle(darr)
+        darr = darr[:ncurr - n_act]
         darr.sort()
         darr = darr[::-1]
         for i in darr:
             del tmp[i]
+
     return tmp
 
 def fig17_pos(bc, radius, sum_num=None, impedance=None, clusterdir=True):
