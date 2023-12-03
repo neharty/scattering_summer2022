@@ -14,20 +14,17 @@ n = 2/tau
 T = 32
 
 Nmode = 1
-Nsamp = 2**15
+Nsamp = 2**10
 
 #point source
 wv = gaussian(
-            time_shift=5,
-            src_type='pointsource')
+            time_shift=6)
 
-tint = IRK3()
+tint = None
 
-thetas = np.arange(8)*np.pi/4
-r = np.array([2.5, 5, 7.5, 10])
-R, ANG = np.meshgrid(r, thetas)
-X = R*np.cos(ANG)
-Y = R*np.sin(ANG)
+x = [6]
+y = [0]
+X, Y = np.meshgrid(x, y)
 
 # np.random.seed(195)
 # Rmax = 10
@@ -50,10 +47,12 @@ tds = time_domain_scattering(
                              modes=Nmode,
                              sampnum=Nsamp,
                              timeint=tint,
-                             use_par=True,
+                             use_par=False,
                              balanced_system=True,
-                             use_disk=True,
+                             use_disk=False,
                              scargs={'method':'explicit'}
                              )
 
 Usc = tds.make_U_sc(X, Y)
+#%%
+plt.plot(tds.times, Usc[0,0,:])

@@ -113,7 +113,7 @@ def uniform_grating(N, bcs, radius, spacing, sum_num = None, impedance = None):
     return cyls
 
 def rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center = None):
-    print('rect_lat imp', impedance)
+    #print('rect_lat imp', impedance)
     cyls = [None for i in range(Nx*Ny)]
     
     if Nx%2 == 1:
@@ -150,7 +150,7 @@ def rectangular_lattice_1bc(Nx, Ny, bc, radius, xspace, yspace, sum_num=None, im
     return rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance=impedance, center=center)
 
 def triangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=None, impedance = None, center=None):
-    print(bcs)
+    #print(bcs)
     if type(bcs) is str:
         bcs=[bcs for i in range(Nx)]
     cyls_main = rectangular_lattice(Nx, Ny, bcs, radius, xspace, yspace, sum_num=sum_num, impedance = impedance, center=center)
@@ -310,15 +310,16 @@ def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, c
     print(N)
     ctmp = random_hexagon(N, bc, radius, spc, 0, sum_num, impedance, center)
     
+    #delete circles overlapping a measurement point
     if measurement_points is not None:
         X, Y = measurement_points
         for c in ctmp:
             p = c.pos
             rad = c.radius
             dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
-            mask = dist > rad
-            if mask.any():
-                del c
+            mask = dist <= rad
+            if np.any(mask):
+                ctmp.remove(c)
     
     rmask = np.array([np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp])
     rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
