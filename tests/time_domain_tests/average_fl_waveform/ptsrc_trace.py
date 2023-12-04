@@ -7,12 +7,13 @@ from integrators.integrators import IRK3, IRK5
 from scipy.special import hankel1
 
 wv = gaussian(time_shift=5,
+              sigma=2,
               src_type='pointsource')
 tint = None
 tds = time_domain_scattering(
                         [cyl('d', [-100, 0], 1)], 
                         wv, 
-                        40, 
+                        30, 
                         sampnum = 2**12, 
                         modes=1,
                         timeint=tint,
@@ -22,7 +23,7 @@ tds = time_domain_scattering(
                         )
 
 t = tds.times
-x=[2.5]
+x=[5]
 X, Y = np.meshgrid(x, [0])
 U = tds.make_U_inc(X, Y)
 
