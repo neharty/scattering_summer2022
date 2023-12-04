@@ -22,17 +22,18 @@ print(args)
 Nt = args.Nt
 Nsamp = 2**Nt
 wvarg = args.wvf
-tint = IRK3()
+tint = IRK5()
 fout = args.fout
 
-Nmodes = 1
+Nmodes = 4
 dataout = args.fout
 
 tshift=5
 
 if wvarg == 'g':
     wv = gaussian(
-            time_shift=tshift, 
+            time_shift=tshift,
+            sigma=((0.4)**2)/(np.log(2)),
             src_type='pointsource')
 elif wvarg == 'dg':
     wv = gaussian_deriv(
@@ -72,6 +73,12 @@ if not os.path.exists(dataout):
 
 for ang in range(len(thetas)):
     for rdx in range(len(r)):
-        fname = f'{r[rdx]: .3f}_{thetas[ang]: .3f}.dat'
+        fname = f'{r[rdx]:.3f}_{thetas[ang]:.3f}.dat'
         arr = [[t[i], U[ang, rdx, i]] for i in range(len(t))]
         np.savetxt(fout+fname, arr)
+
+#clean up the tmp folder
+if tds.use_disk:
+    uuid = tds.uid
+    path = tds.outpath 
+    os.system('rm '+path+'*'+uuid+'.rhs')

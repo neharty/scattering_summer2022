@@ -1,9 +1,9 @@
 BC=d
 RM=10
-RC=0.05
+RC=0.2
 WV=g
-NT=15
-for VF in 0.01 0.05 0.1 
+NT=4
+for VF in 0.05
 do
 for SD in {900..905}
 do

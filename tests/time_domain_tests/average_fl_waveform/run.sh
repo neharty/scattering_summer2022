@@ -1,11 +1,11 @@
 RM=10
-RC=0.05
+RC=0.2
 WV=g
 for BC in d
 do
-for VF in 0.01
+for VF in 0.05 0.15 0.3
 do
-for NT in 15
+for NT in 14
 do
 for SD in {1..200}
 do
