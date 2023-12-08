@@ -637,15 +637,15 @@ class time_domain_scattering(scattering):
                  fft_tol = 1e-10,
                  sampnum = None,
                  modes = 8,
-                 use_par = False,
-                 cpus = None,
-                 use_conj = True,
+                 use_par=False,
+                 cpus=None,
+                 use_conj=True,
                  use_foldy_lax=False,
-                 timeint = None,
-                 balanced_system = False, 
-                 use_disk = False,
+                 timeint=None,
+                 balanced_system=True, 
+                 use_disk=False,
                  wvargs={},
-                 scargs = {}
+                 scargs={}
                  ):
         self.cyls = cyls
         self.waveform = waveform
@@ -1037,7 +1037,10 @@ class time_domain_scattering(scattering):
                 rhs = np.hstack(rhs)
             else:
                 rhs = self.rhsmat[idx]
-                
+            
+            if np.linalg.norm(rhs) < self.fft_tol:
+                return 1j*np.zeros(x.shape)
+            
             sc = scattering(
                 copy.deepcopy(self.cyls), 
                 rhs, 
@@ -1106,17 +1109,20 @@ class time_domain_scattering(scattering):
                     rhs += [tmp[:, idx]]
                 rhs = np.hstack(rhs)
             else:
-                rhs = self.rhsmat[idx]
-                
-            sc = scattering(
-                    copy.deepcopy(self.cyls), 
-                    rhs, 
-                    k=ks[i],
-                    sum_index=self.modes,
-                    balanced_system=self.balanced_system,
-                    **self.scargs
-                )
-            wmat[i] = sc.make_u_sc(x, y)
+                rhs = self.rhsmat[i][idx]
+            
+            if np.linalg.norm(rhs) < self.fft_tol:
+                wmat[i] = 1j*np.zeros(x.shape)
+            else:
+                sc = scattering(
+                        copy.deepcopy(self.cyls), 
+                        rhs, 
+                        k=ks[i],
+                        sum_index=self.modes,
+                        balanced_system=self.balanced_system,
+                        **self.scargs
+                    )
+                wmat[i] = sc.make_u_sc(x, y)
 
         rmat = 1j*np.zeros(wmat[0].shape)
         for i in range(len(wmat)):
