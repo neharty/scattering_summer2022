@@ -28,6 +28,7 @@ class cyl:
             raise NotImplementedError("Impedance is not set")
         self.sum_index = sum_index
         self.uid = None #used for disk writes
+        self.maxidx = np.inf #used for z-transform
         
     def get_label(self):
         return self.label
@@ -884,6 +885,7 @@ class time_domain_scattering(scattering):
                 if np.max(tmp) < self.fft_tol:
                     g[:, i] = np.zeros(n)
                     if self.use_conj:
+                        g = g[:, :i+1]
                         return g 
         return g
     
@@ -941,7 +943,12 @@ class time_domain_scattering(scattering):
                 zbc = self.make_zbc(cyl, zdat)
                 
                 #make fourier coefficients
-                return self.fourier_coeffs_bdy(zbc)
+                fcs = self.fourier_coeffs_bdy(zbc)
+                
+                #set max cyl index
+                cyl.maxidx = fcs.shape[1]
+                
+                return fcs 
             else:
                 #IRK methods
                 zbc = [None for c in self.timeint.c]
@@ -954,7 +961,13 @@ class time_domain_scattering(scattering):
                 dbc = self.diag_bc(cyl, zbc)
                 
                 #return  fourier coeffs
-                return self.fourier_coeffs_bdy_ms(dbc)
+                fcs = self.fourier_coeffs_bdy_ms(dbc)
+                
+                #compute the max idx for the cyl
+                maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
+                cyl.maxidx = max(maxidxs)
+                
+                return fcs
         else:
             #wave is pointsource
             if self.timeint == None:
@@ -968,8 +981,14 @@ class time_domain_scattering(scattering):
                 #make freq-domain bcs
                 zbc = self.make_zbc(cyl, fds)
                 
-                #make fourier coeffs
-                return self.fourier_coeffs_bdy(zbc)
+                
+                #make fourier coefficients
+                fcs = self.fourier_coeffs_bdy(zbc)
+                
+                #set max cyl index
+                cyl.maxidx = fcs.shape[1]
+                
+                return fcs
                 
             else:
                 #IRK methods
@@ -990,9 +1009,24 @@ class time_domain_scattering(scattering):
                     self.ks = 1j*self.sl
                     zdat[i] = self.make_zbc(cyl, self.fd_bdy(cyl, diag_zdat[i]))
                 
-                #return fourier coeffs
-                return self.fourier_coeffs_bdy_ms(zdat)
-
+                #return  fourier coeffs
+                fcs = self.fourier_coeffs_bdy_ms(zdat)
+                
+                #compute the max idx for the cyl
+                maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
+                cyl.maxidx = max(maxidxs)
+                
+                return fcs
+    
+    def zeropad_rhs(self, mat):
+        m, n = mat.shape
+        if n < self.rhs_maxidx:
+            newmat = 1j*np.zeros((m, self.rhs_maxidx))
+            newmat[:, :n] = mat[:, :]
+            return newmat
+        else:
+            return mat
+    
     def fzt_boundary_allcyls(self):
         #only works for BDF2
         def writeout(c):
@@ -1010,9 +1044,19 @@ class time_domain_scattering(scattering):
                 for c in self.cyls:
                     writeout(c)
         else:
-            rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-            self.rhsmat = [None for n in range(len(self.times))]
-            for i in range(len(self.times)):
+            if self.use_par:
+                pool = Pool(processes=self.cpus)
+                rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
+                pool.close()
+                pool.join()
+                for c in self.cyls:
+                    c.maxidx = rhstmp[c.label].shape[1]
+            else:
+                rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+            self.rhs_maxidx = max([c.maxidx for c in self.cyls])
+            rhstmp = [self.zeropad_rhs(m) for m in rhstmp]
+            self.rhsmat = [None for n in range(self.rhs_maxidx)]
+            for i in range(self.rhs_maxidx):
                 if self.fl:
                     self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
                 else:
@@ -1025,7 +1069,7 @@ class time_domain_scattering(scattering):
         cpus = self.cpus
         
         if self.use_conj:
-            self.ks = self.ks[:self.sampnum//2]
+            self.ks = self.ks[:self.rhs_maxidx]
         
         def comp(idx):
             if self.use_disk:
@@ -1087,10 +1131,22 @@ class time_domain_scattering(scattering):
                 for c in self.cyls:
                     writeout(c)
         else:
-            rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-            self.rhsmat = [[None for n in range(len(self.times))] for c in range(len(self.timeint.c))]
+            if self.use_par:
+                pool = Pool(processes=self.cpus)
+                rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
+                pool.close()
+                pool.join()
+                for c in self.cyls:
+                    c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
+            else:
+                rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+            self.rhs_maxidx = np.amax([c.maxidx for c in self.cyls])
             for j in range(len(self.timeint.c)):
-                for i in range(len(self.times)):
+                for c in range(len(self.cyls)):
+                    rhstmp[c][j] = self.zeropad_rhs(rhstmp[c][j])
+            self.rhsmat = [[None for n in range(self.rhs_maxidx)] for c in range(len(self.timeint.c))]
+            for j in range(len(self.timeint.c)):
+                for i in range(self.rhs_maxidx):
                     self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
     
     def highorder_solve(self, idx, x, y):
@@ -1106,7 +1162,7 @@ class time_domain_scattering(scattering):
                     rhs += [tmp[:, idx]]
                 rhs = np.hstack(rhs)
             else:
-                rhs = self.rhsmat[idx]
+                rhs = self.rhsmat[i][idx]
                 
             sc = scattering(
                     copy.deepcopy(self.cyls), 
@@ -1127,10 +1183,9 @@ class time_domain_scattering(scattering):
     def make_time_harmonic_soln_highorder(self, x, y):
         self.fzt_boundary_allcyls_highorder()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
-        klen = range(len(self.zs))
         cpus = self.cpus
         if self.use_conj:
-            idxs = np.arange((self.sampnum//2)+1)
+            idxs = np.arange(self.rhs_maxidx)
         else:
             idxs = np.arange(len(self.times))
         
