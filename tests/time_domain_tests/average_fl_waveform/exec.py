@@ -25,7 +25,7 @@ wvarg = args.wvf
 tint = IRK3()
 fout = args.fout
 
-Nmodes = 2
+Nmodes = 1
 dataout = args.fout
 
 tshift=5
@@ -39,7 +39,7 @@ elif wvarg == 'dg':
             time_shift=tshift,
             src_type='pointsource')
 
-T = 60
+T = 40
 cyls = pickle.load(open(args.cylpath+'cyls.p','rb'))
 
 # measurement points
@@ -58,7 +58,8 @@ tds = time_domain_scattering(
                         modes=Nmodes,
                         timeint=tint,
                         balanced_system=True,
-                        use_par=False,
+                        use_par=True,
+                        use_disk=True,
                         scargs={'method':'explicit'}
                         )
 
