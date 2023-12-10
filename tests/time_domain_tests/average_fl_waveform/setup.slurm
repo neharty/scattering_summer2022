@@ -3,7 +3,7 @@
 #SBATCH --mem=8GB
 #SBATCH --ntasks=1
 #SBATCH --sockets-per-node=1
-#SBATCH --cores-per-socket=4
+#SBATCH --cores-per-socket=8
 #SBATCH --threads-per-core=1
 #SBATCH --hint=nomultithread
 #SBATCH --nodes=1

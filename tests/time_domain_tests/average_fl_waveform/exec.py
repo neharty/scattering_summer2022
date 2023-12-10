@@ -59,7 +59,7 @@ tds = time_domain_scattering(
                         modes=Nmodes,
                         timeint=tint,
                         balanced_system=True,
-                        use_par=True,
+                        use_par=False,
                         use_disk=True,
                         scargs={'method':'explicit'}
                         )
