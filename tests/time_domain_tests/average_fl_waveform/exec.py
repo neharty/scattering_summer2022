@@ -22,7 +22,7 @@ print(args)
 Nt = args.Nt
 Nsamp = 2**Nt
 wvarg = args.wvf
-tint = IRK3()
+tint = IRK5()
 fout = args.fout
 
 Nmodes = 1
@@ -32,7 +32,8 @@ tshift=5
 
 if wvarg == 'g':
     wv = gaussian(
-            time_shift=tshift, 
+            time_shift=tshift,
+            sigma=(0.4)**2/np.log(2),
             src_type='pointsource')
 elif wvarg == 'dg':
     wv = gaussian_deriv(
@@ -59,7 +60,7 @@ tds = time_domain_scattering(
                         timeint=tint,
                         balanced_system=True,
                         use_par=True,
-                        use_disk=True,
+                        use_disk=False,
                         scargs={'method':'explicit'}
                         )
 
@@ -75,3 +76,6 @@ for ang in range(len(thetas)):
         fname = f'{r[rdx]: .3f}_{thetas[ang]: .3f}.dat'
         arr = [[t[i], U[ang, rdx, i]] for i in range(len(t))]
         np.savetxt(fout+fname, arr)
+
+if tds.use_disk:
+    os.system('rm -r '+tds.outpath+'*'+tds.uid+'.dat')

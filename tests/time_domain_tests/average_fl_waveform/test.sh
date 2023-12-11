@@ -1,11 +1,11 @@
 BC=d
 RM=10
-RC=0.05
+RC=0.2
 WV=g
-NT=15
-for VF in 0.01 0.05 0.1 
+NT=10
+for VF in 0.3
 do
-for SD in {900..905}
+for SD in {900..910}
 do
     CP=/home/n/nh287/scattering/tests/time_domain_tests/average_fl_waveform/cyls/${BC}/${RM}/${VF}/${RC}/${SD}/
     DO=/home/n/nh287/scattering/data/time_domain_tests/average_fl_waveform/waveform_${WV}/bc_${BC}/samp_${NT}/R_${RM}/vf_${VF}/rc_${RC}/seed_${SD}/
