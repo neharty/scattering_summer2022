@@ -174,3 +174,4 @@ cython_debug/
 *.pdf
 *.rhs
 *.tar
+*.tar.gz

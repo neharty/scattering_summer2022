@@ -73,7 +73,7 @@ if not os.path.exists(dataout):
 
 for ang in range(len(thetas)):
     for rdx in range(len(r)):
-        fname = f'{r[rdx]: .3f}_{thetas[ang]: .3f}.dat'
+        fname = f'{r[rdx]:.3f}_{thetas[ang]:.3f}.dat'
         arr = [[t[i], U[ang, rdx, i]] for i in range(len(t))]
         np.savetxt(fout+fname, arr)
 
