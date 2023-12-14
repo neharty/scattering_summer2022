@@ -18,7 +18,7 @@ cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 
             radius, 
-            0.3, 
+            0.05, 
             measurement_points=(X, Y)
         )
 #%%

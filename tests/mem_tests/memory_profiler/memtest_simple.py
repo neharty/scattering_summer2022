@@ -26,16 +26,7 @@ x = [6]
 y = [0]
 X, Y = np.meshgrid(x, y)
 
-np.random.seed(666)
-Rmax = 10
-radius = 0.2
-cyls = example_setups.random_circ_hex_vol_frac(
-    Rmax, 
-    'd', 
-    radius, 
-    0.1, 
-    measurement_points=(X, Y)
-    )
+cyls = example_setups.uniform_grid_NxN(4, bcs, 1, 3)
 print(len(cyls))
 #%%
 #run sim

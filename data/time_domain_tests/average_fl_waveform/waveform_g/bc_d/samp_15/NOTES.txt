@@ -1,0 +1,1 @@
+using a gaussian point source of width 0.4 exactly (same as the diameter of the circles)

@@ -4,7 +4,7 @@ import os
 #%%
 wave = 'g'
 bc = 'd'
-Nsamp = 12
+Nsamp = 15
 R = 10
 vf = 0.3
 r = 0.2
@@ -23,7 +23,7 @@ thetas = [f'{t: .3f}' for t in thetas]
 #generate the data
 for theta in thetas:
     r = [' 2.500', ' 5.000', ' 7.500', ' 10.000']
-    end = 19
+    end = 200
     trace = np.zeros((2**Nsamp + 1, 4))
     for seed in range(1, end+1):
         for ridx in range(len(r)):
