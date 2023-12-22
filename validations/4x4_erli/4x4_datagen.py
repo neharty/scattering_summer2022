@@ -16,7 +16,7 @@ parser.add_argument('tint', help='time integration scheme')
 parser.add_argument('Nt', type=int, help='time exponent')
 parser.add_argument('Nmode', type=int, help='mode sum index')
 parser.add_argument('bcs', help='boundary conds')
-parser.add_argument('width', type=float, help='gaussian width')
+parser.add_argument('srctype', help='source type')
 parser.add_argument('incang', type=int, help='incident angle')
 
 args = parser.parse_args()
@@ -25,17 +25,23 @@ T = 40
 
 #plane wave
 if args.incang == 1:
-    inc = np.pi
+    inc = 0
 if args.incang == 2:
-    inc = 4*np.pi/3
-if args.incang == 3:
-    inc = 5*np.pi/4
-if args.incang == 4:
-    inc = 3*np.pi/2
-    
-wv = gaussian(time_shift=10, 
-              sigma=(args.width)**2/np.log(2), 
-              )
+    inc = -np.pi/3
+
+if args.srctype == 'planewave':
+    wv = gaussian(time_shift=12, 
+                  sigma=1/4,
+                  amp = 2/np.sqrt(np.pi)
+                  )
+if args.srctype == 'pointsrc':
+    orig = 8*np.array([np.cos(-np.pi/3), np.sin(-np.pi/3)])
+    wv = gaussian(time_shift=5, 
+                  sigma=1/4,
+                  amp = 2/np.sqrt(np.pi), 
+                  src_type='pointsrc', 
+                  r0=orig
+                  )
 
 if args.tint == 'bdf2':
     tint = None
@@ -44,20 +50,31 @@ if args.tint == 'irk5':
 if args.tint == 'irk3':
     tint = IRK3()
 
-thetas = np.arange(8)*np.pi/4
-r = np.array([0, 3, 6, 10])
+#inner points
+inpts = np.array([-6, -3, 0, 3, 6])
+Xin, Yin = np.meshgrid(inpts, inpts)
+
+r = np.array([9, 10.5, 12])
+thetas = np.arange(11)*np.pi/10
 R, ANG = np.meshgrid(r, thetas)
-X = R*np.cos(ANG)
-Y = R*np.sin(ANG)
+Xout = R*np.cos(ANG)
+Yout = R*np.sin(ANG)
 
-cyls = example_setups.uniform_grid_NxN(4, args.bcs, 1, 3)
+if args.bcs == 'd' or args.bcs == 'n':
+    bcs = args.bcs
+elif args.bcs == 'dndn':
+    bcs = ['d', 'n', 'd', 'n']
+elif args.bcs == 'ndnd':
+    bcs = ['n', 'd', 'n', 'd']
 
-dpath = '/home/n/nh287/scattering/data/publishing/4x4_erli/'
+cyls = example_setups.uniform_grid_NxN(4, bcs, 1, 3)
+
+dpath = '/home/nick/scattering/validations/4x4_erli/data/'
 dpath = os.path.join(dpath,
              args.tint,
-             'width_'+str(args.width),
+             'srctype_'+str(args.srctype),
              'bcs_'+args.bcs,
-             'incang_'+str(np.pi-inc),
+             'incang_'+str(inc),
              'Nmode_'+str(args.Nmode),
              'Ntime_'+str(args.Nt))
 os.makedirs(dpath, exist_ok=True)
@@ -75,8 +92,16 @@ tds = time_domain_scattering(
                              scargs={'method':'explicit'}
                              )
 
-Usc = tds.make_U_sc(X, Y)
+#inner points
+Usc = tds.make_U_sc(Xin, Yin)
+for xdx in range(len(inpts)):
+    for ydx in range(len(inpts)):
+        fname = f'{inpts[xdx]:.3f}_{inpts[ydx]:.3f}.dat'
+        arr = [[tds.times[i], Usc[ydx, xdx, i]] for i in range(len(tds.times))]
+        np.savetxt(os.path.join(dpath, fname), arr)
 
+#outer points
+Usc = tds.make_U_sc(Xout, Yout)
 for ang in range(len(thetas)):
     for rdx in range(len(r)):
         fname = f'{r[rdx]:.3f}_{thetas[ang]:.3f}.dat'

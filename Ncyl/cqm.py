@@ -421,6 +421,7 @@ class scattering(cyl):
             row = rv[2*Nq-1:]
         S = toeplitz(row, col)
         D = np.diag(self.jhm[cyl_i.label])
+        
         return D @ S
 
     def make_scattering_blocks_blockform(self):
@@ -449,6 +450,10 @@ class scattering(cyl):
                         self.scat_mat[i][j] = self.mulscat_term(self.cyls[j], 0, 0, b)
         else:
             self.scat_mat = np.block(self.make_scattering_blocks_blockform())
+            
+        if not np.isfinite(self.scat_mat).all():
+            self.fast_matrix_build = False
+            self.scat_mat = self.make_scattering_blocks()
         
         return self.scat_mat
     

@@ -16,9 +16,9 @@ args = parser.parse_args()
 
 #%%
 #init variables
-tau=2
+tau=1
 n=2/tau
-T=42
+T=40
 
 Nmode = args.Nmodes 
 Nsamp = 2**args.Nt
@@ -46,14 +46,25 @@ if args.tint == 'irk3':
 if args.tint == 'irk5':
     tint = IRK5()
 
-Rs = [5, 7.5, 10, 12]
+# Rs = [5, 7.5, 10, 12]
+# thetas = np.arange(11)*np.pi/10
+# R, ANG = np.meshgrid(Rs, thetas)
+# X, Y = R*np.cos(ANG), R*np.sin(ANG)
+
+#inner points
+xpts = np.array([-3, -1.5, 0, 1.5, 3])
+ypts = np.array([-2, -1, 0, 1, 2])
+Xin, Yin = np.meshgrid(xpts, ypts)
+
+Rs = np.array([9, 10.5, 12])
 thetas = np.arange(11)*np.pi/10
 R, ANG = np.meshgrid(Rs, thetas)
-X, Y = R*np.cos(ANG), R*np.sin(ANG)
+Xout = R*np.cos(ANG)
+Yout = R*np.sin(ANG)
 
 #%%
 # neumann-neumann
-cyls = [cyl('n', [-2, 0], 1), cyl('n', [2, 0], 1)]
+cyls = [cyl('n', [-1.5, 0], 1), cyl('n', [1.5, 0], 1)]
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -68,14 +79,23 @@ fpath = dpath+'/nn/'
 if not os.path.exists(fpath):
     os.makedirs(fpath)
 
-Usc = tds.make_U_sc(X, Y)
+#inner points
+Usc = tds.make_U_sc(Xin, Yin)
+for xdx in range(len(xpts)):
+    for ydx in range(len(ypts)):
+        fname = f'{xpts[xdx]:.3f}_{ypts[ydx]:.3f}.dat'
+        arr = [[tds.times[i], Usc[ydx, xdx, i]] for i in range(len(tds.times))]
+        np.savetxt(os.path.join(fpath, fname), arr)
+        
+#outer points
+Usc = tds.make_U_sc(Xout, Yout)
 for r in range(len(Rs)):
     for a in range(len(thetas)):
         arr = [[tds.times[i], Usc[a, r, i]] for i in range(len(tds.times))]
         np.savetxt(fpath+str(Rs[r])+'_'+str(thetas[a])+'.dat', arr)
 #%%
 # dirichlet-dirichlet
-cyls = [cyl('d', [-2, 0], 1), cyl('d', [2, 0], 1)]
+cyls = [cyl('d', [-1.5, 0], 1), cyl('d', [1.5, 0], 1)]
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -91,7 +111,16 @@ fpath = dpath+'/dd/'
 if not os.path.exists(fpath):
     os.makedirs(fpath)
 
-Usc = tds.make_U_sc(X, Y)
+#inner points
+Usc = tds.make_U_sc(Xin, Yin)
+for xdx in range(len(xpts)):
+    for ydx in range(len(ypts)):
+        fname = f'{xpts[xdx]:.3f}_{ypts[ydx]:.3f}.dat'
+        arr = [[tds.times[i], Usc[ydx, xdx, i]] for i in range(len(tds.times))]
+        np.savetxt(os.path.join(fpath, fname), arr)
+        
+#outer points
+Usc = tds.make_U_sc(Xout, Yout)
 for r in range(len(Rs)):
     for a in range(len(thetas)):
         arr = [[tds.times[i], Usc[a, r, i]] for i in range(len(tds.times))]
@@ -99,7 +128,7 @@ for r in range(len(Rs)):
 
 #%%
 # dirichlet-neumann
-cyls = [cyl('d', [-2, 0], 1), cyl('n', [2, 0], 1)]
+cyls = [cyl('d', [-1.5, 0], 1), cyl('n', [1.5, 0], 1)]
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -115,7 +144,16 @@ fpath = dpath+'/dn/'
 if not os.path.exists(fpath):
     os.makedirs(fpath)
 
-Usc = tds.make_U_sc(X, Y)
+#inner points
+Usc = tds.make_U_sc(Xin, Yin)
+for xdx in range(len(xpts)):
+    for ydx in range(len(ypts)):
+        fname = f'{xpts[xdx]:.3f}_{ypts[ydx]:.3f}.dat'
+        arr = [[tds.times[i], Usc[ydx, xdx, i]] for i in range(len(tds.times))]
+        np.savetxt(os.path.join(fpath, fname), arr)
+        
+#outer points
+Usc = tds.make_U_sc(Xout, Yout)
 for r in range(len(Rs)):
     for a in range(len(thetas)):
         arr = [[tds.times[i], Usc[a, r, i]] for i in range(len(tds.times))]
@@ -123,7 +161,7 @@ for r in range(len(Rs)):
         
 #%%
 # neumann-dirichlet
-cyls = [cyl('n', [-2, 0], 1), cyl('d', [2, 0], 1)]
+cyls = [cyl('n', [-1.5, 0], 1), cyl('d', [1.5, 0], 1)]
 tds = time_domain_scattering(
                              cyls,
                              wv,
@@ -139,7 +177,16 @@ fpath = dpath+'/nd/'
 if not os.path.exists(fpath):
     os.makedirs(fpath)
 
-Usc = tds.make_U_sc(X, Y)
+#inner points
+Usc = tds.make_U_sc(Xin, Yin)
+for xdx in range(len(xpts)):
+    for ydx in range(len(ypts)):
+        fname = f'{xpts[xdx]:.3f}_{ypts[ydx]:.3f}.dat'
+        arr = [[tds.times[i], Usc[ydx, xdx, i]] for i in range(len(tds.times))]
+        np.savetxt(os.path.join(fpath, fname), arr)
+        
+#outer points
+Usc = tds.make_U_sc(Xout, Yout)
 for r in range(len(Rs)):
     for a in range(len(thetas)):
         arr = [[tds.times[i], Usc[a, r, i]] for i in range(len(tds.times))]
