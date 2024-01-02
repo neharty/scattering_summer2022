@@ -25,9 +25,9 @@ T = 40
 
 #plane wave
 if args.incang == 1:
-    inc = 0
+    inc = np.pi
 if args.incang == 2:
-    inc = -np.pi/3
+    inc = np.pi-np.pi/3
 
 if args.srctype == 'planewave':
     wv = gaussian(time_shift=12, 
@@ -74,7 +74,7 @@ dpath = os.path.join(dpath,
              args.tint,
              'srctype_'+str(args.srctype),
              'bcs_'+args.bcs,
-             'incang_'+str(inc),
+             'incang_'+str(inc-np.pi),
              'Nmode_'+str(args.Nmode),
              'Ntime_'+str(args.Nt))
 os.makedirs(dpath, exist_ok=True)

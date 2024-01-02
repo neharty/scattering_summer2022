@@ -7,9 +7,10 @@ from integrators.integrators import IRK3, IRK5
 from scipy.special import hankel1
 
 wv = gaussian(time_shift=5,
-              sigma=0.1,
+              sigma=0.4,
               src_type='pointsource')
-tint = None
+tint = IRK5()
+#dummy tds
 tds = time_domain_scattering(
                         [cyl('d', [-100, 0], 1)], 
                         wv, 
@@ -37,6 +38,3 @@ for x in xs:
             path+'gaussian'+str(x)+'.dat', 
             arr)
 
-# #%%
-# arr= [[t[i], wv.profile(t[i]-5)] for i in range(len(t))]
-# np.savetxt(path+'gaussian.dat', arr)
