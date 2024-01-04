@@ -291,42 +291,34 @@ class scattering(cyl):
         mindist = self.dist_matrix[minidx]
 
         #set up the auxiliary 2-circle problem
+        currmodes = 1
         auxcyls = [
             copy.deepcopy(self.cyls[minidx[0]]), 
             copy.deepcopy(self.cyls[minidx[1]])
             ]
-        currmodes = self.modes(
-            self.k, 
-            np.max((auxcyls[0].radius, auxcyls[1].radius))
-            )
+        
         csc = scattering(
-            auxcyls, 
+            auxcyls,
+            self.rhs,
             k=self.k, 
             method='explicit', 
             sum_index=currmodes
             )
-        nsc = scattering(
-            auxcyls, 
-            k=self.k, 
-            method='explicit', 
-            sum_index=currmodes+1
-            )
 
         #compute the coefficint vectors
         carr = csc.scattering_coeffs()
-        narr = nsc.scattering_coeffs()
         #print(np.abs(carr[0]), np.abs(narr[0]))
-        while np.abs(carr[0]) >= self.sum_tol or np.abs(narr[0]) >= self.sum_tol:
-            print(np.abs(narr[0]))
-            carr = narr
+        while np.abs(carr[0]) >= self.sum_tol:
+            print(np.abs(carr[0]))
             currmodes += 1
-            nsc = scattering(
+            csc = scattering(
                 auxcyls, 
                 freq=self.k, 
                 method='explicit', 
                 sum_index=currmodes+1
                 )
-            narr = nsc.scattering_coeffs()
+            carr = csc.scattering_coeffs()
+        print(currmodes)
         return currmodes
 
     def make_dist_matrix(self):

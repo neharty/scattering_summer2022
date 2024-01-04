@@ -36,7 +36,8 @@ tshift=5
 if wvarg == 'g':
     wv = gaussian(
             time_shift=tshift, 
-            src_type='pointsource')
+            src_type='planewave',
+            inc_angle=np.pi/2)
 elif wvarg == 'dg':
     wv = gaussian_deriv(
             time_shift=tshift,

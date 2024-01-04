@@ -13,7 +13,7 @@ Y = R*np.sin(ANG)
 
 np.random.seed(100)
 Rmax = 10
-radius = 0.2
+radius = 0.5
 cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 

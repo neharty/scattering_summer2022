@@ -328,14 +328,17 @@ def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, c
 
 def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center=None, measurement_points=None):
     #actual number of circles needed
-    n_act = int(rho*R**2/r**2) + 1
+    print(round(rho*R**2/r**2))
+    n_act = int(round(rho*R**2/r**2))
     
     ncurr = 0
+    Nprev = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
     while ncurr < n_act:
         #overfill the circle with higher rho
         rho = rho*1.05
         
-        N = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
+        N = max(0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1)), Nprev+1)
+        Nprev = N
         spc = (2*R - 2*r)/(N-1)
         tmp = random_circ_hex(R, bc, r, spc, sum_num, impedance, center, measurement_points)
         ncurr = len(tmp)
