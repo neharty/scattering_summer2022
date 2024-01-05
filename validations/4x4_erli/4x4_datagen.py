@@ -25,9 +25,9 @@ T = 40
 
 #plane wave
 if args.incang == 1:
-    inc = np.pi
+    inc = 0
 if args.incang == 2:
-    inc = np.pi-np.pi/3
+    inc =-np.pi/3
 
 if args.srctype == 'planewave':
     wv = gaussian(time_shift=12, 

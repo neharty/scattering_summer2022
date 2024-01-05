@@ -9,12 +9,13 @@ class waveform(ABC):
     '''
     def __init__(
                  self, 
-                 inc_angle = np.pi, 
+                 inc_angle = 0, 
                  time_shift = 0, 
                  r0 = np.array([0, 0]), 
                  src_type = 'planewave'
                  ):
         self.inc_angle = inc_angle
+        self.phi = np.pi-self.inc_angle
         self.time_shift = time_shift
         self.src_type = src_type
         self.r0 = np.array(r0)
@@ -22,10 +23,10 @@ class waveform(ABC):
         
         
     def inparg(self, x, y, t):
-        return t - (x*np.cos(self.inc_angle) + y*np.sin(self.inc_angle)) - self.time_shift
+        return t - (x*np.cos(self.phi) + y*np.sin(self.phi)) - self.time_shift
         
     def d_inparg(self, x, y, t):
-        return -np.array([np.cos(self.inc_angle), np.sin(self.inc_angle)])
+        return -np.array([np.cos(self.phi), np.sin(self.phi)])
     
     @abstractmethod
     def profile(self, z):
@@ -45,7 +46,7 @@ class waveform(ABC):
 class gaussian(waveform):
     def __init__(
                  self, 
-                 inc_angle = np.pi, 
+                 inc_angle = 0, 
                  time_shift=0, 
                  r0 = [0,0],
                  src_type = 'planewave',
@@ -86,7 +87,7 @@ class gaussian(waveform):
 class gaussian_deriv(waveform):
     def __init__(
                  self, 
-                 inc_angle = np.pi, 
+                 inc_angle = 0, 
                  time_shift=0,
                  r0 = [0, 0],
                  src_type='planewave',
@@ -127,7 +128,7 @@ class gaussian_deriv(waveform):
 
 class kachanovska(waveform):
     #wave from kachanovska 
-    def __init__(self, inc_angle = np.pi/2, time_shift=2):
+    def __init__(self, inc_angle = -np.pi/2, time_shift=2):
         super().__init__(inc_angle, time_shift)
         
     def profile(self, z):
@@ -143,7 +144,7 @@ class kachanovska(waveform):
 
 class kachanovska_6_3(waveform):
     #another wave from kachanovska 
-    def __init__(self, inc_angle = np.pi/2, time_shift=2):
+    def __init__(self, inc_angle = -np.pi/2, time_shift=2):
         super().__init__(inc_angle, time_shift)
         
     def profile(self, z):
@@ -164,7 +165,7 @@ class kachanovska_6_3(waveform):
 class sine_pulse(waveform):
     def __init__(
                  self, 
-                 inc_angle = np.pi, 
+                 inc_angle = 0, 
                  time_shift=0, 
                  r0 = np.array([0,0]),
                  src_type = 'planewave',
@@ -196,7 +197,7 @@ class sine_pulse(waveform):
 class gauss_mod_sine_pulse(waveform):
     def __init__(
                 self,
-                inc_angle=np.pi,
+                inc_angle=0,
                 time_shift=0, 
                 r0 = np.array([0,0]),
                 src_type = 'planewave',
@@ -233,7 +234,7 @@ class gauss_mod_sine_pulse(waveform):
 class sinewave(waveform):
     def __init__(
                  self, 
-                 inc_angle = np.pi, 
+                 inc_angle = 0, 
                  time_shift=0, 
                  width = 4*np.pi, 
                  cycles = 1,
@@ -258,7 +259,7 @@ class sinewave(waveform):
 class russian(waveform):
     def __init__(
                  self, 
-                 inc_angle = np.pi, 
+                 inc_angle = 0, 
                  time_shift=0, 
                  alpha= 1,
                  beta= 1,
