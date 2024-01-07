@@ -62,6 +62,7 @@ cyls = example_setups.random_circ_hex_vol_frac(
     'i', #'d'=dirichlet, 'n'=neumann, 'i'=impedance 
     radius, 
     rho,
+    minspace=0,
     measurement_points=(X, Y),
     impedance=imp)
 

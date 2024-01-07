@@ -28,7 +28,8 @@ cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 
             args.small_rad, 
-            args.rho, 
+            args.rho,
+            minspace=0, #change this for minimum circle spacing
             measurement_points=(X, Y))
 
 pts = [c.pos for c in cyls]
