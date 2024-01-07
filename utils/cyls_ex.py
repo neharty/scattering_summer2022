@@ -11,14 +11,17 @@ R, ANG = np.meshgrid(r, thetas)
 X = R*np.cos(ANG)
 Y = R*np.sin(ANG)
 
-np.random.seed(100)
+np.random.seed(1)
 Rmax = 10
 radius = 0.5
+vfill = 0.2
+minspace = radius*0.1
 cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 
             radius, 
-            0.05, 
+            vfill, 
+            minspace=minspace,
             measurement_points=(X, Y)
         )
 #%%
@@ -31,6 +34,18 @@ for p in cnrs:
     truth += [np.all(mask)]
 #print([c.pos for c in cyls[mask]])
 print(np.all(truth))
+
+#check if they meet the minimum distance
+ismindist = True
+for p in cnrs:
+    for q in cnrs:
+        tmp = np.linalg.norm(p-q)
+        if tmp <= (2*radius + minspace) and tmp > 0:
+            ismindist = False
+            print(p, q)
+            break
+print(ismindist)
+
 #%%
 print(len(cyls), len(cyls)*(radius**2)/Rmax**2)
 fig, ax = plot_cyls(cyls)

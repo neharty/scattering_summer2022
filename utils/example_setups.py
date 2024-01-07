@@ -304,32 +304,67 @@ def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None):
 
     return cyls
 
-def random_circ_hex(rmax, bc, radius, initspace, sum_num=None, impedance=None, center=None, measurement_points=None):
+def random_circ_hex(rmax, bc, radius, initspace, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None):
     spc = initspace
     N = int((2*rmax - 2*radius)/spc)
     print(N)
-    ctmp = random_hexagon(N, bc, radius, spc, 0, sum_num, impedance, center)
+    ctmp = random_hexagon(N, bc, radius, spc, minspace, sum_num, impedance, center)
     
     #delete circles overlapping a measurement point
     if measurement_points is not None:
         X, Y = measurement_points
-        for c in ctmp:
+        idxs = []
+        for i in range(len(ctmp)):
+            c = ctmp[i]
             p = c.pos
             rad = c.radius
             dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
             mask = dist <= rad
             if np.any(mask):
-                ctmp.remove(c)
+                idxs += [i]
+                
+        idxs = np.array(idxs)
+        for i in idxs[::-1]:
+            ctmp.remove(ctmp[i])
     
     rmask = np.array([np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp])
     rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
     cctmp = np.asarray(ctmp)[rmask*rmask2]
     return cctmp.tolist()
 
-def random_circ_hex_vol_frac(R, bc, r, rho, sum_num=None, impedance=None, center=None, measurement_points=None):
+def random_circ_hex_vol_frac(R, bc, r, rho, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None):
     #actual number of circles needed
     print(round(rho*R**2/r**2))
     n_act = int(round(rho*R**2/r**2))
+    
+    ncurr = 0
+    Nprev = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))
+    while ncurr < n_act:
+        #overfill the circle with higher rho
+        rho = rho*1.05
+        
+        N = max(0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1)), Nprev+1)
+        Nprev = N
+        spc = (2*R - 2*r)/(N-1)
+        tmp = random_circ_hex(R, bc, r, spc, minspace, sum_num, impedance, center, measurement_points)
+        ncurr = len(tmp)
+    
+    if ncurr > n_act:
+        #delete the unneeded circles
+        darr = np.arange(0, len(tmp))
+        np.random.shuffle(darr)
+        darr = darr[:ncurr - n_act]
+        darr.sort()
+        darr = darr[::-1]
+        for i in darr:
+            del tmp[i]
+
+    return tmp
+
+def random_circ_hex_vol_frac_legacy(R, bc, r, rho, sum_num=None, impedance=None, center=None, measurement_points=None):
+    #actual number of circles needed
+    #produces the incorrect number of circles, used for posterity
+    n_act = int(rho*R**2/r**2) + 1
     
     ncurr = 0
     Nprev = 0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1))

@@ -12,12 +12,13 @@ X, Y = np.meshgrid(x, y)
 t = 0
 T = 20
 wave = wvf.gaussian(time_shift=5,
-                    inc_angle=-np.pi/3)
+                    inc_angle=-np.pi/3, 
+                    src_type='pointsrc')
 
 fig, ax = plt.subplots()
 def replot(t):
     wvplt = wave.td_wave(X, Y, t)
-    CS = ax.matshow(wvplt)
+    CS = ax.pcolormesh(X, Y, wvplt)
     #ax.clabel(CS)
     fig.subplots_adjust(left=0.25, bottom=0.25)
 

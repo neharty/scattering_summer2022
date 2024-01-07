@@ -21,16 +21,19 @@ parser.add_argument('incang', type=int, help='incident angle')
 
 args = parser.parse_args()
 
+print(args)
+
 T = 40
 
 #plane wave
 if args.incang == 1:
-    inc = 0
+    inc = -np.pi #changed for test purposes
 if args.incang == 2:
-    inc =-np.pi/3
+    inc = (-np.pi/3)-np.pi #changed for test purposes
 
 if args.srctype == 'planewave':
-    wv = gaussian(time_shift=12, 
+    wv = gaussian(time_shift=12,
+                  inc_angle=inc,
                   sigma=1/4,
                   amp = 2/np.sqrt(np.pi)
                   )
@@ -74,7 +77,7 @@ dpath = os.path.join(dpath,
              args.tint,
              'srctype_'+str(args.srctype),
              'bcs_'+args.bcs,
-             'incang_'+str(inc-np.pi),
+             'incang_'+str(inc),
              'Nmode_'+str(args.Nmode),
              'Ntime_'+str(args.Nt))
 os.makedirs(dpath, exist_ok=True)

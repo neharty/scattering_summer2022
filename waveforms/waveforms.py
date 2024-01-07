@@ -15,7 +15,7 @@ class waveform(ABC):
                  src_type = 'planewave'
                  ):
         self.inc_angle = inc_angle
-        self.phi = np.pi-self.inc_angle
+        self.phi = np.pi+self.inc_angle
         self.time_shift = time_shift
         self.src_type = src_type
         self.r0 = np.array(r0)
