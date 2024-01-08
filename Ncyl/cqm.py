@@ -165,6 +165,18 @@ class scattering(cyl):
             self.scat_mat = None
         
         self.u_sc = None
+        
+        #divide the rhs blocks by hankel functions, depending on the boundary conditions
+        for l in self.labels:
+            if self.balanced_system:
+                for j in range(2*self.cyls[l].sum_index + 1):
+                    idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index+1)
+                    self.rhs[self.lengths[l] + j] = self.rhs[self.lengths[l] + j]/self.hmode(self.cyls[l], idxa[j])
+            else:
+                for j in range(2*self.cyls[l].sum_index):
+                    idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
+                    self.rhs[self.lengths[l] + j] = self.rhs[self.lengths[l] + j]/self.hmode(self.cyls[l], idxa[j])
+            
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -189,8 +201,8 @@ class scattering(cyl):
     def Shat(self, m, n, v):
         # v is in cartesian coords
         return self.phihat(m-n, v)
-
-    def jh(self, cyl, m):
+    
+    def jmode(self, cyl, m):
         bc = cyl.bc
         radius = cyl.radius
         
@@ -205,6 +217,25 @@ class scattering(cyl):
             print('invalid bc')
         
         return st
+    
+    def hmode(self, cyl, m):
+        bc = cyl.bc
+        radius = cyl.radius
+        
+        if bc == 'd':
+            st = hankel1(m, self.k*radius)
+        elif bc == 'n':
+            st = self.k*h1vp(m, self.k*radius)
+        elif bc == 'i':
+            imp = cyl.impedance(self.k)
+            st = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
+        else:
+            print('invalid bc')
+        
+        return st
+    
+    def jh(self, cyl, m):
+        return self.jmode(cyl, m)/self.hmode(cyl, m)
     
     def dirichlet_asymptotic(self, cyl, n, m, b, theta):
         k = self.k
@@ -225,6 +256,7 @@ class scattering(cyl):
     def mulscat_term(self, cyl, n, m, b):
         tmp = self.jh(cyl, m)*self.S(n, m, b)
         if not np.isfinite(tmp):
+            #TODO: the asymptotics here are not correct if dividing by hankel1
             k = self.k
             a = cyl.radius
             b, theta = self.cart_to_polar(b)
@@ -239,31 +271,32 @@ class scattering(cyl):
         return tmp
     
     def directscat_term(self, cyl, m):
-        bc = cyl.bc
-        radius = cyl.radius
-        if bc == 'd':
-            hterm = hankel1(m, self.k*radius)
-        elif bc == 'n':
-            hterm = self.k*h1vp(m, self.k*radius)
-        elif bc == 'i':
-            imp = cyl.impedance(self.k)
-            hterm = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
-        else:
-            print('invalid bc')
-        #expect the hankel functions will go to zero
-        if not np.isfinite(hterm).all():
-            if bc == 'd':
-                tmp = hankel1(m, self.k*radius)
-            elif bc == 'n':
-                tmp = h1vp(m, self.k*radius)
-            elif bc == 'i':
-                imp = cyl.impedance(self.k)
-                tmp = h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius)
+        # bc = cyl.bc
+        # radius = cyl.radius
+        # if bc == 'd':
+        #     hterm = hankel1(m, self.k*radius)
+        # elif bc == 'n':
+        #     hterm = self.k*h1vp(m, self.k*radius)
+        # elif bc == 'i':
+        #     imp = cyl.impedance(self.k)
+        #     hterm = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
+        # else:
+        #     print('invalid bc')
+        # #expect the hankel functions will go to zero
+        # if not np.isfinite(hterm).all():
+        #     if bc == 'd':
+        #         tmp = hankel1(m, self.k*radius)
+        #     elif bc == 'n':
+        #         tmp = h1vp(m, self.k*radius)
+        #     elif bc == 'i':
+        #         imp = cyl.impedance(self.k)
+        #         tmp = h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius)
                 
-            if np.max(np.abs(tmp)) < self.mat_tol:
-                return 1j*np.zeros(tmp.shape)
+        #     if np.max(np.abs(tmp)) < self.mat_tol:
+        #         return 1j*np.zeros(tmp.shape)
         
-        return hterm
+        # return hterm
+        return np.eye(2*cyl.sum_index + 1)
     
     def highfreq_modes(self, x):
         return x + (np.log(2*np.sqrt(2)*np.pi*x/self.sum_tol)/(2*np.sqrt(2)))**(2/3)*(x)**(1/3) + 1
@@ -367,18 +400,18 @@ class scattering(cyl):
         return self.ST
 
     def make_direct_scattering_block(self, cyl):
-        if self.balanced_system:
-            idxa = np.arange(
-                -cyl.sum_index, 
-                cyl.sum_index+1
-                )
-        else:
-            idxa = np.arange(
-                -cyl.sum_index, 
-                cyl.sum_index
-                )
-        hvec = self.directscat_term(cyl, idxa)
-        return np.diag(hvec)
+        # if self.balanced_system:
+        #     idxa = np.arange(
+        #         -cyl.sum_index, 
+        #         cyl.sum_index+1
+        #         )
+        # else:
+        #     idxa = np.arange(
+        #         -cyl.sum_index, 
+        #         cyl.sum_index
+        #         )
+        # hvec = self.directscat_term(cyl, idxa)
+        return np.eye(2*cyl.sum_index + 1)
 
     def make_mul_scattering_block(self, cyl_i, cyl_sc):
         # makes 1 off-diagonal block, 
@@ -485,8 +518,7 @@ class scattering(cyl):
                 convolve(
                     np.array(ST[p][q], dtype=np.complex128),
                     np.array(xs[q], dtype=np.complex128),
-                    mode='valid',
-                    method='fft'
+                    mode='valid'
                 ) for q in self.labels]
             for p in self.labels]
         
@@ -563,8 +595,6 @@ class scattering(cyl):
             if self.scat_mat is None:
                 self.scat_mat = self.make_scattering_blocks()
 
-            #sm = np.array(self.make_scattering_blocks(), dtype=np.complex128)
-            #rhs = np.array(self.rhs, dtype=np.complex128)
             if not np.isfinite(self.scat_mat).all():
                 self.fast_matrix_build = False
                 self.scat_mat = self.make_scattering_blocks()
@@ -635,7 +665,7 @@ class time_domain_scattering(scattering):
                  fft_tol = 1e-10,
                  sampnum = None,
                  modes = 8,
-                 use_par=False,
+                 use_par=True,
                  cpus=None,
                  use_conj=True,
                  use_foldy_lax=False,

@@ -60,7 +60,7 @@ for i in range(len(ks)):
     print(i,'/',len(ks), conds[i], ks[i])
 
 arr = [[ks[j].real, ks[j].imag, np.abs(ks[j]), conds[j]] for j in range(i)]
-dpath = '/home/nick/scattering/data/condition_number/'
+dpath = '/home/nick/scattering/data/condition_number/reduced/'
 dpath = os.path.join(dpath, 
                      'bcs_'+str(args.bcs),
                      'dt_'+str(T/(2**args.Nt)),

@@ -72,7 +72,7 @@ elif args.bcs == 'ndnd':
 
 cyls = example_setups.uniform_grid_NxN(4, bcs, 1, 3)
 
-dpath = '/home/nick/scattering/validations/4x4_erli/data/'
+dpath = '/home/nick/scattering/validations/4x4_erli/data/gmres/'
 dpath = os.path.join(dpath,
              args.tint,
              'srctype_'+str(args.srctype),
@@ -91,8 +91,8 @@ tds = time_domain_scattering(
                              sampnum=2**args.Nt,
                              timeint=tint,
                              use_par=True,
-                             balanced_system=True,
-                             scargs={'method':'explicit'}
+                             balanced_system=True
+                             #scargs={'method':'explicit'}
                              )
 
 #inner points

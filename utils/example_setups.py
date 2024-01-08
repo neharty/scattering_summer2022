@@ -207,7 +207,7 @@ def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=No
     def perturb():
         for i in range(cnum):            
             #generate a perturbation of the ith point
-            r = np.sqrt(np.random.uniform(0, (np.sqrt(2)*dist - 2*radius)**2))
+            r = np.sqrt(np.random.uniform(0, (dist/np.sqrt(2) - 2*radius-minspace)**2))
             theta = np.random.uniform(0, 2*np.pi)
             ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
     
@@ -218,7 +218,7 @@ def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=No
 
             while not allpoints:
                 #if the new point doesnt work, retry until it does
-                r = np.sqrt(np.random.uniform(0, (np.sqrt(2)*dist - 2*radius))**2)
+                r = np.sqrt(np.random.uniform(0, (dist/np.sqrt(2) - 2*radius-minspace))**2)
                 theta = np.random.uniform(0, 2*np.pi)
                 ztest = xpos[i] + 1j*ypos[i] + r*np.exp(1j*theta)
                 allpoints = np.all(np.abs(z - ztest) > (2*radius + minspace))

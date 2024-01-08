@@ -10,13 +10,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('seed', help='random number gen seed', type=int)
 parser.add_argument('small_rad', help='small cylinder radius', type=float)
 parser.add_argument('rho', help='volume fill percentage', type=float)
+parser.add_argument('dspace', help='minimum spacing parameter', type=float)
 parser.add_argument('fout', help='full data output path')
 
 args = parser.parse_args()
 
 #measurement points
 thetas = np.arange(8)*np.pi/4
-r = np.array([2.5, 5, 7.5, 10])
+r = np.array([10, 11, 12, 13])
 R, ANG = np.meshgrid(r, thetas)
 X = R*np.cos(ANG)
 Y = R*np.sin(ANG)
@@ -24,12 +25,13 @@ Y = R*np.sin(ANG)
 np.random.seed(args.seed)
 Rmax = 10
 radius = 0.5
+minspace = args.dspace*radius
 cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 
             args.small_rad, 
             args.rho,
-            minspace=0, #change this for minimum circle spacing
+            minspace = minspace,
             measurement_points=(X, Y))
 
 pts = [c.pos for c in cyls]

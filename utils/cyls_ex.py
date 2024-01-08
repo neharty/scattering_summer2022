@@ -14,8 +14,8 @@ Y = R*np.sin(ANG)
 np.random.seed(1)
 Rmax = 10
 radius = 0.5
-vfill = 0.2
-minspace = radius*0.1
+vfill = 0.05
+minspace = radius*0
 cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 
