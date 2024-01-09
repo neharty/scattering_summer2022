@@ -167,6 +167,7 @@ class scattering(cyl):
         self.u_sc = None
         
         #divide the rhs blocks by hankel functions, depending on the boundary conditions
+        self.rhs = np.array(self.rhs, dtype=np.complex128)
         for l in self.labels:
             if self.balanced_system:
                 for j in range(2*self.cyls[l].sum_index + 1):

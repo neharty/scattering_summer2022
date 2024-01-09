@@ -11,18 +11,17 @@ R, ANG = np.meshgrid(r, thetas)
 X = R*np.cos(ANG)
 Y = R*np.sin(ANG)
 
-np.random.seed(1)
+np.random.seed(110)
 Rmax = 10
 radius = 0.5
-vfill = 0.05
-minspace = radius*0
+vfill = 0.15
+minspace = radius*0.125
 cyls = example_setups.random_circ_hex_vol_frac(
             Rmax, 
             'd', 
             radius, 
-            vfill, 
-            minspace=minspace,
-            measurement_points=(X, Y)
+            vfill,
+            minspace=minspace
         )
 #%%
 #check for overlap
@@ -49,7 +48,7 @@ print(ismindist)
 #%%
 print(len(cyls), len(cyls)*(radius**2)/Rmax**2)
 fig, ax = plot_cyls(cyls)
-ax.plot(X, Y, 'kx')
+#ax.plot(X, Y, 'kx')
 plt.show()
 
 # cyls = pickle.load(open('/home/nick/scattering/data/time_domain_tests/average_fl_waveform/cyls/bad/n/cyls.p', 'rb'))
