@@ -2871,8 +2871,8 @@ static PyObject *__pyx_pf_7wrapper_my_gmres(CYTHON_UNUSED PyObject *__pyx_self, 
  *             ):
  * 
  *     print(restart, tol)             # <<<<<<<<<<<<<<
- *     #get pointer from np array
- *     #cdef np.complex128_t[:, :] Amem = A
+ *     cdef int n = len(b)
+ * 
  */
   __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_restart); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 17, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -2891,17 +2891,17 @@ static PyObject *__pyx_pf_7wrapper_my_gmres(CYTHON_UNUSED PyObject *__pyx_self, 
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "wrapper.pyx":21
- *     #cdef np.complex128_t[:, :] Amem = A
- *     #cdef np.complex128_t[:] bmem = b
+  /* "wrapper.pyx":18
+ * 
+ *     print(restart, tol)
  *     cdef int n = len(b)             # <<<<<<<<<<<<<<
  * 
  *     #create empty array to store solution
  */
-  __pyx_t_4 = PyObject_Length(((PyObject *)__pyx_v_b)); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(((PyObject *)__pyx_v_b)); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 18, __pyx_L1_error)
   __pyx_v_n = __pyx_t_4;
 
-  /* "wrapper.pyx":24
+  /* "wrapper.pyx":21
  * 
  *     #create empty array to store solution
  *     cdef double complex* xptr = <double complex*>malloc(n*sizeof(double complex))             # <<<<<<<<<<<<<<
@@ -2910,49 +2910,49 @@ static PyObject *__pyx_pf_7wrapper_my_gmres(CYTHON_UNUSED PyObject *__pyx_self, 
  */
   __pyx_v_xptr = ((__pyx_t_double_complex *)malloc((__pyx_v_n * (sizeof(__pyx_t_double_complex)))));
 
-  /* "wrapper.pyx":27
+  /* "wrapper.pyx":24
  * 
  *     #pass memoryview pointers to gmres
  *     xptr = gmres_py(<double complex*>A.data, <double complex*>b.data, xptr, n, restart, tol)             # <<<<<<<<<<<<<<
- *     #print(xptr)
- *     #xarr = np.ctypeslib.as_array(, shape=(n,))
+ * 
+ *     #pointer for solution
  */
   __pyx_v_xptr = gmres_py<__pyx_t_double_complex>(((__pyx_t_double_complex *)__pyx_v_A->data), ((__pyx_t_double_complex *)__pyx_v_b->data), __pyx_v_xptr, __pyx_v_n, __pyx_v_restart, __pyx_v_tol);
 
-  /* "wrapper.pyx":30
- *     #print(xptr)
- *     #xarr = np.ctypeslib.as_array(, shape=(n,))
+  /* "wrapper.pyx":27
+ * 
+ *     #pointer for solution
  *     xmem = <np.complex128_t[:n]>xptr             # <<<<<<<<<<<<<<
- *     #print(xmem)
+ *     #return as an array
  *     return np.asarray(xmem)
  */
   if (!__pyx_v_xptr) {
     PyErr_SetString(PyExc_ValueError,"Cannot create cython.array from NULL pointer");
-    __PYX_ERR(0, 30, __pyx_L1_error)
+    __PYX_ERR(0, 27, __pyx_L1_error)
   }
-  __pyx_t_3 = __pyx_format_from_typeinfo(&__Pyx_TypeInfo___pyx_t_double_complex); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 30, __pyx_L1_error)
+  __pyx_t_3 = __pyx_format_from_typeinfo(&__Pyx_TypeInfo___pyx_t_double_complex); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 27, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = Py_BuildValue((char*) "("  __PYX_BUILD_PY_SSIZE_T  ")", ((Py_ssize_t)__pyx_v_n)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 30, __pyx_L1_error)
+  __pyx_t_2 = Py_BuildValue((char*) "("  __PYX_BUILD_PY_SSIZE_T  ")", ((Py_ssize_t)__pyx_v_n)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 27, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_5 = __pyx_array_new(__pyx_t_2, sizeof(__pyx_t_double_complex), PyBytes_AS_STRING(__pyx_t_3), (char *) "c", (char *) __pyx_v_xptr);
-  if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 30, __pyx_L1_error)
+  if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 27, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_xmem = ((struct __pyx_array_obj *)__pyx_t_5);
   __pyx_t_5 = 0;
 
-  /* "wrapper.pyx":32
+  /* "wrapper.pyx":29
  *     xmem = <np.complex128_t[:n]>xptr
- *     #print(xmem)
+ *     #return as an array
  *     return np.asarray(xmem)             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 32, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_np); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 29, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 32, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 29, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -2967,7 +2967,7 @@ static PyObject *__pyx_pf_7wrapper_my_gmres(CYTHON_UNUSED PyObject *__pyx_self, 
   }
   __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_2, ((PyObject *)__pyx_v_xmem)) : __Pyx_PyObject_CallOneArg(__pyx_t_1, ((PyObject *)__pyx_v_xmem));
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 32, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 29, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_3;

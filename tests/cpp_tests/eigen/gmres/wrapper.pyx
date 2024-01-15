@@ -15,9 +15,6 @@ def my_gmres(np.ndarray[dtype=np.complex128_t, ndim=2, mode='c'] A not None,
             ):
 
     print(restart, tol)
-    #get pointer from np array
-    #cdef np.complex128_t[:, :] Amem = A
-    #cdef np.complex128_t[:] bmem = b
     cdef int n = len(b)
 
     #create empty array to store solution
@@ -25,10 +22,10 @@ def my_gmres(np.ndarray[dtype=np.complex128_t, ndim=2, mode='c'] A not None,
 
     #pass memoryview pointers to gmres
     xptr = gmres_py(<double complex*>A.data, <double complex*>b.data, xptr, n, restart, tol)
-    #print(xptr)
-    #xarr = np.ctypeslib.as_array(, shape=(n,))
+    
+    #pointer for solution
     xmem = <np.complex128_t[:n]>xptr
-    #print(xmem)
+    #return as an array
     return np.asarray(xmem)
 
 
