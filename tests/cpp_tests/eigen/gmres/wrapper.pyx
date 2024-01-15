@@ -13,6 +13,8 @@ def my_gmres(np.ndarray[dtype=np.complex128_t, ndim=2, mode='c'] A not None,
              int restart = 30,
              double tol = 1e-10
             ):
+
+    print(restart, tol)
     #get pointer from np array
     #cdef np.complex128_t[:, :] Amem = A
     #cdef np.complex128_t[:] bmem = b

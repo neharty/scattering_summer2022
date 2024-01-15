@@ -66,7 +66,8 @@ class scattering(cyl):
             fast_matrix_build = True,
             use_2cyl_modes = False,
             use_foldy_lax = False,
-            balanced_system=False
+            balanced_system=True,
+            save_coeffs = False
             ):
  
         self.cyls = cyls
@@ -90,6 +91,7 @@ class scattering(cyl):
         self.use_2cyl_modes = use_2cyl_modes
         self.fl = use_foldy_lax
         self.balanced_system = balanced_system
+        self.save_coeffs = save_coeffs
 
         self.precond = precond
         self.precond_dist = precond_dist
@@ -387,7 +389,18 @@ class scattering(cyl):
             jS1 = [self.S(n, idxa_p[0], b) for n in idxd_q]
             jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
             return np.hstack((jS1, jS2))
-
+    
+    def make_root_matrix_offdiags(self):
+        #for use with c++ wrapper
+        self.make_jhm()
+        self.STo = []
+        for p in self.labels:
+            for q in self.labels:
+                if p != q:
+                    self.STo += [[self.make_root_vect_1cyl(p, q)]]
+                    
+        return self.STo
+    
     def make_root_matrix(self):
         self.make_jhm()
         if self.ST is None:
@@ -395,8 +408,7 @@ class scattering(cyl):
                 [
                     [self.make_root_vect_1cyl(p, q) for q in self.labels] 
                     for p in self.labels
-                ], 
-                dtype=object
+                ], dtype=object
                 )
         return self.ST
 
@@ -480,7 +492,7 @@ class scattering(cyl):
         if not np.isfinite(self.scat_mat).all():
             self.fast_matrix_build = False
             self.scat_mat = self.make_scattering_blocks()
-        
+
         return self.scat_mat
     
     def make_jhm(self):
@@ -643,7 +655,10 @@ class scattering(cyl):
                         u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
 
         self.u_sc = u_sc*self.mask(x,y)
-        return self.u_sc
+        if self.save_coeffs:
+            return (self.u_sc, cs)
+        else:
+            return self.u_sc
 
     def make_u_sc_parallel(self, x, y, queue):
         queue.put(self.make_u_sc(x, y))
@@ -673,6 +688,7 @@ class time_domain_scattering(scattering):
                  timeint=None,
                  balanced_system=True, 
                  use_disk=False,
+                 save_coeffs = False,
                  wvargs={},
                  scargs={}
                  ):
@@ -694,6 +710,9 @@ class time_domain_scattering(scattering):
         self.timeint = timeint
         self.balanced_system = balanced_system
         self.use_disk = use_disk
+        self.save_coeffs = save_coeffs
+        self.coeff_mat = None
+        self.use_coeffs = False #changed automatically after 1 computation is done
         
         # create 0-indexed labels for cylinders
         i = 0
@@ -1089,9 +1108,13 @@ class time_domain_scattering(scattering):
                     self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
                 else:
                     self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+            self.rhsmat = np.array(self.rhsmat)
+            if self.save_coeffs and self.coeff_mat is None:
+                self.coeff_mat = 1j*np.zeros(self.rhsmat.shape)
    
     def make_time_harmonic_soln(self, x, y):
-        self.fzt_boundary_allcyls()
+        if not self.use_coeffs:
+            self.fzt_boundary_allcyls()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         klen = range(len(self.ks))
         cpus = self.cpus
@@ -1120,9 +1143,16 @@ class time_domain_scattering(scattering):
                 use_foldy_lax = self.fl,
                 sum_index=self.modes,
                 balanced_system=self.balanced_system,
+                save_coeffs = self.save_coeffs,
                 **self.scargs
             )
-            return sc.make_u_sc(x, y)
+            if self.save_coeffs and not self.use_coeffs:
+                utmp, self.coeff_mat[idx] = sc.make_u_sc(x, y)
+            elif self.save_coeffs and self.use_coeffs:
+                utmp, self.coeff_mat[idx] = sc.make_u_sc(x, y, self.coeff_mat[idx])
+            else:
+                utmp = sc.make_u_sc(x, y)
+            return utmp
         
         if self.use_par:
             #compute using the pool
@@ -1179,6 +1209,8 @@ class time_domain_scattering(scattering):
             for j in range(len(self.timeint.c)):
                 for i in range(self.rhs_maxidx):
                     self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
+            if self.save_coeffs and self.coeff_mat is None:
+                self.coeff_mat = [1j*np.zeros(self.rhsmat[j].shape) for j in range(len(self.timeint.c))]
     
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt
@@ -1204,9 +1236,15 @@ class time_domain_scattering(scattering):
                         k=ks[i],
                         sum_index=self.modes,
                         balanced_system=self.balanced_system,
+                        save_coeffs = self.save_coeffs,
                         **self.scargs
                     )
-                wmat[i] = sc.make_u_sc(x, y)
+                if self.save_coeffs and not self.use_coeffs:
+                    wmat[i], self.coeff_mat[i][idx] = sc.make_u_sc(x, y)
+                elif self.save_coeffs and self.use_coeffs:
+                    wmat[i], self.coeff_mat[i][idx] = sc.make_u_sc(x, y, self.coeff_mat[i][idx])
+                else:
+                    wmat[i] = sc.make_u_sc(x, y)
 
         rmat = 1j*np.zeros(wmat[0].shape)
         for i in range(len(wmat)):
@@ -1215,7 +1253,8 @@ class time_domain_scattering(scattering):
         return self.zs[idx]*rmat
     
     def make_time_harmonic_soln_highorder(self, x, y):
-        self.fzt_boundary_allcyls_highorder()
+        if not self.use_cyls:
+            self.fzt_boundary_allcyls_highorder()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         cpus = self.cpus
         if self.use_conj:
@@ -1253,6 +1292,10 @@ class time_domain_scattering(scattering):
             self.make_time_harmonic_soln(x, y)
         else:
             self.make_time_harmonic_soln_highorder(x, y)
+            
+        if self.save_coeffs:
+            self.use_coeffs = True
+        
         self.U_sc = (1/self.lammat)*ifft(self.u_sc, axis=-1)
         self.U_sc = self.U_sc.real 
         return self.U_sc

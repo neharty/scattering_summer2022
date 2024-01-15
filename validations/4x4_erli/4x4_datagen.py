@@ -72,7 +72,7 @@ elif args.bcs == 'ndnd':
 
 cyls = example_setups.uniform_grid_NxN(4, bcs, 1, 3)
 
-dpath = '/home/nick/scattering/validations/4x4_erli/data/gmres/'
+dpath = '/home/nick/scattering/validations/4x4_erli/data/'
 dpath = os.path.join(dpath,
              args.tint,
              'srctype_'+str(args.srctype),
@@ -90,9 +90,10 @@ tds = time_domain_scattering(
                              modes=args.Nmode,
                              sampnum=2**args.Nt,
                              timeint=tint,
-                             use_par=True,
-                             balanced_system=True
-                             #scargs={'method':'explicit'}
+                             use_par=False,
+                             balanced_system=True,
+                             save_coeffs=True,
+                             scargs={'method':'explicit'}
                              )
 
 #inner points
@@ -102,6 +103,9 @@ for xdx in range(len(inpts)):
         fname = f'{inpts[xdx]:.3f}_{inpts[ydx]:.3f}.dat'
         arr = [[tds.times[i], Usc[ydx, xdx, i]] for i in range(len(tds.times))]
         np.savetxt(os.path.join(dpath, fname), arr)
+
+print('---------inner points done----------')
+print('-------computing outer points-------')
 
 #outer points
 Usc = tds.make_U_sc(Xout, Yout)

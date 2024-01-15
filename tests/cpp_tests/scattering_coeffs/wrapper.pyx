@@ -10,8 +10,8 @@ cdef extern from "gmres_cython.h":
 
 def my_gmres(np.ndarray[dtype=np.complex128_t, ndim=2, mode='c'] A not None,
              np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] b not None,
-             int restart = 30,
-             double tol = 1e-10
+             int restart = 100,
+             double tol = 1e-14
             ):
     #get pointer from np array
     #cdef np.complex128_t[:, :] Amem = A

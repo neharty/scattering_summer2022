@@ -2,44 +2,82 @@ import numpy as np
 from scipy.sparse.linalg import gmres
 import sys
 from tests.cpp_tests.eigen.gmres.wrapper import my_gmres
-from Ncyl.tds import scattering as sc
+from Ncyl.cqm import scattering as sc
+from Ncyl.cqm import time_domain_scattering, cyl
+from waveforms.waveforms import gaussian
 from utils import example_setups
 from time import process_time
+import matplotlib.pyplot as plt
 
-N = 15
-cyls = example_setups.uniform_grid_NxN(N, ['d' for i in range(N)], 1, 3)
-s = sc(cyls, freq=1/(2*np.pi), gmres_tol=1e-10, use_2cyl_modes=False)
+tacav = []
+tcppav = []
 
-'''
-np.random.seed(1234)
-A = np.random.rand(N, N) + 1j*np.random.rand(N, N)
-x = np.random.rand(N) + 1j*np.random.rand(N)
-d = A@x
-'''
-'''
-print('scipy')
-t = process_time()
-x_scipy, err = gmres(A, d, tol = 1e-10, restart=N, maxiter=len(d))
-print(err)
-print(process_time() - t)
-'''
+Ns = np.arange(2, 8)
+for N in Ns:
+    cyls = example_setups.uniform_grid_NxN(5, 'd', 1, 3)
+    #cyls = [cyl('d', [-1.5, 0], 1), cyl('d', [1.5, 0], 1)]
+    wv = gaussian(time_shift=12,
+                  inc_angle=0,
+                  sigma=1/4,
+                  amp = 2/np.sqrt(np.pi)
+                  )
 
-print('actual (fast mvp)')
-s.make_root_matrix()
-t = process_time()
-#x, err = s.scattering_coeffs()
-print(process_time() - t)
+    tds = time_domain_scattering(
+                                 cyls,
+                                 wv,
+                                 40,
+                                 modes=10,
+                                 sampnum=2**12,
+                                 timeint=None,
+                                 use_par=False,
+                                 balanced_system=True,
+                                 scargs={'method':'explicit'}
+                                 )
+    ks = tds.ks
+    tds.fzt_boundary_allcyls()
 
-print('cpp')
-A = np.ascontiguousarray(s.make_scattering_blocks())
-d = np.ascontiguousarray(s.make_rhs_vector())
-t = process_time()
-x_me = my_gmres(A, d, restart=s.scat_matrix_dim)
-print(process_time() - t)
+    X, Y = np.meshgrid([6], [0])
+    
+    errv = []
+    timeac = []
+    timecp = []
 
-print('cpp: ', np.linalg.norm(x_me - x))
-#print('scipy: ', np.linalg.norm(x_scipy - x))
-#print('relative: ', np.linalg.norm(x_me - x_scipy))
-print('max: ', np.max(np.abs(x_me - x)))
-idx = np.argmax(np.abs(x_me - x))
-print(x_me[idx], x[idx])
+    for i in range(len(tds.rhsmat)):
+        s = sc(
+                cyls, 
+                tds.rhsmat[i], 
+                k=ks[i], 
+                gmres_tol=1e-10, 
+                sum_index=10, 
+                method='gmres'
+               )
+        
+        print('actual (fast mvp)')
+        t = process_time()
+        x, e = s.scattering_coeffs()
+        t = process_time() - t
+        print(t)
+        timeac += [t]
+        usc = s.make_u_sc(X, Y, x)
+        
+        print('cpp')
+        A = s.make_scattering_blocks()
+        d = s.rhs
+        t = process_time()
+        x_me = my_gmres(A, d, restart=s.scat_matrix_dim)
+        t = process_time() - t
+        print(t)
+        timecp += [t]
+        errv += [np.max(np.abs(x_me - x))]
+    
+    tacav += [np.average(timeac)]
+    tcppav += [np.average(timecp)]
+#plt.semilogy(errv)
+plt.semilogy(Ns, tacav, label='python fast mvp')
+plt.semilogy(Ns, tcppav, label='c++ full matrix')
+plt.xlabel('N')
+plt.ylabel('solve time')
+plt.title('average time to solve an NxN system, dirichlet BCs')
+plt.legend()
+plt.show()
+
