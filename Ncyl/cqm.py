@@ -390,17 +390,6 @@ class scattering(cyl):
             jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
             return np.hstack((jS1, jS2))
     
-    def make_root_matrix_offdiags(self):
-        #for use with c++ wrapper
-        self.make_jhm()
-        self.STo = []
-        for p in self.labels:
-            for q in self.labels:
-                if p != q:
-                    self.STo += [[self.make_root_vect_1cyl(p, q)]]
-                    
-        return self.STo
-    
     def make_root_matrix(self):
         self.make_jhm()
         if self.ST is None:
