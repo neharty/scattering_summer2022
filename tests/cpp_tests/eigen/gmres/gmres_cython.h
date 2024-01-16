@@ -5,7 +5,6 @@
 #include <Eigen/Core>
 #include <Eigen/IterativeLinearSolvers>
 #include <unsupported/Eigen/IterativeSolvers>
-#include <complex>
 #include <fftw3.h>
 
 using namespace std;
