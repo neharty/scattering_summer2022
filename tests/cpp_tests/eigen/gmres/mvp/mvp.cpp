@@ -7,76 +7,76 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <unsupported/Eigen/IterativeSolvers>
 #include <fftw3.h>
-#include <random>
 
 using namespace std;
 using namespace Eigen;
 
-template<typename T>
 class mvp_class{
     public:
-        vector<vector<vector<T>>> ST; 
-        vector<vector<T>> JHM; 
+        vector<vector<vector<complex<double>>>> ST; 
+        vector<vector<complex<double>>> JHM; 
         int nmode; 
         int ncyl;
          
-        void mvp_class(vector<vector<vector<T>>>& ST, vector<vector<T>>& JHM){
+        
+        /*
+        mvp_class(vector<vector<vector<complex<double>>>>& ST, vector<vector<complex<double>>>& JHM, int nmode, int ncyl){
             this->ST = ST;
             this->JHM = JHM;
+            this->nmode = nmode;
+            this->ncyl = ncyl;
         };
+        */
         
-        Vector<T, Dynamic> mvp(Vector<T, Dynamic>& x){
+        complex<double>* mvp(complex<double>* xin){
             int len = ncyl*(2*nmode + 1);
-            x = np.array(x, dtype=np.complex128)
-            vector<vector<vector<T>>> SCmvp(ncyl, ncyl, (2*nmode+1));
-            vecot<vector<T>> xs(ncyl,vector<int>((2*nmode+1)));
-            vector<vector<T>> mulscat(
-            vector<T> retvect(len);
-            #split up the x coeffs
-            xs = [
-                np.array(
-                    x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128
-                    ) for i in range(1, len(self.lengths))
-                ]
-            ST = self.ST
-
-            mulscat = [1j*np.zeros(len(xn)) for xn in xs]
+            vector<complex<double>> x(xin, xin+len);
+            vector<vector<vector<complex<double>>>> SCmvp(ncyl, vector<vector<complex<double>>>(ncyl, vector<complex<double>>(2*nmode+1)));
+            vector<vector<complex<double>>> xs(ncyl,vector<complex<double>>((2*nmode+1)));
+            vector<vector<complex<double>>> mulscat(ncyl, vector<complex<double>>((2*nmode+1)));
+            vector<complex<double>> retvect(len);
             
-            /*
-            #computes the block MVPs and stores in a multidimensional list
-            SCmvp = [
-                [
-                    convolve(
-                        np.array(ST[p][q], dtype=np.complex128),
-                        np.array(xs[q], dtype=np.complex128),
-                        mode='valid'
-                    ) for q in self.labels]
-                for p in self.labels]
-            */
 
+            // split up the x coeffs
+            int idx;
+            for(int i=0; i<ncyl; i++){
+                for(int j=0; j<(2*nmode + 1); j++){
+                    idx = i*(2*nmode+1) + j;
+                    xs[i][j] = x[idx];
+                }
+            }
+            
+            // do the multiplication
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
+                    
                     this->convolve(this->ST[p][q], xs[q]);
+                    
                     if(p != q){
                         for(int i=0; i<len; i++){
                             SCmvp[p][q][i] *= this->JHM[p][i];
                         }
-                    // mulscat[p] += SCmvp[p][q]
+                    }
+                    
+                    for(int i=0; i<(2*nmode + 1); i++){
+                        mulscat[p][i] += SCmvp[p][q][i];
                     }
                 }
             }
             
-            int idx;
+            // resize the result vector
+            idx=0;
             for(int p=0; p<ncyl; p++){
                 for(int i=0; i<(2*nmode+1); i++){
                     idx = p*(2*nmode+1) + i;
                     retvect[idx] = mulscat[p][i];
                 }
             }
-            return retvect;
+
+            return retvect.data();
         };
  
-        vector<complex<double>> convolve(vector<T>& f, vector<T>& g){
+        vector<complex<double>> convolve(vector<complex<double>>& f, vector<complex<double>>& g){
             int n = int(f.size());
             int m = int(g.size());
             const int N = n+m-1;
