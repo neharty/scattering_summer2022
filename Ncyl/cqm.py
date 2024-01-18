@@ -372,8 +372,8 @@ class scattering(cyl):
         # sc = scatterer circle label
         if i == sc:
             n = self.cyls[i].sum_index
-            #TODO: there was a +1 at the end, check if ok
-            delta = 1j*np.zeros(4*n)
+            #TODO: there was a +1 at the end, check if ok (done 1/17/24?)
+            delta = 1j*np.zeros(4*n+1)
             delta[2*n] = 1
             return delta
         else:
@@ -523,14 +523,14 @@ class scattering(cyl):
                     mode='valid'
                 ) for q in self.labels]
             for p in self.labels]
-        
+
         #TODO: remove this double loop
         for p in self.labels:
             for q in self.labels:
                 if p != q:
                     SCmvp[p][q] *= self.jhm[p]
                 mulscat[p] += SCmvp[p][q]
-        
+        #print(mulscat)
         self.mvp_counter += 1
         return np.hstack(mulscat)
 

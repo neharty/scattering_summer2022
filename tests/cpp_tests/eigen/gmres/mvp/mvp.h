@@ -17,44 +17,37 @@ class mvp_class{
         vector<vector<complex<double>>> JHM; 
         int nmode; 
         int ncyl;
-         
         
-        /*
-        mvp_class(vector<vector<vector<complex<double>>>>& ST, vector<vector<complex<double>>>& JHM, int nmode, int ncyl){
-            this->ST = ST;
-            this->JHM = JHM;
-            this->nmode = nmode;
-            this->ncyl = ncyl;
-        };
-        */
-        
+        void set_ST(const vector<vector<vector<complex<double>>>>& st){ST = st;};
+
+        void set_JHM(const vector<vector<complex<double>>>& jhm){JHM = jhm;};
+
         complex<double>* mvp(complex<double>* xin){
-            int len = ncyl*(2*nmode + 1);
-            vector<complex<double>> x(xin, xin+len);
+            //int len = ncyl*(2*nmode + 1);
             vector<vector<vector<complex<double>>>> SCmvp(ncyl, vector<vector<complex<double>>>(ncyl, vector<complex<double>>(2*nmode+1)));
             vector<vector<complex<double>>> xs(ncyl,vector<complex<double>>((2*nmode+1)));
             vector<vector<complex<double>>> mulscat(ncyl, vector<complex<double>>((2*nmode+1)));
-            vector<complex<double>> retvect(len);
             
-
             // split up the x coeffs
             int idx;
             for(int i=0; i<ncyl; i++){
                 for(int j=0; j<(2*nmode + 1); j++){
                     idx = i*(2*nmode+1) + j;
-                    xs[i][j] = x[idx];
+                    xs[i][j] = xin[idx];
                 }
             }
             
-            // do the multiplication
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
-                    
-                    this->convolve(this->ST[p][q], xs[q]);
-                    
+                    SCmvp[p][q] = convolve(ST[p][q], xs[q]);
+                }
+            }
+            
+            for(int p=0; p<ncyl; p++){
+                for (int q=0; q<ncyl; q++){
                     if(p != q){
-                        for(int i=0; i<len; i++){
-                            SCmvp[p][q][i] *= this->JHM[p][i];
+                        for(int i=0; i<SCmvp[p][q].size(); i++){
+                            SCmvp[p][q][i] *= JHM[p][i];
                         }
                     }
                     
@@ -63,17 +56,17 @@ class mvp_class{
                     }
                 }
             }
-            
+
             // resize the result vector
             idx=0;
             for(int p=0; p<ncyl; p++){
                 for(int i=0; i<(2*nmode+1); i++){
                     idx = p*(2*nmode+1) + i;
-                    retvect[idx] = mulscat[p][i];
+                    xin[idx] = mulscat[p][i];
                 }
             }
 
-            return retvect.data();
+            return xin;
         };
  
         vector<complex<double>> convolve(vector<complex<double>>& f, vector<complex<double>>& g){
@@ -144,4 +137,10 @@ class mvp_class{
             
             return outvect;
         }
+
+    void quicktest(complex<double>* xin){
+        for(int i=0; i<100; i++){
+            mvp(xin);
+        }
+    }
 };

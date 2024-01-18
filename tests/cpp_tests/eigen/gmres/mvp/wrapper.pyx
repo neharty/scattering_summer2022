@@ -1,4 +1,5 @@
 # distutils: language=c++
+from time import process_time
 from libc.stdlib cimport malloc
 import numpy as np
 from scipy.special import jv, jvp, hankel1, h1vp
@@ -6,12 +7,15 @@ cimport numpy as np
 cimport libcpp.complex as cpx
 from libcpp.vector cimport vector
 
-cdef extern from "mvp.cpp":
+cdef extern from "mvp.h":
     cdef cppclass mvp_class:
         mvp_class()
         double complex* mvp(double complex*)
+        void quicktest(double complex*)
         vector[vector[vector[double complex]]] ST 
         vector[vector[double complex]] JHM
+        void set_ST(vector[vector[vector[double complex]]]&)
+        void set_JHM(vector[vector[double complex]]&)
         int nmode, ncyl
 
 def cart_to_polar(v):
@@ -41,11 +45,12 @@ def Shat(m, n, v, k):
 def make_root_vect_1cyl(ci, csc, k):
     # ci = incident circle 
     # csc = scatterer circle 
-    i = ci.label
-    sc = csc.label
+    cdef int i = ci.label
+    cdef int sc = csc.label
+    cdef int n
     if i == sc:
         n = ci.sum_index
-        delta = 1j*np.zeros(4*n)
+        delta = 1j*np.zeros(4*n+1)
         delta[2*n] = 1
         return delta
     else:
@@ -61,8 +66,9 @@ def make_root_vect_1cyl(ci, csc, k):
 
 def jmode(cyl, m, k):
     bc = cyl.bc
-    radius = cyl.radius
-    
+    cdef double radius = cyl.radius
+    #cdef double complex st
+
     if bc == 'd':
         st = jv(m, k*radius)
     elif bc == 'n':
@@ -77,8 +83,9 @@ def jmode(cyl, m, k):
 
 def hmode(cyl, m, k):
     bc = cyl.bc
-    radius = cyl.radius
-    
+    cdef double radius = cyl.radius
+    #cdef double complex st
+
     if bc == 'd':
         st = hankel1(m, k*radius)
     elif bc == 'n':
@@ -109,15 +116,18 @@ def make_jhm(cyls, k):
 def my_mvp(cyls, nmode, k, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None):
     
     cdef int ncyl = len(cyls)
+    cdef int vlen = ncyl*(2*nmode+1)
     cdef vector[vector[vector[double complex]]] STv
     cdef vector[vector[double complex]] empty_2vect, vect2 
     cdef vector[double complex] empty_vect, vect
     cdef vector[vector[double complex]] jhmv
     
     #make STv
-    for p in len(range(ncyl)):
-        for q in len(range(ncyl)):
-            tmpst = make_root_vect_1cyl(p, q)
+    cdef int p, q, i
+    t = process_time()
+    for p in range(ncyl):
+        for q in range(ncyl):
+            tmpst = make_root_vect_1cyl(cyls[p], cyls[q], k)
             for i in range(len(tmpst)):
                 vect.push_back(tmpst[i])
             vect2.push_back(vect)
@@ -129,35 +139,28 @@ def my_mvp(cyls, nmode, k, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x
     vect = empty_vect
     jhmtmp = make_jhm(cyls, k)
     for p in range(ncyl):
-        for i in len(jhmtmp[p]):
+        for i in range(len(jhmtmp[p])):
             vect.push_back(jhmtmp[p][i])
         jhmv.push_back(vect)
         vect = empty_vect
-
+    print(process_time() - t)
     #instatiate for mvp
-    cdef mvp_class cppmvp#(STv, jhmv, nmode, ncyl)
-    cppmvp.ST = STv
-    cppmvp.JHM = jhmv
+    t = process_time()
+    cdef mvp_class cppmvp
+    cppmvp.set_ST(STv)
+    cppmvp.set_JHM(jhmv)
     cppmvp.nmode = nmode
     cppmvp.ncyl = ncyl
-    
+    print(process_time() - t)
     #convert numpy array to a pointer
     cdef double complex* xptr = <double complex*>xin.data
 
     #pass to cpp gmres for mvp
-    xout = cppmvp.mvp(xptr)
-    return np.asarray(<np.complex128_t[:ncyl*(2*nmode+1)]>xout)
+    cdef double complex* xout = <double complex*>malloc(vlen*sizeof(double complex))
     
-    #return 
-
-    #create empty array to store solution
-    #
-    #pass memoryview pointers to gmres
-    #xptr = gmres_py(<double complex*>A.data, <double complex*>b.data, xptr, n, restart, tol)
-    
-    #pointer for solution
-    #xmem = <np.complex128_t[:n]>xptr
-    #return as an array
-    #return np.asarray(xmem)
-
+    #xout = cppmvp.mvp(xptr)
+    #return np.asarray(<np.complex128_t[:vlen]>xout)
+    t = process_time()
+    cppmvp.quicktest(xptr)
+    print(process_time() - t)
 

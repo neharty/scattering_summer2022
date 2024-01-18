@@ -5,7 +5,7 @@ import numpy
 import os
 
 extensions = [Extension('wrapper',
-    ['wrapper.pyx', 'mvp.cpp'],
+    ['wrapper.pyx'],
     include_dirs=[numpy.get_include(), '.', '/usr/local/include'], 
     library_dirs=['/usr/local/lib'],
     libraries=['fftw3', 'm'],

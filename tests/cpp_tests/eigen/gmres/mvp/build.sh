@@ -1,4 +1,2 @@
-clear
-g++ mvp.h -I/usr/local/include -L/usr/local/lib -lfftw3 -lm -o mvp
-chmod a+x mvp
-./mvp
+python3 setup.py build_ext --inplace
+python3 test.py
