@@ -6,6 +6,7 @@ from scipy.special import jv, jvp, hankel1, h1vp
 cimport numpy as np
 cimport libcpp.complex as cpx
 from libcpp.vector cimport vector
+from libcpp cimport bool
 
 cdef extern from "mvp.h":
     cdef cppclass mvp_class:
@@ -14,9 +15,14 @@ cdef extern from "mvp.h":
         void quicktest(double complex*)
         vector[vector[vector[double complex]]] ST 
         vector[vector[double complex]] JHM
+        bool fast_conv
         void set_ST(vector[vector[vector[double complex]]]&)
         void set_JHM(vector[vector[double complex]]&)
+        void set_fast_conv(bool)
+        void mvp_setup()
         int nmode, ncyl
+
+cdef mvp_class cppmvp
 
 def cart_to_polar(v):
     return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -113,8 +119,7 @@ def make_jhm(cyls, k):
         jhm[p] = jh(cyls[p], idxa_p, k)
     return jhm
 
-def my_mvp(cyls, nmode, k, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None):
-    
+def mvp_init(cyls, nmode, k, fast_conv=True): 
     cdef int ncyl = len(cyls)
     cdef int vlen = ncyl*(2*nmode+1)
     cdef vector[vector[vector[double complex]]] STv
@@ -124,7 +129,7 @@ def my_mvp(cyls, nmode, k, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x
     
     #make STv
     cdef int p, q, i
-    t = process_time()
+    
     for p in range(ncyl):
         for q in range(ncyl):
             tmpst = make_root_vect_1cyl(cyls[p], cyls[q], k)
@@ -143,24 +148,23 @@ def my_mvp(cyls, nmode, k, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x
             vect.push_back(jhmtmp[p][i])
         jhmv.push_back(vect)
         vect = empty_vect
-    print(process_time() - t)
+    
     #instatiate for mvp
-    t = process_time()
-    cdef mvp_class cppmvp
+    print(STv[1][0][0])
     cppmvp.set_ST(STv)
     cppmvp.set_JHM(jhmv)
+    cppmvp.set_fast_conv(fast_conv)
     cppmvp.nmode = nmode
     cppmvp.ncyl = ncyl
-    print(process_time() - t)
+    cppmvp.mvp_setup() 
+
+def my_mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None):
     #convert numpy array to a pointer
+    cdef int vlen = len(xin)
     cdef double complex* xptr = <double complex*>xin.data
 
     #pass to cpp gmres for mvp
     cdef double complex* xout = <double complex*>malloc(vlen*sizeof(double complex))
-    
-    #xout = cppmvp.mvp(xptr)
-    #return np.asarray(<np.complex128_t[:vlen]>xout)
-    t = process_time()
-    cppmvp.quicktest(xptr)
-    print(process_time() - t)
 
+    xout = cppmvp.mvp(xptr)
+    return np.asarray(<np.complex128_t[:vlen]>xout)

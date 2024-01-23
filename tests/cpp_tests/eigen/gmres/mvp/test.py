@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.sparse.linalg import gmres
 import sys
-from tests.cpp_tests.eigen.gmres.mvp.wrapper import my_mvp
+from tests.cpp_tests.eigen.gmres.mvp.wrapper import mvp_init, my_mvp
 from Ncyl.cqm import scattering
 from Ncyl.cqm import time_domain_scattering, cyl
 from waveforms.waveforms import gaussian
@@ -16,22 +16,31 @@ for i in range(len(cyls)):
     cyls[i].label = i
 
 N = len(cyls)*(2*nmode+1)
-rhs = np.random.random(N) + 1j*np.random.random(N)
-k = 40 + 50*1j
+tlen = N
+np.random.seed(1234)
+rhs = np.random.rand(tlen) + 1j*np.random.rand(tlen)
+#rhs = np.ascontiguousarray(rhs)
+k = 0.5j
 
+#python result
 t = process_time()
 sc = scattering(cyls, rhs, k=k, use_2cyl_modes=False)
 sc.make_jhm()
 sc.make_root_matrix()
-for i in range(100):
-    xact = sc.mvp(rhs)
-ptime = process_time() - t
+xact = sc.mvp(rhs)
 print('done with python')
 
-t = process_time()
-xsol = my_mvp(cyls, nmode, k, rhs)
-mtime = process_time() - t
 
-print(ptime, mtime, mtime/ptime)
+#full convolution loop
+mvp_init(cyls, nmode, k, fast_conv=False)
+xsolslow = my_mvp(rhs)
+print(np.max(np.abs(xsolslow - xact)))
+
+#fftw conv
+mvp_init(cyls, nmode, k)
+xsolfftw = my_mvp(rhs)
+
+#print(ptime, mtime, 1-mtime/ptime)
 #print(xsol)
-print(np.max(np.abs(xsol-xact)))
+print(np.max(np.abs(xsolfftw - xact)))
+print(np.max(np.abs(xsolfftw - xsolslow)))
