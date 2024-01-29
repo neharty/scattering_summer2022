@@ -30,8 +30,16 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         fftw_plan bwodp;
         int nmode; 
         int ncyl;
-        int dim = ncyl*(2*nmode+1);
+        int dim;
         
+        MatReplacement() {} // default constructor
+        
+        MatReplacement(int nm, int nc){
+            nmode = nm; 
+            ncyl = nc; 
+            dim = nc*((2*nm)+1);
+        }
+
         int Nd;
         int Nod;
         vector<complex<double>> xddum; // dummy arrays for fftw plan
@@ -58,11 +66,11 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         Index cols() const { return dim; }
         
         //setters
-        void set_ST(const vector<vector<vector<complex<double>>>>& st){ST = st;};
-        void set_JHM(const vector<vector<complex<double>>>& jhm){JHM = jhm;};
-        void set_maxiter(const int mit){maxiter=mit;};
-        void set_restart(const int rsrt){restart=rsrt;};
-        void set_tol(const double tl){tol=tl;};
+        void set_ST(const vector<vector<vector<complex<double>>>>& st){this->ST = st;};
+        void set_JHM(const vector<vector<complex<double>>>& jhm){this->JHM = jhm;};
+        void set_maxiter(const int mit){this->maxiter=mit;};
+        void set_restart(const int rsrt){this->restart=rsrt;};
+        void set_tol(const double tl){this->tol=tl;};
 
         //getters
         int get_dim() const { return dim; }
@@ -78,7 +86,7 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             yddum.resize(Nd);
             xoddum.resize(Nod);
             yoddum.resize(Nod);
-   
+
             // forward fft diagonal plan
             fdp = fftw_plan_dft_1d(Nd, 
                             reinterpret_cast<fftw_complex*>(xddum.data()), 
@@ -106,35 +114,31 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                             reinterpret_cast<fftw_complex*>(yoddum.data()), 
                             FFTW_BACKWARD, 
                             FFTW_MEASURE);
-           cout << "mvp initialized" << endl;
+           //cout << "mvp initialized" << endl;
         }
         
-        complex<double>* conv_ptr(complex<double>* fptr, int flen, complex<double>* gptr, int glen, complex<double>* xout){
-            cout << dim << endl;
+        void conv_ptr(const complex<double>* fptr, const int flen, const complex<double>* gptr, const int glen, complex<double>* xout){
+            // convolution algorithm with pointers
             vector<complex<double>> fv(fptr, fptr+flen);
             vector<complex<double>> gv(gptr, gptr+glen);
             vector<complex<double>> xv(max(flen, glen) - min(flen, glen) + 1);
             xv = convolve(fv, gv, fdp, bwdp);
-            cout << "convolved" << endl;
             for(int i(0); i<dim; i++){
                 xout[i] = xv[i];
             }
-            return xout;
         }
 
-        complex<double>* mvp_ptr(complex<double>* xin, complex<double>* xout){
-            cout << dim << endl;
+        void mvp_ptr(const complex<double>* xin, complex<double>* xout){
+            // mvp algorithm with pointers
             vector<complex<double>> xv(xin, xin+dim);
-            xv = mvp(xv);
+            vector<complex<double>> xvout(dim);
+            xvout = mvp(xv);
             for(int i(0); i<dim; i++){
-                xout[i] = xv[i];
+                xout[i] = xvout[i];
             }
-            return xout;
         }
 
-        vector<complex<double>> mvp(vector<complex<double>>& xin){
-            //int len = ncyl*(2*nmode + 1);
-            //cout << "start mvp" << endl;
+        vector<complex<double>> mvp(vector<complex<double>>& xin) const {
             vector<vector<vector<complex<double>>>> SCmvp(ncyl, vector<vector<complex<double>>>(ncyl, vector<complex<double>>(2*nmode+1)));
             vector<vector<complex<double>>> xs(ncyl,vector<complex<double>>((2*nmode+1)));
             vector<vector<complex<double>>> mulscat(ncyl, vector<complex<double>>((2*nmode+1)));
@@ -156,50 +160,62 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                 }
             }
             
+            /* 
+            //print out SCmvp at this stage (matches python result so far)
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
                      for(int i=0; i<SCmvp[p][q].size(); i++){ cout << SCmvp[p][q][i] << " ";}
                      cout << endl;
                 }
                 cout << endl;
-            }
-            
+            } 
             cout << endl;
+            */
+
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
-                    if(p != q){
-                        for(int i=0; i<SCmvp[p][q].size(); i++){ SCmvp[p][q][i] *= JHM[p][i]; }
+                    if(p != q){ // multiply the off diagonal blocks 
+                        for(int i=0; i<int(JHM[p].size()); i++){ SCmvp[p][q][i] *= JHM[p][i]; }
                     }
-                    
-                    for(int i=0; i<(2*nmode + 1); i++){ mulscat[p][i] += SCmvp[p][q][i]; }
+                }
+            }
+            
+            //sum the results for the output vector
+            for(int p=0; p<ncyl; p++){
+                for (int q=0; q<ncyl; q++){
+                    for(int i=0; i<int(SCmvp[p][q].size()); i++){ mulscat[p][i] += SCmvp[p][q][i]; }
                 }
             }
 
             // resize the result vector
+            vector<complex<double>> xout(dim, 0);
             idx=0;
             for(int p=0; p<ncyl; p++){
                 for(int i=0; i<(2*nmode+1); i++){
                     idx = p*(2*nmode+1) + i;
-                    xin[idx] = mulscat[p][i];
+                    xout[idx] = mulscat[p][i];
                 }
             }
-            return xin;
+            
+            /*
+            for(int i(0); i<dim; i++){ cout << xin[i] << " "; }
+            cout << endl << endl;
+            */
+
+            return xout;
         };
  
-        vector<complex<double>> convolve(vector<complex<double>>& f, vector<complex<double>>& g, const fftw_plan fp, const fftw_plan bp){
+        vector<complex<double>> convolve(const vector<complex<double>>& f, const vector<complex<double>>& g, const fftw_plan& fp, const fftw_plan& bp) const {
+            
             int n = int(f.size());
             int m = int(g.size());
             const int N = n+m-1;
+            
             // zero pad the arrays
             vector<complex<double>> fpad(N);
-            vector<complex<double>> gpad(N);
-            
-            for(int i=0;i<n;i++){
-                fpad[i] = f[i];
-            }
-            for(int i=0; i<m; i++){
-                gpad[i] = g[i];
-            }
+            vector<complex<double>> gpad(N);            
+            for(int i=0;i<n;i++){ fpad[i] = f[i]; }
+            for(int i=0; i<m; i++){ gpad[i] = g[i]; }
             
             // fft to convolve the padded arrays   
             vector<complex<double>> fout(N);
@@ -208,19 +224,13 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             fftw_execute_dft(fp, reinterpret_cast<fftw_complex*>(gpad.data()), reinterpret_cast<fftw_complex*>(gout.data()));
 
             vector<complex<double>> convres(N);
-            
-            for(int i=0; i < N; i++){
-                // complex multiply the results
-                convres[i] = fout[i]*gout[i];
-            }
-             
+            for(int i=0; i < N; i++){ convres[i] = fout[i]*gout[i]; } // complex multiply the results
+
             //invert to get result
             vector<complex<double>> resout(N);
             fftw_execute_dft(bp, reinterpret_cast<fftw_complex*>(convres.data()), reinterpret_cast<fftw_complex*>(resout.data()));
             // normalize data
-            for(int i = 0; i < N; i++){
-                resout[i] = resout[i]/double(N);
-            }
+            for(int i = 0; i < N; i++){ resout[i] /= double(N); }
             
             //select the "valid" components in the convolution
             int minlen = min(m, n);
@@ -229,13 +239,13 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
 
             vector<complex<double>> outvect(outlen);
             for(int i=0; i<outlen; i++){
-                outvect[i] = resout[i+minlen-1];
+                outvect[i] = resout[i+minlen-1]; //valid convolution
             }
             
             return outvect;
-            
+           
             /*
-            //from stack overflow
+            //from stack overflow, explicit convolution
             //https://stackoverflow.com/questions/24518989/how-to-perform-1-dimensional-valid-convolution
             //cout << "takin it slow" << endl;
             int const nf = f.size();
@@ -253,56 +263,63 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             }
             return out;
             */
+
         }
 
-        void fftw_clean(){ 
-            // to be implemented
+        void fftw_clean(){
+            //deallocate fftw pointers
+            fftw_destroy_plan(fdp);
+            fftw_destroy_plan(fodp);
+            fftw_destroy_plan(bwdp);
+            fftw_destroy_plan(bwodp);
+            fftw_cleanup();
         }
         
         template<typename Rhs>
         Eigen::Product<MatReplacement, Rhs, Eigen::AliasFreeProduct> operator*(const Eigen::MatrixBase<Rhs>& x) const {
-            //cout << "product defn" << endl;
             return Eigen::Product<MatReplacement, Rhs, Eigen::AliasFreeProduct>(*this, x.derived());
         }
 };
 
+//implementation of matrix-free MVP to be called by eigen
 template<typename Rhs>
 struct internal::generic_product_impl<MatReplacement, Rhs, SparseShape, DenseShape, GemvProduct> // GEMV stands for matrix-vector
 : internal::generic_product_impl_base<MatReplacement, Rhs, generic_product_impl<MatReplacement, Rhs> >{
     typedef typename Product<MatReplacement,Rhs>::Scalar Scalar;
 
     template<typename Dest>
-    static void scaleAndAddTo(Dest& dst, const MatReplacement& lhs, const Rhs& rhs, const Scalar& alpha)
+    static void evalTo(Dest& dst, const MatReplacement& lhs, const Rhs& rhs)//scaleAndAddTo(Dest& dst, const MatReplacement& lhs, const Rhs& rhs, const Scalar& alpha)
     {
         //assert(alpha==Scalar(1) && "scaling is not implemented");
         //EIGEN_ONLY_USED_FOR_DEBUG(alpha);
         
-        vector<complex<double>> rhsin(rhs.data(), rhs.data() + rhs.rows() * rhs.cols());        
-        MatReplacement tmp = lhs; //this line is wrong
-        vector<complex<double>> prodout = tmp.mvp(rhsin);
-        dst += Map<Vector<complex<double>, Dynamic>>(prodout.data(), prodout.size());
+        vector<complex<double>> rhsin(rhs.data(), rhs.data() + rhs.rows() * rhs.cols());
+        vector<complex<double>> prodout = lhs.mvp(rhsin);
+        dst = Map<Vector<complex<double>, Dynamic>>(prodout.data(), prodout.size());
     }
 };
 
-complex<double>* gmres_cpp(complex<double>* xin, complex<double>* xout, const MatReplacement& M){
+void gmres_cpp(complex<double>* xin, complex<double>* xout, const MatReplacement& M){
+    //set up gmres
     GMRES<MatReplacement, IdentityPreconditioner> gmres;
     gmres.set_restart(M.get_restart());
     gmres.setTolerance(M.get_tol());
     gmres.setMaxIterations(M.get_maxiter());
     gmres.compute(M);
-    int N = M.get_dim(); 
+    int N = M.get_dim();
+    
+    // change data types to eigen vector
     Vector<complex<double>, Dynamic> xingmres = Map<Vector<complex<double>, Dynamic> >(xin, N);
-    Vector<complex<double>, Dynamic> xoutgmres = gmres.solve(xingmres);
+    Vector<complex<double>, Dynamic> xoutgmres = gmres.solve(xingmres); // solve the system
+
+    //print gmres info
     cout << "exit info:   "<< gmres.info() << endl;
     cout << "#iterations:     " << gmres.iterations() << endl;
     cout << "estimated error: " << gmres.error()      << endl;
-    //vector<complex<double>> xout(&xoutgmres[0], xoutgmres.data()+xoutgmres.cols()*xoutgmres.rows());
     
     //copy the data to the original array
     for(int i=0; i < N; i++){
         xout[i] = xoutgmres[i];
         //std::cout << xsol[i] << std::endl;
     }
-
-    return xout;
 }

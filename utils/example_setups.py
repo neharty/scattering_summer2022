@@ -191,16 +191,14 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 
     return cyls
 
-def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=None, center=None):
-    #compute the initial grid to perturb
-    #TODO: algorithm to find max num Nx and Ny
-    ctemp = triangular_lattice(N, N, ['d' for n in range(N)], radius, dist, dist, sum_num=None, impedance=None, center=center)
-    
+def random_hexagon(Nx, Ny, bc, radius, dist, minspace=0, sum_num=None, impedance=None, center=None):
+    ctemp = triangular_lattice(Nx, Ny, ['d' for n in range(Nx)], radius, dist, dist, sum_num=None, impedance=None, center=center)
+
     cnum = len(ctemp)
     pos = np.array([c.pos for c in ctemp])
     xpos = pos[:, 0]
     ypos = pos[:, 1]
-   
+    
     paverage = np.inf
     pvariance = np.inf
     
@@ -215,7 +213,7 @@ def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=No
             idx = np.delete(np.arange(cnum), i)
             z = xpos[idx] + 1j*ypos[idx]
             allpoints = np.all(np.abs(z - ztest) > (2*radius + minspace))
-
+    
             while not allpoints:
                 #if the new point doesnt work, retry until it does
                 r = np.sqrt(np.random.uniform(0, (dist/np.sqrt(2) - 2*radius-minspace))**2)
@@ -238,17 +236,20 @@ def random_hexagon(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=No
         caverage = np.sqrt(np.mean(xpos)**2 + np.mean(ypos)**2)
         cvariance = np.var([[xpos[i], ypos[i]] for i in range(cnum)])
         #print(caverage, cvariance)
-
+    
     origins = np.array([[xpos[i], ypos[i]] for i in range(cnum)])
-
+    
     cyls = [None for i in range(cnum)]
     for i in range(cnum):
         cyls[i] = cyl(bc, origins[i], radius, sum_index=sum_num, impedance = impedance)
-
+    
     return cyls
 
+def random_hexagon_square(N, bc, radius, dist, minspace = 0, sum_num=None, impedance=None, center=None):
+    return random_hexagon(N, N, bc, radius, dist, minspace, sum_num, impedance, center)
+
 def all_random_hexagon(N, bcs, radius, dist, sum_num = None, impedance = None, center=None):
-    cyls = random_hexagon(N, 'd', radius, dist, sum_num = sum_num, center=center) #placeholder to change bcs
+    cyls = random_hexagon_square(N, 'd', radius, dist, sum_num = sum_num, center=center) #placeholder to change bcs
     bcs = np.random.choice(bcs, size=len(cyls))
     for c in range(len(cyls)):
         cyls[c].bc = bcs[c]
@@ -304,11 +305,11 @@ def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None):
 
     return cyls
 
-def random_circ_hex(rmax, bc, radius, initspace, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None):
+def random_circ_hex(rmax, bc, radius, initspace, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None, remove_center=False):
     spc = initspace
     N = int((2*rmax - 2*radius)/spc)
     print(N)
-    ctmp = random_hexagon(N, bc, radius, spc, minspace, sum_num, impedance, center)
+    ctmp = random_hexagon_square(N, bc, radius, spc, minspace, sum_num, impedance, center)
     
     #delete circles overlapping a measurement point
     if measurement_points is not None:
@@ -328,11 +329,16 @@ def random_circ_hex(rmax, bc, radius, initspace, minspace=0, sum_num=None, imped
             ctmp.remove(ctmp[i])
     
     rmask = np.array([np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp])
-    rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
-    cctmp = np.asarray(ctmp)[rmask*rmask2]
+    
+    if remove_center:
+        rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
+        cctmp = np.asarray(ctmp)[rmask*rmask2]
+    else:
+        cctmp=np.asarray(ctmp)[rmask]
+        
     return cctmp.tolist()
 
-def random_circ_hex_vol_frac(R, bc, r, rho, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None):
+def random_circ_hex_vol_frac(R, bc, r, rho, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None, remove_center=False):
     #actual number of circles needed
     print(round(rho*R**2/r**2))
     n_act = int(round(rho*R**2/r**2))
@@ -346,7 +352,7 @@ def random_circ_hex_vol_frac(R, bc, r, rho, minspace=0, sum_num=None, impedance=
         N = max(0.5*(1 + np.sqrt(8*R**2*rho/(np.pi*r**2) - 1)), Nprev+1)
         Nprev = N
         spc = (2*R - 2*r)/(N-1)
-        tmp = random_circ_hex(R, bc, r, spc, minspace, sum_num, impedance, center, measurement_points)
+        tmp = random_circ_hex(R, bc, r, spc, minspace, sum_num, impedance, center, measurement_points, remove_center)
         ncurr = len(tmp)
     
     if ncurr > n_act:
@@ -360,6 +366,9 @@ def random_circ_hex_vol_frac(R, bc, r, rho, minspace=0, sum_num=None, impedance=
             del tmp[i]
 
     return tmp
+
+def random_box_hex_vol_frac(Lx, Ly, bc, r, rho, minspace=0, sum_num=0, impedance=None, center=None, measurement_points=None, remove_center=False):
+    pass
 
 def random_circ_hex_vol_frac_legacy(R, bc, r, rho, sum_num=None, impedance=None, center=None, measurement_points=None):
     #actual number of circles needed

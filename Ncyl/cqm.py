@@ -10,6 +10,7 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 import uuid
+from tests.cython_tests.full_gmres.wrapper import PyScat
 
 class cyl:
     '''
@@ -67,13 +68,15 @@ class scattering(cyl):
             use_2cyl_modes = False,
             use_foldy_lax = False,
             balanced_system=True,
-            save_coeffs = False
+            save_coeffs = False,
+            use_cpp = False
             ):
  
         self.cyls = cyls
         self.rhs = rhs
 
-        self.labels = np.arange(len(self.cyls))
+        #self.labels = np.arange(len(self.cyls))
+        self.labels = np.array([c.label for c  in self.cyls])
         self.sum_tol = sum_tol
 
         self.wavespeed = wavespeed
@@ -92,6 +95,7 @@ class scattering(cyl):
         self.fl = use_foldy_lax
         self.balanced_system = balanced_system
         self.save_coeffs = save_coeffs
+        self.use_cpp = use_cpp
 
         self.precond = precond
         self.precond_dist = precond_dist
@@ -134,6 +138,7 @@ class scattering(cyl):
         else:
             for l in self.labels:
                 self.cyls[l].sum_index = sum_index
+            self.sum_index = sum_index
                 
         # make lengths of coefficient vector blocks for MVP algorithm
         self.lengths = np.zeros(len(self.cyls) + 1, dtype=int)
@@ -274,31 +279,6 @@ class scattering(cyl):
         return tmp
     
     def directscat_term(self, cyl, m):
-        # bc = cyl.bc
-        # radius = cyl.radius
-        # if bc == 'd':
-        #     hterm = hankel1(m, self.k*radius)
-        # elif bc == 'n':
-        #     hterm = self.k*h1vp(m, self.k*radius)
-        # elif bc == 'i':
-        #     imp = cyl.impedance(self.k)
-        #     hterm = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
-        # else:
-        #     print('invalid bc')
-        # #expect the hankel functions will go to zero
-        # if not np.isfinite(hterm).all():
-        #     if bc == 'd':
-        #         tmp = hankel1(m, self.k*radius)
-        #     elif bc == 'n':
-        #         tmp = h1vp(m, self.k*radius)
-        #     elif bc == 'i':
-        #         imp = cyl.impedance(self.k)
-        #         tmp = h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius)
-                
-        #     if np.max(np.abs(tmp)) < self.mat_tol:
-        #         return 1j*np.zeros(tmp.shape)
-        
-        # return hterm
         return np.eye(2*cyl.sum_index + 1)
     
     def highfreq_modes(self, x):
@@ -402,17 +382,6 @@ class scattering(cyl):
         return self.ST
 
     def make_direct_scattering_block(self, cyl):
-        # if self.balanced_system:
-        #     idxa = np.arange(
-        #         -cyl.sum_index, 
-        #         cyl.sum_index+1
-        #         )
-        # else:
-        #     idxa = np.arange(
-        #         -cyl.sum_index, 
-        #         cyl.sum_index
-        #         )
-        # hvec = self.directscat_term(cyl, idxa)
         return np.eye(2*cyl.sum_index + 1)
 
     def make_mul_scattering_block(self, cyl_i, cyl_sc):
@@ -544,51 +513,63 @@ class scattering(cyl):
             if np.all(np.abs(self.rhs) < self.rhs_tol):
                 return (np.zeros(len(self.rhs)), 0)
             
-            #set the vectors for fast matrix multiplication
-            self.ST = self.make_root_matrix()
-            self.gmres_iter = 0
-            self.mvp_counter = 0
-            dim = self.scat_matrix_dim
-            if self.use_mat:
-                linearop = self.make_scattering_blocks()
+            if self.use_cpp:
+                ps = PyScat(self.cyls, self.k, self.sum_index)
+                # ps.mvp_init()
+                # ps.gmres_setup(self.gmres_restart, 2*self.gmres_restart, self.gmres_tol)
+                tmp = ps.gmres_py(self.rhs, self.gmres_restart, self.gmres_tol)
+                print('k done:', self.k)
+                if np.all(np.isfinite(tmp[0])):
+                    return tmp
+                else:
+                    self.method='explicit'
+                    return (self.scattering_coeffs(), 0)
+                
             else:
-                linearop = LinearOperator((dim, dim), matvec = self.mvp)
-
-            rhs = self.rhs
-            #counter = self.gmres_counter()
-
-            #initialize the residual vector
-            reslength = 0.
-            if self.gmres_maxiter is None:
-                reslength = self.gmres_restart*len(rhs)*10
-            else:
-                reslength = self.gmres_restart*self.gmres_maxiter
+                #set the vectors for fast matrix multiplication
+                self.ST = self.make_root_matrix()
+                self.gmres_iter = 0
+                self.mvp_counter = 0
+                dim = self.scat_matrix_dim
+                if self.use_mat:
+                    linearop = self.make_scattering_blocks()
+                else:
+                    linearop = LinearOperator((dim, dim), matvec = self.mvp)
+    
+                rhs = self.rhs
+                #counter = self.gmres_counter()
+    
+                #initialize the residual vector
+                reslength = 0.
+                if self.gmres_maxiter is None:
+                    reslength = self.gmres_restart*len(rhs)*10
+                else:
+                    reslength = self.gmres_restart*self.gmres_maxiter
+                
+                #initialize residual vector
+                self.gmres_res = np.zeros(reslength)
+                self.iter = 0
+    
+                #set the preconditioner, if any
+                if self.precond is not None:
+                    precond_mat = self.precond(self, **self.pargs).inv_mat
+                else:
+                    precond_mat = None
+    
+                #NOTE: outp will contain the solution vector AND an error code
+                outp = gmres(
+                            linearop,
+                            self.rhs,
+                            rtol = self.gmres_tol,
+                            M = precond_mat,
+                            restart = self.gmres_restart,
+                            callback = self.gmres_callback,
+                            callback_type = 'pr_norm',
+                            maxiter = self.gmres_maxiter
+                            )
+                print('k done:', self.k)
+                return outp
             
-            #initialize residual vector
-            self.gmres_res = np.zeros(reslength)
-            self.iter = 0
-
-            #set the preconditioner, if any
-            if self.precond is not None:
-                precond_mat = self.precond(self, **self.pargs).inv_mat
-            else:
-                precond_mat = None
-
-            #NOTE: outp will contain the solution vector AND an error code
-            outp = gmres(
-                        linearop,
-                        self.rhs,
-                        tol = self.gmres_tol,
-                        atol = 'legacy',
-                        M = precond_mat,
-                        restart = self.gmres_restart,
-                        callback = self.gmres_callback,
-                        callback_type = 'pr_norm',
-                        maxiter = self.gmres_maxiter
-                        )
-            print('k done:', self.k)
-            return outp
-
         elif self.method == 'explicit':
             #check if rhs is zero-ish
             if np.max(np.abs(self.rhs)) < self.rhs_tol:
@@ -620,11 +601,14 @@ class scattering(cyl):
         else:
             print(self.method, self.k)
             if self.method == 'gmres':
-                cs, ecode = self.scattering_coeffs()
-                if ecode != 0:
-                    print('GMRES failed, switching to explicit')
-                    self.method = 'explicit'
-                    cs = self.scattering_coeffs()
+                if self.use_cpp:
+                    cs, ecode = self.scattering_coeffs()
+                else:
+                    cs, ecode = self.scattering_coeffs()
+                    if ecode != 0:
+                        print('GMRES failed, switching to explicit')
+                        self.method = 'explicit'
+                        cs = self.scattering_coeffs()
 
             elif self.method == 'explicit':
                 cs = self.scattering_coeffs()
@@ -678,6 +662,7 @@ class time_domain_scattering(scattering):
                  balanced_system=True, 
                  use_disk=False,
                  save_coeffs = False,
+                 use_cpp = False,
                  wvargs={},
                  scargs={}
                  ):
@@ -702,6 +687,7 @@ class time_domain_scattering(scattering):
         self.save_coeffs = save_coeffs
         self.coeff_mat = None
         self.use_coeffs = False #changed automatically after 1 computation is done
+        self.use_cpp = use_cpp
         
         # create 0-indexed labels for cylinders
         i = 0
@@ -1133,6 +1119,7 @@ class time_domain_scattering(scattering):
                 sum_index=self.modes,
                 balanced_system=self.balanced_system,
                 save_coeffs = self.save_coeffs,
+                use_cpp=self.use_cpp,
                 **self.scargs
             )
             if self.save_coeffs and not self.use_coeffs:
@@ -1226,6 +1213,7 @@ class time_domain_scattering(scattering):
                         sum_index=self.modes,
                         balanced_system=self.balanced_system,
                         save_coeffs = self.save_coeffs,
+                        use_cpp=self.use_cpp,
                         **self.scargs
                     )
                 if self.save_coeffs and not self.use_coeffs:
@@ -1242,7 +1230,7 @@ class time_domain_scattering(scattering):
         return self.zs[idx]*rmat
     
     def make_time_harmonic_soln_highorder(self, x, y):
-        if not self.use_cyls:
+        if not self.use_coeffs:
             self.fzt_boundary_allcyls_highorder()
         self.u_sc = 1j*np.zeros((*x.shape, len(self.times)))
         cpus = self.cpus
