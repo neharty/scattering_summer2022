@@ -16,8 +16,7 @@ extensions = [Extension('wrapper',
 setup(
     ext_modules=cythonize(
         extensions, 
-        compiler_directives={'language_level':3}, 
-        gdb_debug=True
+        compiler_directives={'language_level':3}
         ),
     cmdclass = {'build_ext': build_ext}
     )

@@ -515,7 +515,7 @@ class scattering(cyl):
             
             if self.use_cpp:
                 ps = PyScat(self.cyls, self.k, self.sum_index)
-                # ps.mvp_init()
+                #ps.mvp_init()
                 # ps.gmres_setup(self.gmres_restart, 2*self.gmres_restart, self.gmres_tol)
                 tmp = ps.gmres_py(self.rhs, self.gmres_restart, self.gmres_tol)
                 print('k done:', self.k)

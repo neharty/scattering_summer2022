@@ -11,29 +11,29 @@ from integrators.integrators import IRK3, IRK5
 
 Nmode = 10
 Nt=12
-tint=IRK3()
+tint=None
 T=40
 wv=gaussian(time_shift=12)
 X, Y = np.meshgrid([10], [0])
-cyls = example_setups.uniform_grid_NxN(4, 'd', 1, 3, sum_num=Nmode)
+cyls = example_setups.uniform_grid_NxN(6, 'd', 1, 3, sum_num=Nmode)
 
+#%%
 #no cpp
-t = time()
 tds = time_domain_scattering(
-                             cyls,
-                             wv,
-                             T,
-                             modes=Nmode,
-                             sampnum=2**Nt,
-                             timeint=tint,
-                             use_par=True,
-                             scargs={'method':'gmres'}
-                             )
+                              cyls,
+                              wv,
+                              T,
+                              modes=Nmode,
+                              sampnum=2**Nt,
+                              timeint=tint,
+                              use_par=True,
+                              scargs={'method':'gmres', 'gmres_tol':1e-10}
+                              )
+t = time()
 Usc = tds.make_U_sc(X, Y)
 tpy = time() - t
 #%%
 #with cpp
-t = time()
 print('starting cpp')
 tdscpp = time_domain_scattering(
                              cyls,
@@ -42,10 +42,11 @@ tdscpp = time_domain_scattering(
                              modes=Nmode,
                              sampnum=2**Nt,
                              timeint=tint,
-                             use_par=False,
+                             use_par=True,
                              scargs={'method':'gmres', 'gmres_tol':1e-10},
                              use_cpp=True
                              )
+t = time()
 Usccpp = tdscpp.make_U_sc(X, Y)
 tcp = time() - t
 #%%
@@ -53,3 +54,4 @@ plt.plot(tds.times, Usc[0,0,:])
 plt.plot(tdscpp.times[:], Usccpp[0,0,:])
 print(np.max(np.abs(Usc-Usccpp)))
 print(tpy, tcp, 1-(tcp/tpy))
+plt.show()

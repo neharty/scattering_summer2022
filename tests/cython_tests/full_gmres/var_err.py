@@ -46,8 +46,10 @@ for i in range(len(tds.rhsmat)):
     jhm_py = sc.make_jhm()
     
     ps = PyScat(cyls, ks[i], nmode) #create a PyScat instance
-    st_cy = ps.make_root_matrix()
-    jhm_cy = ps.make_jhm()
+    st_cy = ps.make_root_matrix_py()
+    jhm_cy = ps.make_jhm_py()
+    if i == 0:
+        sterrmat = np.abs(st_cy - st_py)
     st_errs += [np.max(np.abs(st_cy - st_py))]
     jhmax = [np.max(np.abs(jhm_cy[p] - jhm_py[p])) for p in sc.labels]
     jhm_err += [np.max(jhmax)]

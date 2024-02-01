@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 nmode = 10
 cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3, sum_num=nmode)
 
+cyls = [cyl('d', [-1.5, 0.], 1, sum_index=nmode), cyl('d', [1.5, 0.], 1, sum_index=nmode)]
+
 N = len(cyls)*(2*nmode + 1)
 
 for i in range(len(cyls)):
@@ -32,11 +34,6 @@ tds = time_domain_scattering(
                              timeint=tint,
                              use_par=False
                              )
-
-#N = len(cyls)*(2*nmode+1)
-#np.random.seed(1)
-#rhs = np.random.rand(N) + 1j*np.random.rand(N)
-#rhs = rhs/np.linalg.norm(rhs)
 tds.fzt_boundary_allcyls()
 ks = tds.ks[:len(tds.rhsmat)]
 print('len ks', len(ks))
@@ -62,8 +59,7 @@ for i in range(len(tds.rhsmat)):
     mvp_err += [np.max(np.abs(xout - rmat))]
     
     print()
-    ps.gmres_setup(N, 0, 1e-10) #gmres initialization, args are (restart, maxiters, tol)
-    xsol = ps.gmres(rhs) #call cython (and hence c++) gmres
+    xsol = ps.gmres_py(rhs, N, 1e-10) #call cython (and hence c++) gmres
     ps.fftw_clean_py() #free memory associated with fftw
     print('fftw cleaned up')
     sol_errs += [np.max(np.abs(xsol-xact))]
@@ -74,4 +70,5 @@ plt.loglog(np.abs(ks), sol_errs, label='gmres error')
 plt.legend()
 plt.xlabel('|k|')
 plt.ylabel('infty norm')
-plt.savefig('/home/nick/scattering/tests/cpp_tests/eigen/gmres/full_gmres/errs_vs_k.pdf')
+plt.show()
+#plt.savefig('/home/nick/scattering/tests/cpp_tests/eigen/gmres/full_gmres/errs_vs_k.pdf')

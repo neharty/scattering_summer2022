@@ -31,27 +31,27 @@ tds = time_domain_scattering(
 for i in range(len(cyls)):
     cyls[i].label = i
 
-#N = len(cyls)*(2*nmode+1)
-#np.random.seed(1)
-#rhs = np.random.rand(N) + 1j*np.random.rand(N)
-#rhs = rhs/np.linalg.norm(rhs)
 tds.fzt_boundary_allcyls()
 ks = tds.ks
 print('len ks', len(ks))
 
 errs = []
 #set up and solve the system
-for k in ks:
-    sc = scattering(cyls, rhs, k=k, use_2cyl_modes=False)
+for i in range(len(tds.rhsmat)):
+    rhs = tds.rhsmat[i]
+    sc = scattering(cyls, rhs, k=ks[i], use_2cyl_modes=False)
+    rhs = sc.rhs
     sc.make_root_matrix()
     print(np.max(np.abs(sc.ST[0][1])))
     sc.make_jhm()
     A = sc.make_scattering_blocks()
     print('cond num', np.linalg.cond(A))
     xact = np.linalg.solve(A, rhs)
-    
+
+    #test convolve
+
     #test mvp
-    ps = PyScat(cyls, k, nmode) #create a PyScat instance
+    ps = PyScat(cyls, ks[i], nmode) #create a PyScat instance
     ps.mvp_init() # make the fftw plans
     xout = ps.my_mvp(rhs) # perform 1 c++ matrix-free mvp
     rmvp = sc.mvp(rhs) # 1 python matrix-free mvp 
@@ -65,12 +65,12 @@ for k in ks:
     #xdiff = np.abs(xout-xact)
     
     print()
-    ps.gmres_setup(N, N*2, 1e-14) #gmres initialization, args are restart, maxiters, tol
-    xsol = ps.gmres(rhs) #call cython (and hence c++) gmres
+    xsol = ps.gmres_py(rhs, len(cyls)*(2*nmode+1), 1e-10) #call cython (and hence c++) gmres
     mvpsol = ps.my_mvp(xsol) #use c++ mvp with to approximate the rhs, then measure errors below
     print('gmres rel err w/mvp', np.max(np.abs(rhs - mvpsol))/np.max(np.abs(rhs)))
     print('gmres mat err', np.max(np.abs(rhs-(A@xsol)))/np.max(np.abs(rhs)))
     print('gmres backslash err', np.max(np.abs(xact-xsol))/np.max(np.abs(rhs)))
     ps.fftw_clean_py() #free memory associated with fftw
     print('fftw cleaned up')
-    errs += []
+    
+    input()

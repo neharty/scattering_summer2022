@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <iostream>
 #include <complex>
 #include <numeric>
@@ -114,7 +115,7 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                             reinterpret_cast<fftw_complex*>(yoddum.data()), 
                             FFTW_BACKWARD, 
                             FFTW_MEASURE);
-           //cout << "mvp initialized" << endl;
+           cout << "mvp initialized" << endl;
         }
         
         void conv_ptr(const complex<double>* fptr, const int flen, const complex<double>* gptr, const int glen, complex<double>* xout){
@@ -137,12 +138,31 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                 xout[i] = xvout[i];
             }
         }
+        
+        void print_ST(){
+            for(int i(0); i < ncyl; i++){
+                for(int j(0); j < ncyl; j++){
+                    cout << "ST[" << i << "][" << j << "]" << endl;
+                    for(int k(0); k < 4*nmode+1; k++){ cout << setprecision(15) << ST[i][j][k] << " "; }
+                cout << endl << endl;
+                }
+            }
+        }
+
+        void print_JHM(){  
+            for(int i(0); i < ncyl; i++){
+                cout << "JHM[" << i << "]" << endl;
+                for(int j(0); j < 2*nmode+1; j++){ cout << setprecision(15) << JHM[i][j] << " "; }
+                cout << endl << endl;
+            }
+        }
 
         vector<complex<double>> mvp(vector<complex<double>>& xin) const {
-            vector<vector<vector<complex<double>>>> SCmvp(ncyl, vector<vector<complex<double>>>(ncyl, vector<complex<double>>(2*nmode+1)));
-            vector<vector<complex<double>>> xs(ncyl,vector<complex<double>>((2*nmode+1)));
-            vector<vector<complex<double>>> mulscat(ncyl, vector<complex<double>>((2*nmode+1)));
-            
+            vector<vector<vector<complex<double>>>> SCmvp(ncyl, vector<vector<complex<double>>>(ncyl, vector<complex<double>>(2*nmode+1, 0)));
+            vector<vector<complex<double>>> xs(ncyl,vector<complex<double>>((2*nmode+1), 0));
+            vector<vector<complex<double>>> mulscat(ncyl, vector<complex<double>>((2*nmode+1), 0));
+            vector<complex<double>> tmp;
+                        
             // split up the x coeffs
             int idx;
             for(int i=0; i<ncyl; i++){
@@ -154,9 +174,11 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             
             //matrix multiply the toeplitz part by convolution
             for(int p=0; p<ncyl; p++){
-                for (int q=0; q<ncyl; q++){
-                    if(p==q){ SCmvp[p][q] = convolve(ST[p][q], xs[q], fdp, bwdp); }
-                    else{ SCmvp[p][q] = convolve(ST[p][q], xs[q], fodp, bwodp); }
+                for (int q=0; q<ncyl; q++){ 
+                    tmp = convolve(ST[p][q], xs[q], fdp, bwdp);
+                    for(int i=0; i<2*nmode+1; i++){
+                        SCmvp[p][q][i] = tmp[i];
+                    }
                 }
             }
             
@@ -174,18 +196,21 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
 
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
-                    if(p != q){ // multiply the off diagonal blocks 
-                        for(int i=0; i<int(JHM[p].size()); i++){ SCmvp[p][q][i] *= JHM[p][i]; }
+                    for(int i=0; i<int(2*nmode+1); i++){
+                        if(p != q){ SCmvp[p][q][i] *= JHM[p][i]; }
+                        mulscat[p][i] += SCmvp[p][q][i];
                     }
                 }
             }
             
+            /*
             //sum the results for the output vector
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
                     for(int i=0; i<int(SCmvp[p][q].size()); i++){ mulscat[p][i] += SCmvp[p][q][i]; }
                 }
             }
+            */
 
             // resize the result vector
             vector<complex<double>> xout(dim, 0);

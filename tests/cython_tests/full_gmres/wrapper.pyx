@@ -1,4 +1,7 @@
 # distutils: language=c++
+# cython: profile=True
+# cython: linetrace=True
+# distutils: define_macros=CYTHON_TRACE=1
 from time import process_time
 from libc.stdlib cimport malloc
 import numpy as np
@@ -13,62 +16,69 @@ from libcpp.vector cimport vector
 
 #class to wrap cpp algorithms
 cdef class PyScat:
-    cdef public object cyls
+    cdef public list cyls
     cdef public double complex k
     cdef public long nmode
+    cdef public long ncyls
     cdef public long[:] labels
 
-    def __init__(self, object cyls, double complex k, long nmode):
+    def __init__(self, list cyls, double complex k, long nmode):
         self.cyls = cyls
         self.k = k
         self.nmode = nmode
+        self.ncyls = len(cyls)
         self.labels = np.array([c.label for c in cyls])
 
-    cdef cart_to_polar(self, v):
+    cdef (double, double) cart_to_polar(self, np.ndarray[dtype=np.float64_t, ndim=1, mode='c'] v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
 
-    cdef polar_to_cart(self, v):
-        return (v[0]*np.cos(v[1]), v[0]*np.sin(v[1]))
-
-    cdef phi(self, n, v):
+    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] phi(self, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] n, 
+                                                                 np.ndarray[dtype=np.float64_t, ndim=1, mode='c'] v):
         # v is in cartesian coords
+        cdef double r
+        cdef double theta
         r, theta = self.cart_to_polar(v)
         return hankel1(n, self.k*r)*np.exp(1j*n*theta)
 
-    cdef phihat(self, n, v):
-        # v s in cartesian coords
-        r, theta = self.cart_to_polar(v)
-        return jv(n, self.k*r)*np.exp(1j*n*theta)
-
-    cdef S(self, m, n, v):
+    cdef double complex[:] S1(self, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m, long n, np.ndarray[dtype=np.float64_t, ndim=1, mode='c'] v):
         # v is in cartesian coords
-        return self.phi(m-n, v)
-
-    cdef Shat(self, m, n, v):
+        cdef double complex[:] retv = self.phi(m-n, v)
+        return retv
+    
+    cdef double complex[:] S2(self, long m, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] n, np.ndarray[dtype=np.float64_t, ndim=1, mode='c'] v):
         # v is in cartesian coords
-        return self.phihat(m-n, v)
+        cdef double complex[:] retv =  self.phi(m-n, v)
+        return retv
 
     cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] make_root_vect_1cyl(self, int i, int sc):
         # i = incident circle label
         # sc = scatterer circle label
+        
+        #return vector
+        cdef double complex[:] retv = np.zeros(4*self.nmode+1, dtype=np.complex128)
+        
+        #index for diagonal block assignment
+        cdef int N = 2*self.nmode
+        
+        #data for off-diagonal vectors
+        cdef object cyl_i = self.cyls[i]
+        cdef object cyl_sc = self.cyls[sc]
+        cdef np.ndarray[dtype=np.float64_t, ndim=1] b = cyl_i.pos - cyl_sc.pos
+
+        cdef np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
+        cdef np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] idxd_q = np.ascontiguousarray(np.flip(np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)))
+
+        cdef double complex[:] jS1 = np.zeros(2*self.nmode+1, dtype=np.complex128)
+        cdef double complex[:] jS2 = np.zeros(2*self.nmode, dtype=np.complex128)
+        
         if i == sc:
-            cdef int n = self.cyls[i].sum_index
-            cdef double complex[:] delta = 1j*np.zeros(4*n+1)
-            delta[2*n] = 1
-            return np.asarray(delta)
+            retv[N] = 1
         else:
-            cyl_i = self.cyls[i]
-            cyl_sc = self.cyls[sc]
-            b = cyl_i.pos - cyl_sc.pos
+            retv[:2*self.nmode+1] = self.S1(idxd_q, idxa_p[0], b)
+            retv[2*self.nmode+1:] = self.S2(idxd_q[-1], idxa_p[1:], b)
+        return np.asarray(retv)
 
-            idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
-            idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)[::-1]
-
-            jS1 = [self.S(n, idxa_p[0], b) for n in idxd_q]
-            jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
-            return np.hstack((jS1, jS2))
-
-    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] jmode(self, cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
+    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] jmode(self, object cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
         cdef str bc = cyl.bc
         cdef double radius = cyl.radius
         #cdef double complex st
@@ -85,7 +95,7 @@ cdef class PyScat:
         
         return st
 
-    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] hmode(self, cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
+    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] hmode(self, object cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
         cdef str bc = cyl.bc
         cdef double radius = cyl.radius
         #cdef double complex st
@@ -102,73 +112,78 @@ cdef class PyScat:
         
         return st
 
-
-    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] jh(self, cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
+    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] jh(self, object cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
         return self.jmode(cyl, m)/self.hmode(cyl, m)
 
-    cdef make_jhm(self):
-        jhm = [None for p in self.labels]
+    cdef double complex[:, :] make_jhm(self):
+        cdef double complex[:, :] jhm = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
+        cdef object tmp
+        cdef size_t p, i
+        cdef np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] idxa = np.arange(-self.cyls[0].sum_index, self.cyls[0].sum_index+1)
         for p in self.labels:
-            #assume balanced system
-            idxa_p = np.arange(
-                -self.cyls[p].sum_index, 
-                self.cyls[p].sum_index+1
-                )
-            jhm[p] = self.jh(self.cyls[p], idxa_p)
+            tmp = self.jh(self.cyls[p], idxa)
+            for i in range(2*self.nmode+1):
+                jhm[p, i] = tmp[i]
         return jhm
     
-    cdef make_root_matrix(self):
-        ST = np.array(
-            [
-                [self.make_root_vect_1cyl(p, q) for q in self.labels] 
-                for p in self.labels
-            ], dtype=object
-            )
+    def make_jhm_py(self):
+        return np.asarray(self.make_jhm())
+    
+    cdef double complex[:, :, :] make_root_matrix(self):
+        cdef size_t p, q
+        cdef double complex[:, :, :] ST = 1j*np.zeros((self.ncyls, self.ncyls, 4*self.nmode+1))
+        cdef object tmp
+        for p in self.labels:
+            for q in self.labels:
+                tmp = self.make_root_vect_1cyl(p, q)
+                for i in range(4*self.nmode+1):
+                    ST[p, q, i] = tmp[i]        
         return ST
-
+    
+    def make_root_matrix_py(self):
+        return np.asarray(self.make_root_matrix())
+    
     def gmres_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None,
-              int restart,
+              long restart,
               double tol):
         
-        jhm = self.make_jhm()
-        ST = self.make_root_matrix()
+        cdef double complex[:, :] jhm = self.make_jhm()
+        cdef double complex[:, :, :] ST = self.make_root_matrix()
         
-        cdef int[:] lengths = np.zeros(len(self.cyls) + 1, dtype=int)
+        cdef int dim = len(self.cyls)*(2*self.nmode+1)
+        cdef long[:] lengths = np.zeros(len(self.cyls) + 1, dtype=int)
+        cdef size_t p, q, i
         for i in range(len(self.cyls)):
             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]
         
-        def mvp(x):
+        def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
             #split up the x coeffs
-            cdef list xs = [
-                np.array(
-                    x[lengths[i-1]:lengths[i]], dtype=np.complex128
-                    ) for i in range(1, len(lengths))
-                ]
 
-            cdef list mulscat = [1j*np.zeros(len(xn)) for xn in xs]
+            cdef double complex[:, :] xs = np.reshape(x, (self.ncyls, 2*self.nmode+1))
+            cdef double complex[:, :] mulscat = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
 
             #computes the block MVPs and stores in a multidimensional list
-            cdef list SCmvp = [
-                [
-                    convolve(
-                        np.array(ST[p][q], dtype=np.complex128),
-                        np.array(xs[q], dtype=np.complex128),
-                        mode='valid'
-                    ) for q in self.labels]
-                for p in self.labels]
-
+            cdef object tmp
+            cdef double complex[:, :, :] SCmvp = 1j*np.zeros((self.ncyls, self.ncyls, 2*self.nmode+1))
+            for p in self.labels:
+                for q in self.labels:
+                    tmp = np.convolve(ST[p, q, :], xs[q, :], mode='valid')
+                    for i in range(2*self.nmode+1):
+                        SCmvp[p, q, i] = tmp[i]
+            
             #TODO: remove this double loop
             for p in self.labels:
                 for q in self.labels:
-                    if p != q:
-                        SCmvp[p][q] *= jhm[p]
-                    mulscat[p] += SCmvp[p][q]
+                    for i in range(2*self.nmode+1):
+                        if p != q:
+                            SCmvp[p, q, i] *= jhm[p, i]
+                        mulscat[p, i] += SCmvp[p, q, i]
 
-            return np.hstack(mulscat)
+            return np.hstack(np.asarray(mulscat))
         
-        cdef int dim = len(self.cyls)*(2*self.nmode+1)
+        
         outp = gmres(
-                    LinearOperator((dim, dim), matvec=mvp),
+                    LinearOperator((dim, dim), matvec=mvp, dtype=np.complex128),
                     xin,
                     rtol = tol,
                     restart = restart
