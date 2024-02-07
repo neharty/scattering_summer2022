@@ -16,7 +16,6 @@ def make_cyls(pos, bc, radius, mode, sum_num=None, impedance=None):
     
     if mode=='uniform':
         bcs = [bc[0] for i in range(l)]
-        print(bcs)
     elif mode=='repeat': #this is not right...
         bcs = np.empty(l, dtype=str)
         n = len(bc)
@@ -26,7 +25,7 @@ def make_cyls(pos, bc, radius, mode, sum_num=None, impedance=None):
         pass
     elif mode=='random':
         bcs = np.random.choice(bc, size=l)
-        bcs = [bcs[i].astype(str) for i in range(l)]
+        bcs = [bcs[i].item() for i in range(l)]
         
     cyls=[cyl(bcs[i], pos[i], radius, sum_num, impedance) for i in range(l)]
     return cyls
@@ -139,7 +138,6 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, bc, radius, dist, sum_num=None, im
 
 def random_hexagon(Nx, Ny, bc, radius, dist, minspace=0, sum_num=None, impedance=None, center=None, bc_mode='uniform'):
     ctemp = triangular_lattice(Nx, Ny, 'd', radius, dist, dist) #dummy hexagonal configuration
-    print(len(ctemp))
     cnum = len(ctemp)
     pos = np.array([c.pos for c in ctemp])
     xpos = pos[:, 0]
@@ -226,7 +224,6 @@ def random_circ(rmax, N, bc, radius, sum_num=None, impedance=None, center=None, 
 def random_circ_hex(rmax, bc, radius, initspace, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None, remove_center=False, bc_mode='uniform', rin=0):
     spc = initspace
     N = int((2*rmax - 2*radius)/spc)
-    print(N)
     ctmp = random_hexagon_square(N, bc, radius, spc, minspace, sum_num, impedance, center, bc_mode)
     
     #delete circles overlapping a measurement point
@@ -261,9 +258,7 @@ def random_circ_hex(rmax, bc, radius, initspace, minspace=0, sum_num=None, imped
     return cctmp.tolist()
 
 def random_circ_hex_vol_frac(R, bc, r, rho, minspace=0, sum_num=None, impedance=None, center=None, measurement_points=None, remove_center=False, bc_mode='uniform', rin=0):
-    print(round(rho*(R**2 - rin**2)/r**2))
     n_act = int(round(rho*(R**2 - rin**2)/r**2)) #circles needed for the specified volume fraction
-    print(bc)
     
     ncurr = 0
     Nprev = int(round(0.5*(1 + np.sqrt(8*(R**2-rin**2)*rho/(np.pi*r**2) - 1))))
@@ -343,18 +338,15 @@ def random_box_hex_vol_frac(Lx, Ly, bc, r, rho, minspace=0, sum_num=0, impedance
     gam = (Lx-Lxin)/(Ly-Lyin)
     Nxprev = int(round(0.25*(gam+1+np.sqrt(32*rho*(Lx-Lxin)**2/(np.pi*r**2)+(gam+1)**2-8*gam))))
     Nyprev = int(Ly*Nxprev/Lx)
-    print(n_act, Nxprev*Nyprev + (Nxprev-1)*(Nyprev-1))
     while ncurr < n_act:
         #overfill the circle with higher rho
         rho = rho*1.05    
         Nx = max(0.25*(gam+1+np.sqrt(32*rho*(Lx-Lxin)**2/(np.pi*r**2)+(gam+1)**2-8*gam)), Nxprev+1)
         Nxprev = Nx
         spc = (2*Lx - 2*r)/(Nxprev-1)
-        print(spc)
         #dummy circles for position setting
         tmp = random_box_hex(Lx, Ly, bc, r, spc, minspace, sum_num, impedance, center, measurement_points, remove_center, Lxin=Lxin, Lyin=Lyin)
         ncurr = len(tmp)
-        print(n_act, ncurr)
     
     if ncurr > n_act:
         #delete the unneeded circles
