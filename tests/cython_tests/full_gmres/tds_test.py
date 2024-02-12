@@ -11,11 +11,11 @@ from integrators.integrators import IRK3, IRK5
 
 Nmode = 10
 Nt=12
-tint=None
+tint=IRK5()
 T=40
 wv=gaussian(time_shift=12)
 X, Y = np.meshgrid([10], [0])
-cyls = example_setups.uniform_grid_NxN(6, 'd', 1, 3, sum_num=Nmode)
+cyls = example_setups.uniform_grid_NxN(3, ['d', 'n'], 1, 3, sum_num=Nmode, bc_mode='random')
 
 #%%
 #no cpp
@@ -27,7 +27,7 @@ tds = time_domain_scattering(
                               sampnum=2**Nt,
                               timeint=tint,
                               use_par=True,
-                              scargs={'method':'gmres', 'gmres_tol':1e-10}
+                              scargs={'method':'explicit'}
                               )
 t = time()
 Usc = tds.make_U_sc(X, Y)

@@ -11,6 +11,7 @@ from scipy.sparse.linalg import LinearOperator
 from scipy.signal import convolve
 cimport numpy as np
 cimport libcpp.complex as cpx
+from libcpp cimport bool
 from libcpp.vector cimport vector
 
 
@@ -21,6 +22,7 @@ cdef class PyScat:
     cdef public long nmode
     cdef public long ncyls
     cdef public long[:] labels
+    cdef public long gmres_iter
 
     def __init__(self, list cyls, double complex k, long nmode):
         self.cyls = cyls
@@ -123,7 +125,9 @@ cdef class PyScat:
         for p in self.labels:
             tmp = self.jh(self.cyls[p], idxa)
             for i in range(2*self.nmode+1):
+                tmp = np.nan_to_num(tmp, copy=False)
                 jhm[p, i] = tmp[i]
+        
         return jhm
     
     def make_jhm_py(self):
@@ -137,15 +141,20 @@ cdef class PyScat:
             for q in self.labels:
                 tmp = self.make_root_vect_1cyl(p, q)
                 for i in range(4*self.nmode+1):
+                    tmp = np.nan_to_num(tmp, copy=False)
                     ST[p, q, i] = tmp[i]        
         return ST
     
     def make_root_matrix_py(self):
         return np.asarray(self.make_root_matrix())
     
+    cdef void gmres_callback(self, double nrm):
+        self.gmres_iter += 1
+
     def gmres_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None,
               long restart,
-              double tol):
+              double tol,
+              bool debug=False):
         
         cdef double complex[:, :] jhm = self.make_jhm()
         cdef double complex[:, :, :] ST = self.make_root_matrix()
@@ -181,13 +190,23 @@ cdef class PyScat:
 
             return np.hstack(np.asarray(mulscat))
         
-        
-        outp = gmres(
-                    LinearOperator((dim, dim), matvec=mvp, dtype=np.complex128),
-                    xin,
-                    rtol = tol,
-                    restart = restart
-                    )
-        
+        self.gmres_iter = 0
+        if debug:
+            outp = gmres(
+                        LinearOperator((dim, dim), matvec=mvp, dtype=np.complex128),
+                        xin,
+                        rtol = tol,
+                        restart = restart,
+                        callback=self.gmres_callback
+                        )
+        else:
+            outp = gmres(
+                        LinearOperator((dim, dim), matvec=mvp, dtype=np.complex128),
+                        xin,
+                        rtol = tol,
+                        restart = restart
+                        )
+
+         
         print('k done:', self.k)
         return outp

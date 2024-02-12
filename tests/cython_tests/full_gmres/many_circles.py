@@ -10,7 +10,7 @@ from integrators.integrators import IRK3, IRK5
 
 Nmode = 4
 Nt=12
-tint=None
+tint=IRK3()
 T=40
 wv=gaussian(time_shift=12)
 X, Y = np.meshgrid([12], [0])
@@ -18,16 +18,16 @@ X, Y = np.meshgrid([12], [0])
 np.random.seed(110)
 Rmax = 10
 radius = 0.25
-vfill = 0.15
+vfill = 0.10
 minspace = radius*0.5
 cyls = example_setups.random_circ_hex_vol_frac(
             Rmax,
-            ['d'], 
+            ['d', 'n'], 
             radius, 
             vfill,
             minspace=minspace,
             impedance=1,
-            bc_mode='uniform'
+            bc_mode='random'
         )
 
 #%%

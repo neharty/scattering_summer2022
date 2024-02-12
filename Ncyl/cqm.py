@@ -184,6 +184,7 @@ class scattering(cyl):
                 for j in range(2*self.cyls[l].sum_index):
                     idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
                     self.rhs[self.lengths[l] + j] = self.rhs[self.lengths[l] + j]/self.hmode(self.cyls[l], idxa[j])
+        self.rhs = np.nan_to_num(self.rhs, copy=False)
             
 
     def cart_to_polar(self, v):

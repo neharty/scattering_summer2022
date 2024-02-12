@@ -53,10 +53,7 @@ for i in range(len(tds.rhsmat)):
     sc.make_root_matrix()
     sc.make_jhm()
     A = sc.make_scattering_blocks()
-    print(np.amax(np.abs(A)))
-    #xact = np.linalg.solve(A, rhs)
-    #(xact, ecode) = sc.scattering_coeffs()
-    xact = sc.scattering_coeffs()
+    
     
     ps = PyScat(cyls, ks[i], nmode) #create a PyScat instance
     print()

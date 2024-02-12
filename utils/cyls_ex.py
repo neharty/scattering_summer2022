@@ -36,7 +36,7 @@ cyls = example_setups.random_box_hex_vol_frac(
         ['d', 'n'], 
         radius, 
         vfill, 
-        bc_mode='uniform', 
+        bc_mode='random', 
         minspace=minspace, 
         Lxin = Lxin,
         Lyin = Lyin
