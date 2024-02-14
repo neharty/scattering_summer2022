@@ -53,7 +53,7 @@ def plot_cyls_pub(cyls):
         elif bc == 'n':
             c = 'k--'
         elif bc =='i':
-            c = 'k.-'
+            c = 'k-.'
         ax.plot(*(pos[n, 0] + r*np.sin(angs), pos[n, 1] + r*np.cos(angs)), c, label = 'bc: '+bc)
     
     handles, labels = ax.get_legend_handles_labels()

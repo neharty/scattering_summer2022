@@ -43,7 +43,7 @@ tdscpp = time_domain_scattering(
                              sampnum=2**Nt,
                              timeint=tint,
                              use_par=True,
-                             scargs={'method':'gmres', 'gmres_tol':1e-10},
+                             scargs={'method':'gmres', 'gmres_tol':1e-8},
                              use_cpp=True
                              )
 t = time()

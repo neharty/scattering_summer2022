@@ -1,6 +1,6 @@
 import numpy as np
 from utils import example_setups
-from utils.plot_cyls import plot_cyls
+from utils.plot_cyls import plot_cyls, plot_cyls_pub
 import matplotlib.pyplot as plt
 from Ncyl.cqm import cyl, scattering
 
@@ -26,21 +26,23 @@ minspace = radius*1
 #             bc_mode='uniform',
 #             rin=0
 #         )
-Lx = 5
-Lxin = 2
-Ly = 10
-Lyin = 5
-cyls = example_setups.random_box_hex_vol_frac(
-        5, 
-        10, 
-        ['d', 'n'], 
-        radius, 
-        vfill, 
-        bc_mode='random', 
-        minspace=minspace, 
-        Lxin = Lxin,
-        Lyin = Lyin
-        )
+# Lx = 5
+# Lxin = 2
+# Ly = 10
+# Lyin = 5
+# cyls = example_setups.random_box_hex_vol_frac(
+#         5, 
+#         10, 
+#         ['d', 'n'], 
+#         radius, 
+#         vfill, 
+#         bc_mode='permuted', 
+#         minspace=minspace, 
+#         Lxin = Lxin,
+#         Lyin = Lyin
+#         )
+
+cyls = example_setups.uniform_grid_NxN(3, ['d', 'n', 'i'], 1, 3, impedance=1, bc_mode='repeated')
 #%%
 #check for overlap with measurement points
 cnrs = [c.pos for c in cyls]
@@ -65,7 +67,7 @@ print(ismindist)
 
 #%%
 
-fig, ax = plot_cyls(cyls)
+fig, ax = plot_cyls_pub(cyls)
 #ax.plot(X, Y, 'kx')
 plt.show()
 print(len(cyls), len(cyls)*(radius**2)*np.pi/(4*(Lx-Lxin)*(Ly-Lyin)))#, len(cyls)*(radius**2)/Rmax**2)

@@ -4,9 +4,10 @@ import os
 #from Ncyl.Ncyl_gmres import scattering, cyl
 #from Ncyl.tds import scattering, cyl
 from Ncyl.cqm import cyl
+from collections import deque
 
 def make_cyls(pos, bc, radius, mode, sum_num=None, impedance=None):
-    modes=['uniform', 'repeat', 'permuted', 'random']
+    modes=['uniform', 'repeated', 'permuted', 'random']
     
     l = len(pos)
     #print(l)
@@ -16,13 +17,21 @@ def make_cyls(pos, bc, radius, mode, sum_num=None, impedance=None):
     
     if mode=='uniform':
         bcs = [bc[0] for i in range(l)]
-    elif mode=='repeat': #this is not right...
+    elif mode=='repeated':
         bcs = np.empty(l, dtype=str)
         n = len(bc)
         for i in range(l):
             bcs[i] = bc[i%n]
+        bcs = [bcs[i].item() for i in range(l)]
     elif mode=='permuted':
-        pass
+        d = deque(bc)
+        for i in range(l//len(bc)):
+            d.rotate()
+            bc += list(d)
+        # append the remaining permutations
+        d.rotate()
+        bc += list(d)[:l%len(bc)]
+        bcs = bc
     elif mode=='random':
         bcs = np.random.choice(bc, size=l)
         bcs = [bcs[i].item() for i in range(l)]
