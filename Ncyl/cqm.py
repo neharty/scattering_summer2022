@@ -10,7 +10,7 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 import uuid
-from tests.cython_tests.full_gmres.wrapper import PyScat
+from Ncyl.scython.wrapper import PyScat
 
 class cyl:
     '''
@@ -882,7 +882,11 @@ class time_domain_scattering(scattering):
             n = 2*self.modes + 1
         else:
             n = 2*self.modes
-        N = len(self.times)
+        
+        if self.use_conj:
+            N = len(self.times)//2 +1
+        else:
+            N = len(self.times)
         
         #for using foldy lax approx
         if not self.fl:
@@ -892,7 +896,7 @@ class time_domain_scattering(scattering):
             # only uses 1 mode -- incorrect for Neumann case
             g = 1j*np.zeros(N)
                 
-        for i in range(len(self.times)):
+        for i in range(N):
             if self.fl:
                 gtmp = fftshift(fft(v[:, i]))/n
                 g[i] = gtmp[n//2]
@@ -970,7 +974,7 @@ class time_domain_scattering(scattering):
                 
                 #set max cyl index
                 cyl.maxidx = fcs.shape[1]
-                
+                #print(fcs.shape[1])
                 return fcs 
             else:
                 #IRK methods
@@ -989,7 +993,7 @@ class time_domain_scattering(scattering):
                 #compute the max idx for the cyl
                 maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
                 cyl.maxidx = max(maxidxs)
-                
+                #print(max(maxidxs))
                 return fcs
         else:
             #wave is pointsource
@@ -1010,7 +1014,7 @@ class time_domain_scattering(scattering):
                 
                 #set max cyl index
                 cyl.maxidx = fcs.shape[1]
-                
+                #print(fcs.shape[1])
                 return fcs
                 
             else:
@@ -1038,7 +1042,7 @@ class time_domain_scattering(scattering):
                 #compute the max idx for the cyl
                 maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
                 cyl.maxidx = max(maxidxs)
-                
+                #print(max(maxidxs))
                 return fcs
     
     def zeropad_rhs(self, mat):
@@ -1174,11 +1178,12 @@ class time_domain_scattering(scattering):
                 rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
                 pool.close()
                 pool.join()
-                for c in self.cyls:
-                    c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
             else:
                 rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-            self.rhs_maxidx = np.amax([c.maxidx for c in self.cyls])
+            for c in self.cyls:
+                c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
+            self.rhs_maxidx_matrix = [c.maxidx for c in self.cyls]
+            self.rhs_maxidx = np.amax(self.rhs_maxidx_matrix)
             for j in range(len(self.timeint.c)):
                 for c in range(len(self.cyls)):
                     rhstmp[c][j] = self.zeropad_rhs(rhstmp[c][j])

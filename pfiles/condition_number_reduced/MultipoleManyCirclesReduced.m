@@ -1,4 +1,4 @@
-function[near_field] = MultipoleManyCirclesReduced(wavenumber, center, radius, ntrunc1);
+function[A] = MultipoleManyCirclesReduced(wavenumber, center, radius, ntrunc1);
 phi = 0; %incident direction
 N_circles = length(center);
 direction = [cos(phi) sin(phi)];
@@ -49,20 +49,20 @@ coeff = A\(-rhs);
 
 
 %compute the near field now
-n_near = 256;
-x_near = zeros(n_near,2);
-for j=1:n_near
-    x_near(j,1) = (j-1) *0.2; x_near(j,2) = 3;
-end;
-
-near_field = zeros(n_near,1);
-for i=1:n_near
-    for ell=1:N_circles
-    rx1 = x_near(i,:) - center(ell,:); dist1 = norm(rx1,2); th1 = atan2(rx1(2),rx1(1));
-    for j=1:N_Fourier
-        near_field(i) = near_field(i) + coeff((ell-1) * N_Fourier+ j) * ...
-            besselh(index1(j), wavenumber * dist1)/besselh(index1(j), wavenumber * radius(ell)) *...
-            exp(1i *index1(j) *th1);
-    end;
-    end;
-end;
+% n_near = 256;
+% x_near = zeros(n_near,2);
+% for j=1:n_near
+%     x_near(j,1) = (j-1) *0.2; x_near(j,2) = 3;
+% end;
+% 
+% near_field = zeros(n_near,1);
+% for i=1:n_near
+%     for ell=1:N_circles
+%     rx1 = x_near(i,:) - center(ell,:); dist1 = norm(rx1,2); th1 = atan2(rx1(2),rx1(1));
+%     for j=1:N_Fourier
+%         near_field(i) = near_field(i) + coeff((ell-1) * N_Fourier+ j) * ...
+%             besselh(index1(j), wavenumber * dist1)/besselh(index1(j), wavenumber * radius(ell)) *...
+%             exp(1i *index1(j) *th1);
+%     end;
+%     end;
+% end;

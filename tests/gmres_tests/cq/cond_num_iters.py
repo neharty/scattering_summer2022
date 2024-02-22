@@ -22,14 +22,18 @@ parser.add_argument('rho', type=float)
 parser.add_argument('dpath')
 args = parser.parse_args()
 
+np.random.seed(1)
 nmode = args.Nmode
 if args.cyl_dist == 'reg':
     cyls = example_setups.uniform_grid_NxN(args.Ncyl, 'd', 1, 3, sum_num=nmode)
-    wv=gaussian(time_shift=3*args.Ncyl)
-    X, Y = np.meshgrid([3*args.Ncyl], [0])
+    pos = [c.pos[0] for c in cyls]
+    tshift = np.max(pos) + 4
+    wv=gaussian(time_shift=tshift)
+    X, Y = np.meshgrid([3*args.Ncyl], [0]) #dummy point
 elif args.cyl_dist == 'rand':
-    cyls = example_setups.random_box_hex_vol_frac(8, 8, ['d'], 0.5, args.rho, sum_num=nmode, bc_mode='random')
-    wv=gaussian(time_shift=12)
+    print(args.rho)
+    cyls = example_setups.random_box_hex_vol_frac(8, 8, ['d', 'n'], 0.5, args.rho, sum_num=nmode, bc_mode='random')
+    wv=gaussian(time_shift=20)
     X, Y = np.meshgrid([12], [0])
     
 print('# of cyls', len(cyls))
@@ -39,7 +43,6 @@ for i in range(len(cyls)):
 Nt=args.Nt
 tint=IRK5() #fix this for now
 T=40
-wv=gaussian(time_shift=3*args.Ncyl)
 X, Y = np.meshgrid([3*args.Ncyl], [0])
 
 tds = time_domain_scattering(
@@ -50,11 +53,12 @@ tds = time_domain_scattering(
                              sampnum=2**Nt,
                              timeint=tint,
                              use_par=False,
-                             fft_tol=1e-8
+                             fft_tol=1e-10
                              )
 tds.fzt_boundary_allcyls_highorder()
 ks = 1j*tds.evals/tds.dt
 ks = ks[:len(tds.rhsmat[0])]
+print(tds.rhs_maxidx)
 print('len ks', len(ks))
 
 iternum = np.zeros(ks.shape)
@@ -68,7 +72,7 @@ for i in range(len(ks)):
         
         ps = PyScat(cyls, ks[i, j], nmode) #create a PyScat instance
         if np.all(np.abs(rhs) < 1e-10):
-            iternum[i,j] = 1 #dummy dum dum
+            iternum[i,j] = 0 #dummy dum dum
         else:
             (xsol, ecode) = ps.gmres_py(rhs, N, args.gmres_tol, debug=True)
             iternum[i, j] = ps.gmres_iter

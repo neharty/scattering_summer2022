@@ -1,0 +1,2 @@
+data is in the form
+abs(k)  cond_num    abs(avg_eval)   real(avg_eval)  imag(avg_eval)  real(k) imag(k)

@@ -1,5 +1,3 @@
-#!/bin/sh
-
 import numpy as np
 from scipy.signal import convolve
 from Ncyl.cqm import time_domain_scattering, cyl
@@ -11,11 +9,13 @@ from integrators.integrators import IRK3, IRK5
 
 Nmode = 10
 Nt=12
-tint=IRK5()
+tint=None
 T=40
-wv=gaussian(time_shift=12)
+wv=gaussian(time_shift=7.5,
+            sigma=0.1)
 X, Y = np.meshgrid([10], [0])
-cyls = example_setups.uniform_grid_NxN(3, ['d', 'n'], 1, 3, sum_num=Nmode, bc_mode='random')
+np.random.seed(1)
+cyls = example_setups.uniform_grid_NxN(4, ['d', 'n'], 1, 3, sum_num=Nmode, bc_mode='random')
 
 #%%
 #no cpp
@@ -44,13 +44,14 @@ tdscpp = time_domain_scattering(
                              timeint=tint,
                              use_par=True,
                              scargs={'method':'gmres', 'gmres_tol':1e-8},
-                             use_cpp=True
+                             use_cpp=True,
+                             fft_tol=1e-10
                              )
 t = time()
 Usccpp = tdscpp.make_U_sc(X, Y)
 tcp = time() - t
 #%%
-plt.plot(tds.times, Usc[0,0,:])
+#plt.plot(tds.times, Usc[0,0,:])
 plt.plot(tdscpp.times[:], Usccpp[0,0,:])
 print(np.max(np.abs(Usc-Usccpp)))
 print(tpy, tcp, 1-(tcp/tpy))
