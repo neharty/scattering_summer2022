@@ -125,7 +125,7 @@ cdef class PyScat:
         for p in self.labels:
             tmp = self.jh(self.cyls[p], idxa)
             for i in range(2*self.nmode+1):
-                tmp = np.nan_to_num(tmp, copy=False)
+                #tmp = np.nan_to_num(tmp, copy=False)
                 jhm[p, i] = tmp[i]
         
         return jhm
@@ -141,7 +141,7 @@ cdef class PyScat:
             for q in self.labels:
                 tmp = self.make_root_vect_1cyl(p, q)
                 for i in range(4*self.nmode+1):
-                    tmp = np.nan_to_num(tmp, copy=False)
+                    #tmp = np.nan_to_num(tmp, copy=False)
                     ST[p, q, i] = tmp[i]        
         return ST
     

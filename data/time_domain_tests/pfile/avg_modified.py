@@ -75,15 +75,15 @@ for theta in zip(thetas1, thetas2):
             trace2[:, ridx] += tmptrace2
             
         tmptrace1, tmptrace2 = trace1/seed, trace2/seed #running averages
-        plt.plot(tmptrace1)
-        plt.plot(tmptrace2, '--')
+        #plt.plot(tmptrace1)
+        #plt.plot(tmptrace2, '--')
         #compute the energies (L2 norms)
         for ridx in range(len(r)):
             engtmp1 = np.sqrt(np.trapz(np.abs(tmptrace1[:, ridx])**2, times))
             engtmp2 = np.sqrt(np.trapz(np.abs(tmptrace2[:, ridx])**2, times))
             #energydat[seed-1, ridx] = np.abs(engtmp1 - engtmp2)
-            #energydat[seed-1, ridx] = np.max(np.abs(tmptrace1[:, ridx] - tmptrace2[:, ridx]))#np.sqrt(np.trapz(np.abs(tmptrace1[:, ridx] - tmptrace2[:, ridx])**2, times))
-    plt.show()
+            energydat[seed-1, ridx] = np.sqrt(np.trapz(np.abs(tmptrace1[:, ridx] - tmptrace2[:, ridx])**2, times))
+    #plt.show()
     for ridx in range(len(r)):
         #plt.plot(range(1, end+1), energydat[:, ridx])
         arr = energydat[:, ridx]

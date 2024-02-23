@@ -3692,7 +3692,6 @@ static const char __pyx_k_tmp[] = "tmp";
 static const char __pyx_k_tol[] = "tol";
 static const char __pyx_k_xin[] = "xin";
 static const char __pyx_k_base[] = "base";
-static const char __pyx_k_copy[] = "copy";
 static const char __pyx_k_cyls[] = "cyls";
 static const char __pyx_k_dict[] = "__dict__";
 static const char __pyx_k_flip[] = "flip";
@@ -3783,7 +3782,6 @@ static const char __pyx_k_IndexError[] = "IndexError";
 static const char __pyx_k_ValueError[] = "ValueError";
 static const char __pyx_k_complex128[] = "complex128";
 static const char __pyx_k_invalid_bc[] = "invalid bc";
-static const char __pyx_k_nan_to_num[] = "nan_to_num";
 static const char __pyx_k_pyx_result[] = "__pyx_result";
 static const char __pyx_k_pyx_vtable[] = "__pyx_vtable__";
 static const char __pyx_k_ImportError[] = "ImportError";
@@ -4086,7 +4084,6 @@ typedef struct {
   PyObject *__pyx_kp_s_contiguous_and_direct;
   PyObject *__pyx_kp_s_contiguous_and_indirect;
   PyObject *__pyx_n_s_convolve;
-  PyObject *__pyx_n_s_copy;
   PyObject *__pyx_n_s_count;
   PyObject *__pyx_n_s_cyls;
   PyObject *__pyx_n_u_d;
@@ -4147,7 +4144,6 @@ typedef struct {
   PyObject *__pyx_n_u_n;
   PyObject *__pyx_n_s_name;
   PyObject *__pyx_n_s_name_2;
-  PyObject *__pyx_n_s_nan_to_num;
   PyObject *__pyx_n_s_ndim;
   PyObject *__pyx_n_s_new;
   PyObject *__pyx_n_s_nmode;
@@ -4411,7 +4407,6 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_kp_s_contiguous_and_direct);
   Py_CLEAR(clear_module_state->__pyx_kp_s_contiguous_and_indirect);
   Py_CLEAR(clear_module_state->__pyx_n_s_convolve);
-  Py_CLEAR(clear_module_state->__pyx_n_s_copy);
   Py_CLEAR(clear_module_state->__pyx_n_s_count);
   Py_CLEAR(clear_module_state->__pyx_n_s_cyls);
   Py_CLEAR(clear_module_state->__pyx_n_u_d);
@@ -4472,7 +4467,6 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_u_n);
   Py_CLEAR(clear_module_state->__pyx_n_s_name);
   Py_CLEAR(clear_module_state->__pyx_n_s_name_2);
-  Py_CLEAR(clear_module_state->__pyx_n_s_nan_to_num);
   Py_CLEAR(clear_module_state->__pyx_n_s_ndim);
   Py_CLEAR(clear_module_state->__pyx_n_s_new);
   Py_CLEAR(clear_module_state->__pyx_n_s_nmode);
@@ -4714,7 +4708,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_kp_s_contiguous_and_direct);
   Py_VISIT(traverse_module_state->__pyx_kp_s_contiguous_and_indirect);
   Py_VISIT(traverse_module_state->__pyx_n_s_convolve);
-  Py_VISIT(traverse_module_state->__pyx_n_s_copy);
   Py_VISIT(traverse_module_state->__pyx_n_s_count);
   Py_VISIT(traverse_module_state->__pyx_n_s_cyls);
   Py_VISIT(traverse_module_state->__pyx_n_u_d);
@@ -4775,7 +4768,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_u_n);
   Py_VISIT(traverse_module_state->__pyx_n_s_name);
   Py_VISIT(traverse_module_state->__pyx_n_s_name_2);
-  Py_VISIT(traverse_module_state->__pyx_n_s_nan_to_num);
   Py_VISIT(traverse_module_state->__pyx_n_s_ndim);
   Py_VISIT(traverse_module_state->__pyx_n_s_new);
   Py_VISIT(traverse_module_state->__pyx_n_s_nmode);
@@ -5053,7 +5045,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_kp_s_contiguous_and_direct __pyx_mstate_global->__pyx_kp_s_contiguous_and_direct
 #define __pyx_kp_s_contiguous_and_indirect __pyx_mstate_global->__pyx_kp_s_contiguous_and_indirect
 #define __pyx_n_s_convolve __pyx_mstate_global->__pyx_n_s_convolve
-#define __pyx_n_s_copy __pyx_mstate_global->__pyx_n_s_copy
 #define __pyx_n_s_count __pyx_mstate_global->__pyx_n_s_count
 #define __pyx_n_s_cyls __pyx_mstate_global->__pyx_n_s_cyls
 #define __pyx_n_u_d __pyx_mstate_global->__pyx_n_u_d
@@ -5114,7 +5105,6 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_u_n __pyx_mstate_global->__pyx_n_u_n
 #define __pyx_n_s_name __pyx_mstate_global->__pyx_n_s_name
 #define __pyx_n_s_name_2 __pyx_mstate_global->__pyx_n_s_name_2
-#define __pyx_n_s_nan_to_num __pyx_mstate_global->__pyx_n_s_nan_to_num
 #define __pyx_n_s_ndim __pyx_mstate_global->__pyx_n_s_ndim
 #define __pyx_n_s_new __pyx_mstate_global->__pyx_n_s_new
 #define __pyx_n_s_nmode __pyx_mstate_global->__pyx_n_s_nmode
@@ -23060,7 +23050,7 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_jhm(struct __pyx_obj_7wr
  *         for p in self.labels:
  *             tmp = self.jh(self.cyls[p], idxa)             # <<<<<<<<<<<<<<
  *             for i in range(2*self.nmode+1):
- *                 tmp = np.nan_to_num(tmp, copy=False)
+ *                 #tmp = np.nan_to_num(tmp, copy=False)
  */
     __Pyx_TraceLine(126,0,__PYX_ERR(0, 126, __pyx_L1_error))
     if (unlikely(__pyx_v_self->cyls == Py_None)) {
@@ -23079,7 +23069,7 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_jhm(struct __pyx_obj_7wr
  *         for p in self.labels:
  *             tmp = self.jh(self.cyls[p], idxa)
  *             for i in range(2*self.nmode+1):             # <<<<<<<<<<<<<<
- *                 tmp = np.nan_to_num(tmp, copy=False)
+ *                 #tmp = np.nan_to_num(tmp, copy=False)
  *                 jhm[p, i] = tmp[i]
  */
     __Pyx_TraceLine(127,0,__PYX_ERR(0, 127, __pyx_L1_error))
@@ -23088,47 +23078,18 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_jhm(struct __pyx_obj_7wr
     for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_16; __pyx_t_17+=1) {
       __pyx_v_i = __pyx_t_17;
 
-      /* "wrapper.pyx":128
- *             tmp = self.jh(self.cyls[p], idxa)
- *             for i in range(2*self.nmode+1):
- *                 tmp = np.nan_to_num(tmp, copy=False)             # <<<<<<<<<<<<<<
- *                 jhm[p, i] = tmp[i]
- * 
- */
-      __Pyx_TraceLine(128,0,__PYX_ERR(0, 128, __pyx_L1_error))
-      __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 128, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_nan_to_num); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 128, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 128, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __Pyx_INCREF(__pyx_v_tmp);
-      __Pyx_GIVEREF(__pyx_v_tmp);
-      if (__Pyx_PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_v_tmp)) __PYX_ERR(0, 128, __pyx_L1_error);
-      __pyx_t_6 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 128, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_6);
-      if (PyDict_SetItem(__pyx_t_6, __pyx_n_s_copy, Py_False) < 0) __PYX_ERR(0, 128, __pyx_L1_error)
-      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 128, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_2);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __Pyx_DECREF_SET(__pyx_v_tmp, __pyx_t_2);
-      __pyx_t_2 = 0;
-
       /* "wrapper.pyx":129
  *             for i in range(2*self.nmode+1):
- *                 tmp = np.nan_to_num(tmp, copy=False)
+ *                 #tmp = np.nan_to_num(tmp, copy=False)
  *                 jhm[p, i] = tmp[i]             # <<<<<<<<<<<<<<
  * 
  *         return jhm
  */
       __Pyx_TraceLine(129,0,__PYX_ERR(0, 129, __pyx_L1_error))
-      __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_tmp, __pyx_v_i, size_t, 0, __Pyx_PyInt_FromSize_t, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_18 = __Pyx_PyComplex_As___pyx_t_double_complex(__pyx_t_2); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 129, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_tmp, __pyx_v_i, size_t, 0, __Pyx_PyInt_FromSize_t, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_t_18 = __Pyx_PyComplex_As___pyx_t_double_complex(__pyx_t_1); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 129, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_19 = __pyx_v_p;
       __pyx_t_20 = __pyx_v_i;
       __pyx_t_7 = -1;
@@ -23493,7 +23454,7 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_root_matrix(struct __pyx
  *             for q in self.labels:
  *                 tmp = self.make_root_vect_1cyl(p, q)             # <<<<<<<<<<<<<<
  *                 for i in range(4*self.nmode+1):
- *                     tmp = np.nan_to_num(tmp, copy=False)
+ *                     #tmp = np.nan_to_num(tmp, copy=False)
  */
       __Pyx_TraceLine(142,0,__PYX_ERR(0, 142, __pyx_L1_error))
       __pyx_t_4 = ((PyObject *)((struct __pyx_vtabstruct_7wrapper_PyScat *)__pyx_v_self->__pyx_vtab)->make_root_vect_1cyl(__pyx_v_self, __pyx_v_p, __pyx_v_q)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 142, __pyx_L1_error)
@@ -23505,7 +23466,7 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_root_matrix(struct __pyx
  *             for q in self.labels:
  *                 tmp = self.make_root_vect_1cyl(p, q)
  *                 for i in range(4*self.nmode+1):             # <<<<<<<<<<<<<<
- *                     tmp = np.nan_to_num(tmp, copy=False)
+ *                     #tmp = np.nan_to_num(tmp, copy=False)
  *                     ST[p, q, i] = tmp[i]
  */
       __Pyx_TraceLine(143,0,__PYX_ERR(0, 143, __pyx_L1_error))
@@ -23514,47 +23475,18 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_root_matrix(struct __pyx
       for (__pyx_t_21 = 0; __pyx_t_21 < __pyx_t_20; __pyx_t_21+=1) {
         __pyx_v_i = __pyx_t_21;
 
-        /* "wrapper.pyx":144
- *                 tmp = self.make_root_vect_1cyl(p, q)
- *                 for i in range(4*self.nmode+1):
- *                     tmp = np.nan_to_num(tmp, copy=False)             # <<<<<<<<<<<<<<
- *                     ST[p, q, i] = tmp[i]
- *         return ST
- */
-        __Pyx_TraceLine(144,0,__PYX_ERR(0, 144, __pyx_L1_error))
-        __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 144, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_nan_to_num); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 144, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_2);
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 144, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_INCREF(__pyx_v_tmp);
-        __Pyx_GIVEREF(__pyx_v_tmp);
-        if (__Pyx_PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_tmp)) __PYX_ERR(0, 144, __pyx_L1_error);
-        __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_copy, Py_False) < 0) __PYX_ERR(0, 144, __pyx_L1_error)
-        __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 144, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_7);
-        __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        __Pyx_DECREF_SET(__pyx_v_tmp, __pyx_t_7);
-        __pyx_t_7 = 0;
-
         /* "wrapper.pyx":145
  *                 for i in range(4*self.nmode+1):
- *                     tmp = np.nan_to_num(tmp, copy=False)
+ *                     #tmp = np.nan_to_num(tmp, copy=False)
  *                     ST[p, q, i] = tmp[i]             # <<<<<<<<<<<<<<
  *         return ST
  * 
  */
         __Pyx_TraceLine(145,0,__PYX_ERR(0, 145, __pyx_L1_error))
-        __pyx_t_7 = __Pyx_GetItemInt(__pyx_v_tmp, __pyx_v_i, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 145, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_22 = __Pyx_PyComplex_As___pyx_t_double_complex(__pyx_t_7); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 145, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+        __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_tmp, __pyx_v_i, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 145, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_22 = __Pyx_PyComplex_As___pyx_t_double_complex(__pyx_t_4); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 145, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
         __pyx_t_23 = __pyx_v_p;
         __pyx_t_24 = __pyx_v_q;
         __pyx_t_14 = __pyx_v_i;
@@ -23579,7 +23511,7 @@ static __Pyx_memviewslice __pyx_f_7wrapper_6PyScat_make_root_matrix(struct __pyx
   __pyx_t_10.memview = NULL; __pyx_t_10.data = NULL;
 
   /* "wrapper.pyx":146
- *                     tmp = np.nan_to_num(tmp, copy=False)
+ *                     #tmp = np.nan_to_num(tmp, copy=False)
  *                     ST[p, q, i] = tmp[i]
  *         return ST             # <<<<<<<<<<<<<<
  * 
@@ -23980,7 +23912,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
 /* "wrapper.pyx":168
  *             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]
  * 
- *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):             # <<<<<<<<<<<<<<
+ *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):             # <<<<<<<<<<<<<<
  *             #split up the x coeffs
  * 
  */
@@ -24068,7 +24000,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 168, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 0, "x", 0))) __PYX_ERR(0, 168, __pyx_L1_error)
   __pyx_r = __pyx_pf_7wrapper_6PyScat_8gmres_py_mvp(__pyx_self, __pyx_v_x);
 
   /* function exit code */
@@ -24779,7 +24711,7 @@ __pyx_t_4 = __pyx_memoryview_fromslice(__pyx_t_20, 1, (PyObject *(*)(char *)) __
   /* "wrapper.pyx":168
  *             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]
  * 
- *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):             # <<<<<<<<<<<<<<
+ *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):             # <<<<<<<<<<<<<<
  *             #split up the x coeffs
  * 
  */
@@ -24995,7 +24927,7 @@ static PyObject *__pyx_pf_7wrapper_6PyScat_6gmres_py(struct __pyx_obj_7wrapper_P
  *         for i in range(len(self.cyls)):
  *             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]             # <<<<<<<<<<<<<<
  * 
- *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
+ *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):
  */
     __Pyx_TraceLine(166,0,__PYX_ERR(0, 166, __pyx_L1_error))
     if (unlikely(__pyx_cur_scope->__pyx_v_self->cyls == Py_None)) {
@@ -25041,7 +24973,7 @@ static PyObject *__pyx_pf_7wrapper_6PyScat_6gmres_py(struct __pyx_obj_7wrapper_P
   /* "wrapper.pyx":168
  *             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]
  * 
- *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):             # <<<<<<<<<<<<<<
+ *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):             # <<<<<<<<<<<<<<
  *             #split up the x coeffs
  * 
  */
@@ -28590,7 +28522,6 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_kp_s_contiguous_and_direct, __pyx_k_contiguous_and_direct, sizeof(__pyx_k_contiguous_and_direct), 0, 0, 1, 0},
     {&__pyx_kp_s_contiguous_and_indirect, __pyx_k_contiguous_and_indirect, sizeof(__pyx_k_contiguous_and_indirect), 0, 0, 1, 0},
     {&__pyx_n_s_convolve, __pyx_k_convolve, sizeof(__pyx_k_convolve), 0, 0, 1, 1},
-    {&__pyx_n_s_copy, __pyx_k_copy, sizeof(__pyx_k_copy), 0, 0, 1, 1},
     {&__pyx_n_s_count, __pyx_k_count, sizeof(__pyx_k_count), 0, 0, 1, 1},
     {&__pyx_n_s_cyls, __pyx_k_cyls, sizeof(__pyx_k_cyls), 0, 0, 1, 1},
     {&__pyx_n_u_d, __pyx_k_d, sizeof(__pyx_k_d), 0, 1, 0, 1},
@@ -28651,7 +28582,6 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_u_n, __pyx_k_n, sizeof(__pyx_k_n), 0, 1, 0, 1},
     {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
     {&__pyx_n_s_name_2, __pyx_k_name_2, sizeof(__pyx_k_name_2), 0, 0, 1, 1},
-    {&__pyx_n_s_nan_to_num, __pyx_k_nan_to_num, sizeof(__pyx_k_nan_to_num), 0, 0, 1, 1},
     {&__pyx_n_s_ndim, __pyx_k_ndim, sizeof(__pyx_k_ndim), 0, 0, 1, 1},
     {&__pyx_n_s_new, __pyx_k_new, sizeof(__pyx_k_new), 0, 0, 1, 1},
     {&__pyx_n_s_nmode, __pyx_k_nmode, sizeof(__pyx_k_nmode), 0, 0, 1, 1},
@@ -28849,7 +28779,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   /* "wrapper.pyx":168
  *             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]
  * 
- *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):             # <<<<<<<<<<<<<<
+ *         def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):             # <<<<<<<<<<<<<<
  *             #split up the x coeffs
  * 
  */
