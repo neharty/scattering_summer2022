@@ -1,0 +1,12 @@
+the data output is in the form
+
+    # of cyls/volume fill, python gmres time, cython gmres time, full matrix time, reduced memory useage, full matrix memory usage
+
+where 
+    # of cyls/volume fill = the number of cylinder or volume fraction for a regular/random arrangement, respectively
+    python gmres time = the time (sec) needed to construct the root matrix data used for GMREs, in pure python
+    cython gmres time = the time needed to construct the root matrix data used for GMREs, in cython
+    full matrix time = the time needed to construct the full matrix in pure python (no cython code here)
+    reduced memory useage = memory in bytes for the GMREs root matrix data. this includes the numpy array overhead, along with the actual array values
+    full matrix memory usage = memory in bytes for the full matrix data. this includes the numpy array overhead, along with the actual array values
+

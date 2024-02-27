@@ -23,6 +23,8 @@ cdef class PyScat:
     cdef public long ncyls
     cdef public long[:] labels
     cdef public long gmres_iter
+    cdef public double complex [:, :, :] ST
+    cdef public double complex [:, :] jhm
 
     def __init__(self, list cyls, double complex k, long nmode):
         self.cyls = cyls
@@ -119,7 +121,7 @@ cdef class PyScat:
 
     cdef double complex[:, :] make_jhm(self):
         cdef double complex[:, :] jhm = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
-        cdef object tmp
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp
         cdef size_t p, i
         cdef np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] idxa = np.arange(-self.cyls[0].sum_index, self.cyls[0].sum_index+1)
         for p in self.labels:
@@ -127,7 +129,7 @@ cdef class PyScat:
             for i in range(2*self.nmode+1):
                 #tmp = np.nan_to_num(tmp, copy=False)
                 jhm[p, i] = tmp[i]
-        
+        self.jhm = jhm
         return jhm
     
     def make_jhm_py(self):
@@ -136,13 +138,14 @@ cdef class PyScat:
     cdef double complex[:, :, :] make_root_matrix(self):
         cdef size_t p, q
         cdef double complex[:, :, :] ST = 1j*np.zeros((self.ncyls, self.ncyls, 4*self.nmode+1))
-        cdef object tmp
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp
         for p in self.labels:
             for q in self.labels:
                 tmp = self.make_root_vect_1cyl(p, q)
                 for i in range(4*self.nmode+1):
                     #tmp = np.nan_to_num(tmp, copy=False)
-                    ST[p, q, i] = tmp[i]        
+                    ST[p, q, i] = tmp[i]
+        self.ST = ST
         return ST
     
     def make_root_matrix_py(self):
@@ -150,50 +153,54 @@ cdef class PyScat:
     
     cdef void gmres_callback(self, double nrm):
         self.gmres_iter += 1
+    
+    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] mvp(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
+        #split up the x coeffs
 
+        cdef double complex[:, :] xs = np.reshape(x, (self.ncyls, 2*self.nmode+1))
+        cdef double complex[:, :] mulscat = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
+
+        #computes the block MVPs and stores in a multidimensional list
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp
+        cdef double complex[:, :, :] SCmvp = 1j*np.zeros((self.ncyls, self.ncyls, 2*self.nmode+1))
+        for p in self.labels:
+            for q in self.labels:
+                tmp = np.convolve(self.ST[p, q, :], xs[q, :], mode='valid')
+                for i in range(2*self.nmode+1):
+                    SCmvp[p, q, i] = tmp[i]
+        
+        #TODO: remove this double loop
+        for p in self.labels:
+            for q in self.labels:
+                for i in range(2*self.nmode+1):
+                    if p != q:
+                        SCmvp[p, q, i] *= self.jhm[p, i]
+                    mulscat[p, i] += SCmvp[p, q, i]
+
+        return np.hstack(np.asarray(mulscat))
+    
+    def mvp_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):
+        return self.mvp(x)
+    
     def gmres_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None,
               long restart,
               double tol,
               bool debug=False):
         
-        cdef double complex[:, :] jhm = self.make_jhm()
-        cdef double complex[:, :, :] ST = self.make_root_matrix()
+        #initialize root matrix data
+        self.make_jhm()
+        self.make_root_matrix()
         
         cdef int dim = len(self.cyls)*(2*self.nmode+1)
         cdef long[:] lengths = np.zeros(len(self.cyls) + 1, dtype=int)
         cdef size_t p, q, i
         for i in range(len(self.cyls)):
             lengths[i+1] = 2*self.cyls[i].sum_index + 1 + lengths[i]
-        
-        def mvp(np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):
-            #split up the x coeffs
-
-            cdef double complex[:, :] xs = np.reshape(x, (self.ncyls, 2*self.nmode+1))
-            cdef double complex[:, :] mulscat = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
-
-            #computes the block MVPs and stores in a multidimensional list
-            cdef object tmp
-            cdef double complex[:, :, :] SCmvp = 1j*np.zeros((self.ncyls, self.ncyls, 2*self.nmode+1))
-            for p in self.labels:
-                for q in self.labels:
-                    tmp = np.convolve(ST[p, q, :], xs[q, :], mode='valid')
-                    for i in range(2*self.nmode+1):
-                        SCmvp[p, q, i] = tmp[i]
-            
-            #TODO: remove this double loop
-            for p in self.labels:
-                for q in self.labels:
-                    for i in range(2*self.nmode+1):
-                        if p != q:
-                            SCmvp[p, q, i] *= jhm[p, i]
-                        mulscat[p, i] += SCmvp[p, q, i]
-
-            return np.hstack(np.asarray(mulscat))
-        
+               
         self.gmres_iter = 0
         if debug:
             outp = gmres(
-                        LinearOperator((dim, dim), matvec=mvp, dtype=np.complex128),
+                        LinearOperator((dim, dim), matvec=self.mvp_py, dtype=np.complex128),
                         xin,
                         rtol = tol,
                         restart = restart,
@@ -201,7 +208,7 @@ cdef class PyScat:
                         )
         else:
             outp = gmres(
-                        LinearOperator((dim, dim), matvec=mvp, dtype=np.complex128),
+                        LinearOperator((dim, dim), matvec=self.mvp_py, dtype=np.complex128),
                         xin,
                         rtol = tol,
                         restart = restart
