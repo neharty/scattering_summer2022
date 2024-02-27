@@ -110,8 +110,9 @@ class scattering(cyl):
         self.mvp_counter = 0
         
         #make dist matrix for mode computation
-        self.dist_matrix = self.make_dist_matrix()
-
+        #self.dist_matrix = self.make_dist_matrix()
+        self.dist_matrix = None
+        
         # set the sum index for each cylinder, depending 
         # on whether there's a global index or not
         if sum_index == None:
