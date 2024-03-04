@@ -1,0 +1,1 @@
+use the graph I made of the march tp the homogenized state and make some additional graphs showing the actual time traces at theta=0, +/-pi/4, +/-pi/2, +/-3pi/4, and pi.

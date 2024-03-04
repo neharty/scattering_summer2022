@@ -655,7 +655,9 @@ class time_domain_scattering(scattering):
                  end_time,
                  fft_tol = 1e-10,
                  sampnum = None,
-                 modes = 8,
+                 modes = None,
+                 mode_start=1,
+                 mode_tol=1e-10,
                  use_par=True,
                  cpus=None,
                  use_conj=True,
@@ -676,6 +678,8 @@ class time_domain_scattering(scattering):
         self.fftidx = []
         self.sampnum = sampnum
         self.modes = modes
+        self.mode_start = mode_start
+        self.mode_tol = mode_tol
         self.use_par = use_par
         self.cpus = cpus
         if self.cpus is None:
@@ -696,6 +700,8 @@ class time_domain_scattering(scattering):
         for c in self.cyls:
             c.label = i
             i+=1
+            
+        self.labels = [c.label for c in self.cyls]
             
         self.init_vars()
         
@@ -742,7 +748,68 @@ class time_domain_scattering(scattering):
             self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])     
         
         self.lammat = self.lam**np.arange(0, len(self.times))
+        
+    def mode_select(self, x, y):
+        #make distance matrix
+        dist_matrix = np.zeros((len(self.cyls), len(self.cyls))) 
+        for i in self.labels:
+            for j in self.labels:
+                if i == j: 
+                    dist_matrix[i, j] = np.inf
+                else:
+                    dist_matrix[i, j] = np.linalg.norm(self.cyls[i].pos - self.cyls[j].pos)
 
+        #find closest 2 circles
+        minidx = np.unravel_index(
+            dist_matrix.argmin(), 
+            dist_matrix.shape
+            )
+        print(minidx, dist_matrix[minidx])
+        auxcyls = [
+            copy.deepcopy(self.cyls[minidx[0]]), 
+            copy.deepcopy(self.cyls[minidx[1]])
+            ]
+        
+        #solve the problem once
+        Nmodeprev = self.mode_start
+        tdsc = time_domain_scattering(
+                                     auxcyls,
+                                     self.waveform,
+                                     self.end_time,
+                                     modes=Nmodeprev,
+                                     sampnum=self.sampnum,
+                                     timeint=self.timeint,
+                                     use_par=self.use_par,
+                                     scargs=self.scargs,
+                                     use_cpp=self.use_cpp
+                                     )
+        Uscprev = tdsc.make_U_sc(x, y)
+        
+        #solve the problem with increasing mode numbers
+        err = np.inf
+        while err > self.mode_tol:
+            print(Nmodeprev, err)
+            auxcyls[0].sum_index = None
+            auxcyls[1].sum_index = None
+            Nmodecurr = Nmodeprev + 1
+            tdsc = time_domain_scattering(
+                                         auxcyls,
+                                         self.waveform,
+                                         self.end_time,
+                                         modes=Nmodecurr,
+                                         sampnum=self.sampnum,
+                                         timeint=self.timeint,
+                                         use_par=self.use_par,
+                                         scargs=self.scargs,
+                                         use_cpp=self.use_cpp
+                                         )
+            Usccurr = tdsc.make_U_sc(x, y)
+            err = np.amax(np.abs(Usccurr - Uscprev))
+            Uscprev = Usccurr
+            Nmodeprev = Nmodecurr
+        
+        return Nmodecurr
+    
     def td_bdy(self, cyl, c=0):
         bc = cyl.bc
         if self.balanced_system:
@@ -1272,6 +1339,10 @@ class time_domain_scattering(scattering):
         return self.u_sc
     
     def make_U_sc(self, x, y):
+        #select Nmodes
+        if self.modes is None:
+            self.modes=self.mode_select(x, y)
+        
         if self.timeint is None:
             self.make_time_harmonic_soln(x, y)
         else:

@@ -2,11 +2,11 @@
 Nt=14
 for tint in irk5
 do
-for bcs in d n dndn ndnd
+for bcs in dndn 
 do
 for inc in 1 2
 do
-for Nmode in 2 4 8 {10..16}
+for Nmode in 2 4 8 {10..20} 
 do
 for srctype in planewave pointsrc
 do
@@ -19,10 +19,10 @@ done
 done 
 
 #sweep timesteps
-Nmode=16
+Nmode=20
 for tint in irk5
 do
-for bcs in d n dndn ndnd
+for bcs in dndn 
 do
 for inc in 1 2
 do

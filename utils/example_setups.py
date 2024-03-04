@@ -61,7 +61,7 @@ def big_circle(N, bc, big_radius, small_radius, sum_num = None, impedance=None, 
         c = center
     points = [[c[0] + big_radius*np.cos(a), c[1] + big_radius*np.sin(a)] for a in angs]
 
-    return make_cyls(points, bc, bc_mode, sum_num, impedance)
+    return make_cyls(points, bc, small_radius, bc_mode, sum_num, impedance)
     #return [cyl(bc, points[i], small_radius, sum_index=sum_num, impedance=impedance) for i in range(N)]
 
 def uniform_pentagon(penta_radius, cyl_radius, ang_shift):

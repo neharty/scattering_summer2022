@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.sparse.linalg import gmres
 from scipy.signal import convolve
-from tests.cython_tests.full_gmres.wrapper import PyScat
+from Ncyl.scython.wrapper import PyScat
 from Ncyl.cqm import scattering
 from Ncyl.cqm import time_domain_scattering, cyl
 from waveforms.waveforms import gaussian

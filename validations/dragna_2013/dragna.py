@@ -15,10 +15,9 @@ b = 0.632
 nu = 0.673
 q = 0.618
 
-Nmode = 16
 Nsamp = 2**12
 
-tint = IRK3()
+tint = IRK5()
 #%%
 #exact data
 def make_data(x, y, bc):
@@ -52,10 +51,10 @@ def make_data(x, y, bc):
                                  cyls,
                                  wv,
                                  T,
-                                 modes=Nmode,
+                                 modes=25,
                                  sampnum=Nsamp,
                                  timeint=tint,
-                                 scargs={'method':'explicit'}
+                                 scargs={'method':'gmres'}
                                  )
     
     X, Y = np.meshgrid([x], [y])

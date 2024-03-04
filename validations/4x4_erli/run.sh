@@ -1,10 +1,10 @@
-for tint in irk5
+for tint in bdf2 irk3 irk5
 do
 for bcs in d n dndn ndnd
 do
 for inc in 1 2
 do
-for Nmode in {1..10}
+for Nmode in {1..20}
 do
 for Nt in {5..14}
 do

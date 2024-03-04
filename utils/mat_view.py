@@ -20,4 +20,3 @@ A = sc.make_scattering_blocks()
 
 im = plt.matshow(np.abs(A))
 plt.colorbar(im)
-

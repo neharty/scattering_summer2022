@@ -1,0 +1,5 @@
+I send you two MATLAB routines:
+- impedance_2023 plots the impedance spectra for the two models (obtained with the exact model and with the approximation by a rational function)
+- curviligne_ana_2023 plots the analytical solution for the time-domain pressure at M_1, M_2 and M_3 and for three different boundary conditions.
+
+The coefficients A_k and lambda_k in Eq.(26) of the JASA paper can be found in the routines for the two impedance models (note that we did not use Z_{\infty} here).  In addition, I still have the results from the FDTD simulation for the three cases and I can share them if that helps.

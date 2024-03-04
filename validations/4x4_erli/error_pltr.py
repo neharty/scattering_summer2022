@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 #initialize
-def key(idx):
+def get_point(idx):
     ptdict = {
         2 : (6,0),
         3 : (-3, 3),
@@ -50,8 +50,10 @@ def key(idx):
         44 : (12, 2.827), 
         45 : (12, 3.141), 
         }
-    
-    x, y = ptdict[idx]
+    return ptdict[idx]
+
+def key(idx):
+    x, y = get_point(idx)
     return f'{x:.3f}_{y:.3f}.dat' 
 
 bckey = {
@@ -60,46 +62,55 @@ bckey = {
     'dndn': 'dirneu',
     'ndnd': 'neudir'}
 
-l = 2
+l = 2 
 inc = 3
-bc='n'
+bc='dndn'
 
-refpath = '/home/nick/scattering/validations/4x4_erli/generic/'
-refpath = os.path.join(refpath, 
-                       bckey[bc],
-                       'lrep_'+str(l), 
-                       'inc_'+str(inc)
-                       )
-keyidx = 35
-fname = key(keyidx)
-refarr = np.loadtxt(os.path.join(refpath, fname)) #reference soln
+ #reference soln
 
 #%%
 # error vs modes
-tint = 'irk5'
-srctype = 'planewave'
-if inc == 3:
-    incang = -np.pi
-if inc == 4:
-    incang = -np.pi-np.pi/3
-
-err = []
-Narr = [2, 4, 8, 10, 11, 12, 13, 14, 15, 16]
-for N in Narr:
-    dpath = '/home/nick/scattering/validations/4x4_erli/data/gmres/'
-    dpath = os.path.join(dpath, 
-                         tint, 
-                         'srctype_'+srctype,
-                         'bcs_'+bc,
-                         'incang_'+str(incang),
-                         'Nmode_'+str(N), 
-                         'Ntime_14')
-    fname = key(keyidx)
-    arr = np.loadtxt(os.path.join(dpath, fname))
-    err += [np.max(np.abs(arr[:, 1] - refarr[:, 1]))]
+for inc in [3, 4]:
+    tint = 'irk5'
+    srctype = 'planewave'
+    if inc == 3:
+        incang = -np.pi
+        label= r'$\theta_{inc}=-\pi$'
+    if inc == 4:
+        incang = -np.pi-np.pi/3
+        label= r'$\theta_{inc}=-4\pi/3$'
     
-plt.semilogy(Narr, err, '.-', label=tint)
-plt.legend()
+    refpath = '/home/nick/scattering/validations/4x4_erli/generic/'
+    refpath = os.path.join(refpath, 
+                           bckey[bc],
+                           'lrep_'+str(l), 
+                           'inc_'+str(inc)
+                           )
+    keyidx = 25
+    fname = key(keyidx)
+    refarr = np.loadtxt(os.path.join(refpath, fname))
+    
+    err = []
+    Narr = [2, 4, 8, 10, 11, 12, 13, 14, 15, 16]
+    for N in Narr:
+        dpath = '/home/nick/scattering/validations/4x4_erli/data/gmres'
+        dpath = os.path.join(dpath, 
+                             tint, 
+                             'srctype_'+srctype,
+                             'bcs_'+bc,
+                             'incang_'+str(incang),
+                             'Nmode_'+str(N), 
+                             'Ntime_14')
+        fname = key(keyidx)
+        arr = np.loadtxt(os.path.join(dpath, fname))
+        err += [np.max(np.abs(arr[:, 1] - refarr[:, 1]))]
+        
+    plt.semilogy(Narr, err, '-', label=label)
+    plt.xlabel('M')
+    plt.ylabel('error')
+    plt.legend()
+plt.title('Convergence in M, using IRK5, (x, y) = '+str(get_point(keyidx)))
+plt.savefig('/home/nick/scattering/proposal_imgs/s4/modeconverge.pdf')
 plt.show()
         
 #%%
@@ -117,13 +128,13 @@ maxpow=14
 end = 1
 refarr = refarr[:int(end*len(refarr))]
 for N in Narr:
-    dpath = '/home/nick/scattering/validations/4x4_erli/data/gmres/'
+    dpath = '/home/nick/scattering/validations/4x4_erli/data/'
     dpath = os.path.join(dpath, 
                          tint, 
                          'srctype_'+srctype,
                          'bcs_'+bc,
                          'incang_'+str(incang),
-                         'Nmode_16', 
+                         'Nmode_20', 
                          'Ntime_'+str(N))
     fname = key(keyidx)
     arr = np.loadtxt(os.path.join(dpath, fname))
@@ -131,7 +142,9 @@ for N in Narr:
     samepoints = refarr[::int(2**(maxpow - N)), 1]
     err += [np.max(np.abs(arr[:, 1] - samepoints))]
 
-    
-plt.loglog(Narr, err, '.-', label=tint)
+plt.loglog(40/2**Narr, 1*(40/2**Narr)**5, 'k--')
+plt.loglog(40/2**Narr, err, '.-', label=tint)
+plt.xlabel(r'$\Delta t$')
+plt.ylabel('error')
 plt.legend()
 plt.show()

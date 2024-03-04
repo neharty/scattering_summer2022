@@ -14,25 +14,26 @@ T = 4.4
 cyls = [cyl('d', [-0.105, 0], 0.1), 
         cyl('d', [0.105, 0], 0.1), 
         cyl('d', [0, 0.1819], 0.1)]
-
+#%%
 #foldy lax solution
-tds_fl = time_domain_scattering(
-                             cyls,
-                             wv,
-                             T,
-                             timeint=None,
-                             modes=4,
-                             sampnum=2**12,
-                             use_foldy_lax=True,
-                             scargs={'method':'explicit'}
-                             )
+# tds_fl = time_domain_scattering(
+#                              cyls,
+#                              wv,
+#                              T,
+#                              mode_tol=1e-5,
+#                              timeint=None,
+#                              sampnum=2**12,
+#                              use_foldy_lax=True,
+#                              use_par=False,
+#                              scargs={'method':'explicit'}
+#                              )
 
-X, Y = np.meshgrid([0.2], [0.2])
-U_fl = tds_fl.make_U_sc(X, Y)
+# X, Y = np.meshgrid([0.2], [0.2])
+# U_fl = tds_fl.make_U_sc(X, Y)
 
-darr = [[tds_fl.times[i], U_fl[0,0,i]] for i in range(len(tds_fl.times))]
-dataout = '/home/nick/scattering/validations/kachanovska_2023/data/fig_3-2/'
-np.savetxt(os.path.join(dataout, 'fig_3-2_d_foldy-galerkin.dat'), darr)
+# darr = [[tds_fl.times[i], U_fl[0,0,i]] for i in range(len(tds_fl.times))]
+# dataout = '/home/nick/scattering/validations/kachanovska_2023/data/fig_3-2/'
+# np.savetxt(os.path.join(dataout, 'fig_3-2_d_foldy-galerkin.dat'), darr)
 
 #%%
 #actual solution
@@ -41,8 +42,8 @@ tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
-                             modes=8,
                              sampnum=2**12,
+                             mode_tol=1e-5,
                              balanced_system=True,
                              scargs={'method':'explicit'}
                              )
@@ -62,7 +63,7 @@ T = 4.4
 cyls = [cyl('n', [-0.105, 0], 0.1), 
         cyl('n', [0.105, 0], 0.1), 
         cyl('n', [0, 0.1819], 0.1)]
-
+#%%
 #foldy lax solution
 tds_fl = time_domain_scattering(
                              cyls,
@@ -89,8 +90,8 @@ tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
-                             modes=8,
                              sampnum=2**12,
+                             mode_tol=1e-5,
                              balanced_system=True,
                              scargs={'method':'explicit'}
                              )
@@ -139,8 +140,8 @@ tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
-                             modes=8,
                              sampnum=2**12,
+                             mode_tol=1e-5,
                              balanced_system=True,
                              scargs={'method':'explicit'}
                              )

@@ -49,7 +49,10 @@ plt.legend()
 plt.savefig('/home/nick/scattering/proposal_imgs/s3/irk5_all_evals.pdf')
 plt.show()
 
-plt.plot(ks.real[:, 1], ks.imag[:, 1], label='c='+str(1))  
+l = len(ks[: ,1])
+
+plt.plot(ks.real[:l//2+1, 1], ks.imag[:l//2+1, 1],  'k-', label='c='+str(1))
+plt.plot(ks.real[l//2+1:, 1], ks.imag[l//2+1:, 1],  'k-')  
 plt.xlabel('real(k)')
 plt.ylabel('im(k)')
 plt.title('IRK5 solved wavenumbers')

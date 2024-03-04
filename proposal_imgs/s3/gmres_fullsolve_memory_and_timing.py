@@ -34,7 +34,7 @@ def build_n_time(cylarr, r=0):
     rhs = np.ones((2*args.Nmode + 1)*len(cyls), dtype=np.complex128)
     
     #py gmres
-    sc = scattering(cyls, rhs, k=k, use_2cyl_modes=False, )
+    sc = scattering(cyls, rhs, k=k, use_2cyl_modes=False)
     t = process_time()
     sc.make_root_matrix()
     sc.make_jhm()

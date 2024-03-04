@@ -90,10 +90,10 @@ tds = time_domain_scattering(
                              modes=args.Nmode,
                              sampnum=2**args.Nt,
                              timeint=tint,
-                             use_par=False,
+                             use_par=True,
                              balanced_system=True,
-                             save_coeffs=True,
-                             scargs={'method':'explicit'}
+                             use_cpp=True,
+                             scargs={'method':'gmres'}
                              )
 
 #inner points
