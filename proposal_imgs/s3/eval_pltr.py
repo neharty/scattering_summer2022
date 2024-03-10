@@ -59,13 +59,13 @@ for i in range(len(ks)):
     print('mean', np.mean(vals))
     print('std dev', np.std(vals))
     
-    plt.plot(vals.real, vals.imag, ls[i], label=f'{k.real:.3f}+{k.imag:.3f}i')
+    plt.plot(vals.real, vals.imag, ls[i], label=f'{k:.3f}')
 plt.xlabel('real')
 plt.ylabel('imag')
 plt.title('eigenvalue distribution for a 6x6 Dirichlet arrangement')
 plt.legend()
 plt.savefig('/home/nick/scattering/proposal_imgs/s3/eigvals.pdf')
-#plt.show()
+plt.show()
 
 #%%
 for i in range(len(ks)):
@@ -84,5 +84,23 @@ plt.ylabel('imag')
 plt.title('eigenvalue distribution for a 6x6 Dirichlet arrangement')
 plt.legend()
 plt.savefig('/home/nick/scattering/proposal_imgs/s3/eigvals_realk.pdf')
-        
+plt.show()
 
+#%%
+from Ncyl.cqm_reduced import scattering as scr
+for i in range(len(ks)):
+    k = ks[i]
+    sc = scr(cyls, np.zeros(N), k=k, use_2cyl_modes=False)
+    A = sc.make_scattering_blocks()
+    vals, vects = np.linalg.eig(A)
+    
+    #mean
+    print('mean', np.mean(vals))
+    print('std dev', np.std(vals))
+    
+    plt.plot(vals.real, vals.imag, ls[i], label=f'{k:.3f}')
+plt.xlabel('real')
+plt.ylabel('imag')
+plt.title('eigenvalue distribution for a 6x6 Dirichlet arrangement')
+plt.legend()
+plt.savefig('/home/nick/scattering/proposal_imgs/s3/eigvals_reduced.pdf')

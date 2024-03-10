@@ -1,2 +1,5 @@
 data is in the form
-abs(k)  cond_num    abs(avg_eval)   real(avg_eval)  imag(avg_eval)  real(k) imag(k)
+abs(k)  cond_num    abs(avg_eval)   stddev  real(avg_eval)  imag(avg_eval)  cond_num_red    abs(avg_eval_red)   stddev_redu real(avg_eval_red)  imag(avg_eval_red) real(k)    imag(k)
+
+red = reduced matrix form
+otherwise they are the Antoine form (divide by H^(1))

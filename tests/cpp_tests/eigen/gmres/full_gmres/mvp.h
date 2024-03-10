@@ -24,7 +24,9 @@ namespace Eigen{
 class MatReplacement : public Eigen::EigenBase<MatReplacement> {
     public:
         vector<vector<vector<complex<double>>>> ST; 
-        vector<vector<complex<double>>> JHM; 
+        vector<vector<complex<double>>> JM; 
+        vector<vector<complex<double>>> HM; 
+
         fftw_plan fdp; 
         fftw_plan fodp;
         fftw_plan bwdp;
@@ -68,7 +70,9 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         
         //setters
         void set_ST(const vector<vector<vector<complex<double>>>>& st){this->ST = st;};
-        void set_JHM(const vector<vector<complex<double>>>& jhm){this->JHM = jhm;};
+        void set_JM(const vector<vector<complex<double>>>& jm){this->JM = jm;};
+        void set_HM(const vector<vector<complex<double>>>& hm){this->HM = hm;};
+
         void set_maxiter(const int mit){this->maxiter=mit;};
         void set_restart(const int rsrt){this->restart=rsrt;};
         void set_tol(const double tl){this->tol=tl;};
@@ -149,19 +153,28 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             }
         }
 
-        void print_JHM(){  
+        void print_JM(){  
             for(int i(0); i < ncyl; i++){
-                cout << "JHM[" << i << "]" << endl;
-                for(int j(0); j < 2*nmode+1; j++){ cout << setprecision(15) << JHM[i][j] << " "; }
+                cout << "JM[" << i << "]" << endl;
+                for(int j(0); j < 2*nmode+1; j++){ cout << setprecision(15) << JM[i][j] << " "; }
                 cout << endl << endl;
             }
         }
-
+        
+        void print_HM(){  
+            for(int i(0); i < ncyl; i++){
+                cout << "HM[" << i << "]" << endl;
+                for(int j(0); j < 2*nmode+1; j++){ cout << setprecision(15) << HM[i][j] << " "; }
+                cout << endl << endl;
+            }
+        }
+        
         vector<complex<double>> mvp(vector<complex<double>>& xin) const {
             vector<vector<vector<complex<double>>>> SCmvp(ncyl, vector<vector<complex<double>>>(ncyl, vector<complex<double>>(2*nmode+1, 0)));
             vector<vector<complex<double>>> xs(ncyl,vector<complex<double>>((2*nmode+1), 0));
             vector<vector<complex<double>>> mulscat(ncyl, vector<complex<double>>((2*nmode+1), 0));
             vector<complex<double>> tmp;
+            vector<complex<double>> tmp2(2*nmode+1);
                         
             // split up the x coeffs
             int idx;
@@ -174,10 +187,13 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             
             //matrix multiply the toeplitz part by convolution
             for(int p=0; p<ncyl; p++){
-                for (int q=0; q<ncyl; q++){ 
-                    tmp = convolve(ST[p][q], xs[q], fdp, bwdp);
-                    for(int i=0; i<2*nmode+1; i++){
-                        SCmvp[p][q][i] = tmp[i];
+                for (int q=0; q<ncyl; q++){
+                    if(p == q){
+                        for(int i=0; i<2*nmode+1; i++){ SCmvp[p][q][i] = xs[p][i]; }
+                    }else{
+                        for(int i=0; i<(2*nmode+1); i++){ tmp2[i] = xs[q][i]/HM[q][i]; }
+                        tmp = convolve(ST[p][q], tmp2, fdp, bwdp);
+                        for(int i=0; i<2*nmode+1; i++){ SCmvp[p][q][i] = tmp[i]; }
                     }
                 }
             }
@@ -197,7 +213,7 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
             for(int p=0; p<ncyl; p++){
                 for (int q=0; q<ncyl; q++){
                     for(int i=0; i<int(2*nmode+1); i++){
-                        if(p != q){ SCmvp[p][q][i] *= JHM[p][i]; }
+                        if(p != q){ SCmvp[p][q][i] *= JM[p][i]; }
                         mulscat[p][i] += SCmvp[p][q][i];
                     }
                 }

@@ -18,14 +18,16 @@ cdef extern from "mvp.h":
         vector[vector[vector[double complex]]] ST 
         vector[vector[double complex]] JHM
         void set_ST(vector[vector[vector[double complex]]]&)
-        void set_JHM(vector[vector[double complex]]&)
+        void set_JM(vector[vector[double complex]]&)
+        void set_HM(vector[vector[double complex]]&)
         void set_maxiter(int)
         void set_restart(int)
         void set_tol(double)
         void mvp_setup()
         void fftw_clean()
         void print_ST()
-        void print_JHM()
+        void print_JM()
+        void print_HM()
         int nmode, ncyl, dim
 
     void gmres_cpp(double complex*, double complex*, MatReplacement&)
@@ -39,10 +41,12 @@ cdef class PyScat:
     cdef public long ncyls
     cdef public long[:] labels
     cdef public double complex[:, :, :] ST
-    cdef public double complex[:, :] JHM
+    cdef public double complex[:, :] JM
+    cdef public double complex[:, :] HM
     cdef public vector[vector[vector[double complex]]] STv
-    cdef public vector[vector[double complex]] JHMv
-    
+    cdef public vector[vector[double complex]] JMv
+    cdef public vector[vector[double complex]] HMv
+ 
     def __init__(self, object cyls, double complex k, int nmode):
         self.cppmvp = MatReplacement(nmode, len(cyls))
         self.cyls = cyls
@@ -51,7 +55,8 @@ cdef class PyScat:
         self.ncyls = len(cyls)
         self.labels = np.array([c.label for c in cyls])
         self.ST = self.make_root_matrix()
-        self.JHM = self.make_jhm()
+        self.JM = self.make_jm()
+        self.HM = self.make_hm()
     
     cdef (double, double) cart_to_polar(self, np.ndarray[dtype=np.float64_t, ndim=1, mode='c'] v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -136,20 +141,34 @@ cdef class PyScat:
     cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] jh(self, object cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
         return self.jmode(cyl, m)/self.hmode(cyl, m)
 
-    cdef double complex[:, :] make_jhm(self):
-        cdef double complex[:, :] jhm = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
+    cdef double complex[:, :] make_jm(self):
+        cdef double complex[:, :] jm = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
         cdef object tmp
         cdef size_t p, i
         cdef np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] idxa = np.arange(-self.cyls[0].sum_index, self.cyls[0].sum_index+1)
         for p in self.labels:
-            tmp = self.jh(self.cyls[p], idxa)
+            tmp = self.jmode(self.cyls[p], idxa)
             for i in range(2*self.nmode+1):
-                jhm[p, i] = tmp[i]
-        return jhm
+                jm[p, i] = tmp[i]
+        return jm
     
-    def make_jhm_py(self):
-        return np.asarray(self.make_jhm())
+    def make_jm_py(self):
+        return np.asarray(self.make_jm())
     
+    cdef double complex[:, :] make_hm(self):
+        cdef double complex[:, :] hm = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
+        cdef object tmp
+        cdef size_t p, i
+        cdef np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] idxa = np.arange(-self.cyls[0].sum_index, self.cyls[0].sum_index+1)
+        for p in self.labels:
+            tmp = self.hmode(self.cyls[p], idxa)
+            for i in range(2*self.nmode+1):
+                hm[p, i] = tmp[i]
+        return hm
+    
+    def make_hm_py(self):
+        return np.asarray(self.make_hm())
+
     cdef double complex[:, :, :] make_root_matrix(self):
         cdef size_t p, q
         cdef double complex[:, :, :] ST = 1j*np.zeros((self.ncyls, self.ncyls, 4*self.nmode+1))
@@ -192,21 +211,34 @@ cdef class PyScat:
             self.STv.push_back(vect2)
             vect2 = empty_2vect
 
-        #make jhmv
+        #make jmv
         vect = empty_vect
         for p in range(ncyl):
             for i in range(2*self.nmode+1):
-                tmp = self.JHM[p, i]
+                tmp = self.JM[p, i]
                 if np.isfinite(tmp):
                     vect.push_back(tmp)
                 else:
                     vect.push_back(0j)
-            self.JHMv.push_back(vect)
+            self.JMv.push_back(vect)
             vect = empty_vect
         
+        #make hmv
+        vect = empty_vect
+        for p in range(ncyl):
+            for i in range(2*self.nmode+1):
+                tmp = self.HM[p, i]
+                if np.isfinite(tmp):
+                    vect.push_back(tmp)
+                else:
+                    vect.push_back(0j)
+            self.HMv.push_back(vect)
+            vect = empty_vect
+
         #initialize mvp variables
         self.cppmvp.set_ST(self.STv)
-        self.cppmvp.set_JHM(self.JHMv)
+        self.cppmvp.set_JM(self.JMv)
+        self.cppmvp.set_HM(self.HMv)
         self.cppmvp.mvp_setup() 
 
     def gmres_setup(self, int restart, int maxiter, double tol):
@@ -244,6 +276,7 @@ cdef class PyScat:
     def gmres_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None, 
                  int restart,
                  double tol):
+        self.mvp_init()
         self.cppmvp.set_restart(restart)
         cdef int maxiter = 2*2*self.ncyls*(2*self.nmode+1)
         self.cppmvp.set_maxiter(maxiter)
@@ -258,5 +291,8 @@ cdef class PyScat:
     def print_STv(self):
         self.cppmvp.print_ST()
     
-    def print_JHMv(self):
-        self.cppmvp.print_JHM()
+    def print_JMv(self):
+        self.cppmvp.print_JM()
+
+    def print_HMv(self):
+        self.cppmvp.print_HM()
