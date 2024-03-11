@@ -10,8 +10,8 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 import uuid
-#from Ncyl.scython_reduced.wrapper import PyScat
-from tests.cpp_tests.eigen.gmres.full_gmres.wrapper import PyScat
+from Ncyl.scython_reduced.wrapper import PyScat
+#from tests.cpp_tests.eigen.gmres.full_gmres.wrapper import PyScat
 
 class cyl:
     '''
@@ -432,7 +432,8 @@ class scattering(cyl):
                 tmp = ps.gmres_py(self.rhs, self.gmres_restart, self.gmres_tol)
                 print('k done:', self.k)
                 if np.all(np.isfinite(tmp[0])):
-                    return (tmp, 0)
+                    #return (tmp, 0)
+                    return tmp
                 else:
                     self.method='explicit'
                     return (self.scattering_coeffs(), 0)
