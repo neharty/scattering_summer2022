@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
 from scipy.signal import convolve
-from scipy.linalg import toeplitz
+from scipy.linalg import toeplitz, matmul_toeplitz
 from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
 from numpy.fft import fft, ifft
@@ -481,25 +481,31 @@ class scattering(cyl):
                 x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128
                 ) for i in range(1, len(self.lengths))
             ]
-        ST = self.ST
 
         mulscat = [1j*np.zeros(len(xn)) for xn in xs]
+        
+        SCmvp = []
+        
+        for p in self.labels: # incident label
+            tmp = []
+            for q in self.labels: # scattered label
+                if p != q:
+                    # off-diagonal matrix multiplication
+                    Nq = self.cyls[q].sum_index
+                    Np = self.cyls[p].sum_index
+                    rv = self.make_root_vect_1cyl(p, q)
+                    col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
+                    row = np.array(rv[2*Nq:], dtype=np.complex128)
+                    tmparr = matmul_toeplitz((row, col), np.array(xs[q]), workers=1)
+                    tmparr *= self.jhm[p]
+                    tmp += [tmparr]
+                else:
+                    # diagonal matrix multiplication
+                    tmp += [xs[p]]
+            SCmvp += [tmp]
 
-        #computes the block MVPs and stores in a multidimensional list
-        SCmvp = [
-            [
-                convolve(
-                    np.array(ST[p][q], dtype=np.complex128),
-                    np.array(xs[q], dtype=np.complex128),
-                    mode='valid'
-                ) for q in self.labels]
-            for p in self.labels]
-
-        #TODO: remove this double loop
         for p in self.labels:
             for q in self.labels:
-                if p != q:
-                    SCmvp[p][q] *= self.jhm[p]
                 mulscat[p] += SCmvp[p][q]
         #print(mulscat)
         self.mvp_counter += 1

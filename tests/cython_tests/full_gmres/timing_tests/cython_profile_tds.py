@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import convolve
-from Ncyl.cqm import time_domain_scattering, cyl
+from Ncyl.cqm_reduced import time_domain_scattering, cyl
 from waveforms.waveforms import gaussian, gaussian_deriv
 from utils import example_setups
 from time import process_time, time

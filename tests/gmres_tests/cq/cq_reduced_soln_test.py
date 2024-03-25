@@ -2,7 +2,7 @@ import numpy as np
 from utils import example_setups
 from utils.plot_cyls import plot_cyls
 import matplotlib.pyplot as plt
-from Ncyl.cqm import time_domain_scattering
+from Ncyl.cqm_reduced import time_domain_scattering
 from integrators.integrators import IRK5, IRK3
 from waveforms.waveforms import gaussian
 import os
@@ -11,7 +11,7 @@ import argparse
 #%%
 #init variables
 Nt = 12
-Nmode=16
+Nmode=100
 bcs='d'
 srctype='planewave'
 inc=0
@@ -36,8 +36,8 @@ if srctype == 'pointsrc':
 
 X, Y = np.meshgrid([6], [0])
 
-#cyls = example_setups.uniform_grid_NxN(3, bcs, 1, 3)
-cyls = example_setups.random_circ_hex_vol_frac(5, 'd', 0.1, 0.05, measurement_points=(X, Y))
+cyls = example_setups.uniform_grid_NxN(3, bcs, 1, 3)
+#cyls = example_setups.random_circ_hex_vol_frac(5, 'd', 0.1, 0.05, measurement_points=(X, Y))
 #%%
 #run sim
 #explicit matrix
@@ -66,7 +66,8 @@ tdsg = time_domain_scattering(
                              modes=Nmode,
                              sampnum=2**Nt,
                              timeint=tint,
-                             use_par=False,
+                             use_par=True,
+                             use_cpp=False,
                              scargs={'method':'gmres'}
                              )
 

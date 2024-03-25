@@ -32,7 +32,8 @@ cyls = example_setups.random_circ_hex_vol_frac(
             args.small_rad, 
             args.rho,
             minspace = minspace,
-            measurement_points=(X, Y))
+            measurement_points=(X, Y), 
+            rin=whatever)
 
 pts = [c.pos for c in cyls]
 pts = np.hstack(pts)

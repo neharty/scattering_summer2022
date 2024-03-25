@@ -1,16 +1,15 @@
 import numpy as np
 from scipy.sparse.linalg import gmres
 from scipy.signal import convolve
-from Ncyl.scython.wrapper import PyScat
-from Ncyl.cqm import scattering
-from Ncyl.cqm import time_domain_scattering, cyl
+from Ncyl.scython_reduced.wrapper import PyScat
+from Ncyl.cqm_reduced import scattering, time_domain_scattering, cyl
 from waveforms.waveforms import gaussian
 from utils import example_setups
 from time import process_time
 import matplotlib.pyplot as plt
 import cProfile
 
-nmode = 10
+nmode = 30
 cyls = example_setups.uniform_grid_NxN(5, ['d', 'n'], 1, 3, sum_num=nmode, bc_mode='uniform')
 
 N = len(cyls)*(2*nmode + 1)

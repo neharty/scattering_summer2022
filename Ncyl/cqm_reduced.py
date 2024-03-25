@@ -1,10 +1,12 @@
 import numpy as np
 from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
+from scipy.linalg import matmul_toeplitz
 from scipy.signal import convolve
-from scipy.linalg import toeplitz
+from scipy.linalg import toeplitz, circulant
 from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import LinearOperator
-from numpy.fft import fft, ifft
+from scipy.ndimage import convolve1d
+from scipy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
 from multiprocess import Process, Pool, cpu_count
 import copy
@@ -301,7 +303,6 @@ class scattering(cyl):
     def make_mul_scattering_block_root(self, cyl_i, cyl_sc):
         rv = self.make_root_vect_1cyl(cyl_i.label, cyl_sc.label)
         Nq = cyl_sc.sum_index
-        Np = cyl_i.sum_index
         if self.balanced_system:
             col = np.flip(rv[:2*Nq+1])
             row = rv[2*Nq:]
@@ -382,6 +383,32 @@ class scattering(cyl):
                 self.hm[p] = self.hmode(self.cyls[p], idxa_p)
         return self.hm
         
+    def circulant_mvp(self, r, x):
+        #r = root matrix
+        #x = input vector
+        #print(np.max(np.abs(ifft(fft(r)*fft(x)) - circulant(r) @ x)))
+        scale = np.max(np.abs(r))
+        tmp1 = ifft(fft(r)*fft(x))
+        tmp2 = circulant(r) @ x
+        tmp = np.max(np.abs(tmp1 - tmp2))
+        tmp3 = tmp/np.max(np.abs(tmp2))
+        return tmp1
+
+    def toeplitz_mvp(self, c, r, x):
+        #c = col matrix
+        #r = root matrix
+        #x = input vector
+        
+        #zero pad to a circulant matrix form
+        rnew = np.hstack((c, 0, np.flip(r[1:])))
+        
+        #zero pad input vector
+        xnew = np.zeros(2*len(x), dtype=np.complex128)
+        xnew[:len(x)] = x[:]
+        
+        res = self.circulant_mvp(rnew, xnew)
+        return res[:len(x)]
+    
     def mvp(self, x):
         x = np.array(x, dtype=np.complex128)
 
@@ -391,25 +418,32 @@ class scattering(cyl):
                 x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128
                 ) for i in range(1, len(self.lengths))
             ]
-        ST = self.ST
 
         mulscat = [1j*np.zeros(len(xn)) for xn in xs]
+        
+        SCmvp = []
+        
+        for p in self.labels: # incident label 
+            tmp = []
+            for q in self.labels: # scattered label
+                if p != q:
+                    # off-diagonal matrix multiplication
+                    Nq = self.cyls[q].sum_index
+                    #Np = self.cyls[p].sum_index
+                    rv = self.ST[p][q]
+                    col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
+                    row = np.array(rv[2*Nq:], dtype=np.complex128)
+                    tmparr = self.toeplitz_mvp(row, col, np.array(xs[q]/self.hm[q]))
+                    tmparr *= self.jm[p]
+                    tmp += [tmparr]
+                else:
+                    # diagonal matrix multiplication (identity)
+                    tmp += [xs[p]]
+                    
+            SCmvp += [tmp]
 
-        #computes the block MVPs and stores in a multidimensional list
-        SCmvp = [
-            [
-                convolve(
-                    np.array(ST[p][q], dtype=np.complex128),
-                    np.array(xs[q]/self.hm[q], dtype=np.complex128),
-                    mode='valid'
-                ) for q in self.labels]
-            for p in self.labels]
-
-        #TODO: remove this double loop
         for p in self.labels:
             for q in self.labels:
-                if p != q:
-                    SCmvp[p][q] *= self.jm[p]
                 mulscat[p] += SCmvp[p][q]
         #print(mulscat)
         self.mvp_counter += 1
@@ -656,6 +690,7 @@ class time_domain_scattering(scattering):
             self.gminv = np.array([gm(z) for z in self.zs])
             peig = [np.linalg.eig(Ainv) for Ainv in self.gminv]
             self.evals = np.array([tup[0] for tup in peig])
+            self.ks = 1j*self.evals/self.dt
             self.pmats = np.array([tup[1] for tup in peig])
             self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])     
         
@@ -851,7 +886,6 @@ class time_domain_scattering(scattering):
         if bc == 'i':
             z_d, z_n = zdat
             z_d *= self.sl*imp(self.ks)
-            #TODO: this is possibly wrong
             return -z_n - z_d 
         else:
             return -zdat
