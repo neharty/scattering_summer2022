@@ -7,16 +7,16 @@ from time import process_time, time
 import matplotlib.pyplot as plt
 from integrators.integrators import IRK3, IRK5
 
-Nmode = 20
+Nmode = 8
 Nt=12
-tint=None
-T=80
+tint=IRK5()
+T=40
 wv=gaussian(time_shift=12,
-            sigma=0.1)
+            sigma=0.2)
 X, Y = np.meshgrid([12], [0])
 np.random.seed(1)
 rad = 1
-cyls = example_setups.uniform_grid_NxN(2, ['n'], rad, 3*rad, sum_num=Nmode)
+cyls = example_setups.uniform_grid_NxN(3, ['d'], rad, 3*rad, sum_num=Nmode)
 
 #%%
 #explicit reduced
@@ -31,7 +31,7 @@ tds = tdr(
         scargs={'method':'explicit'}
         )
 t = time()
-Usc = tds.make_U_sc(X, Y)
+#Usc = tds.make_U_sc(X, Y)
 tpy = time() - t
 
 #%%
@@ -50,23 +50,23 @@ tdsgm = tdr(
 t = time()
 Uscgm = tdsgm.make_U_sc(X, Y)
 tpygm = time() - t
-
+print('---------------------')
 #%%
-#cython gmres reduced
-#tdsgmc = tdr(
-#        cyls,
-#        wv,
-#        T,
-#        modes=Nmode,
-#        sampnum=2**Nt,
-#        timeint=tint,
-#        use_par=True,
-#        use_cpp=True,
-#        scargs={'method':'gmres'}
-#        )
-#t = time()
-#Uscgmc = tdsgmc.make_U_sc(X, Y)
-#tpygmc = time() - t
+# cython gmres reduced
+tdsgmc = tdr(
+        cyls,
+        wv,
+        T,
+        modes=Nmode,
+        sampnum=2**Nt,
+        timeint=tint,
+        use_par=True,
+        use_cpp=True,
+        scargs={'method':'gmres'}
+        )
+t = time()
+Uscgmc = tdsgmc.make_U_sc(X, Y)
+tpygmc = time() - t
 
 #%%
 #nonreduced, cython gmres
@@ -86,12 +86,12 @@ tpygm = time() - t
 #tcp = time() - t
 
 #%%
-plt.plot(tds.times, Usc[0,0,:])
+#plt.plot(tds.times, Usc[0,0,:])
 plt.plot(tdsgm.times, Uscgm[0,0,:])
-#plt.plot(tdsgmc.times, Uscgmc[0,0,:])
+plt.plot(tdsgmc.times, Uscgmc[0,0,:])
 #plt.plot(tdscpp.times[:], Usccpp[0,0,:])
-print(np.max(np.abs(Uscgm - Usc)))
+#print(np.max(np.abs(Uscgm - Usc)))
 #print(np.max(np.abs(Uscgmc - Usc)))
 #print(np.max(np.abs(Usc-Usccpp)))
-print(tpy, tpygm)#, tpygmc)
+print(tpy, tpygm, tpygmc)
 plt.show()

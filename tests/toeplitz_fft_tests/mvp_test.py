@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from Ncyl.cqm_reduced import time_domain_scattering, scattering, cyl
+from Ncyl.scython_reduced.wrapper import PyScat
 #from Ncyl.cqm import time_domain_scattering, scattering, cyl
 from utils import example_setups
 from integrators.integrators import IRK5
@@ -8,9 +9,9 @@ from waveforms.waveforms import gaussian
 
 N = 2
 modes = 8
-#cyls = example_setups.uniform_grid_NxN(N, 'd', 1, 3, sum_num=modes)
+cyls = example_setups.uniform_grid_NxN(N, 'd', 1, 3, sum_num=modes)
 # cyls = [cyl('d', [0,0], 1, sum_index=10)]
-cyls = example_setups.random_circ_hex_vol_frac(10, 'd', 0.25, 0.15, sum_num=modes)
+#cyls = example_setups.random_circ_hex_vol_frac(10, 'd', 0.25, 0.15, sum_num=modes)
 print(len(cyls))
 wfv = gaussian(time_shift=15, sigma=0.4)
 T = 40
@@ -28,6 +29,7 @@ tds.fzt_boundary_allcyls()
 normss = []
 normsf = []
 normsm = []
+normsc = []
 mvpval = []
 matval = []
 builderr = []
@@ -43,6 +45,10 @@ for i in range(len(ks)):
     As = scs.make_scattering_blocks()
     Af = scf.make_scattering_blocks()
     scf.make_root_matrix()
+    ps = PyScat(cyls, ks[i], cyls[0].sum_index)
+    ps.make_jm_py()
+    ps.make_hm_py()
+    ps.make_root_matrix_py()
     x = tds.rhsmat[i, :]
     
     
@@ -56,6 +62,7 @@ for i in range(len(ks)):
     normss += [relerr(act, scf.mvp(x))]
     normsf += [relerr(Af@x, scf.mvp(x))]
     normsm += [relerr(As@x, Af@x)]
+    normsc += [np.max(np.abs(scf.mvp(x) - ps.mvp_py(x)))]
 
 print(np.max(builderr))
 plt.loglog(np.abs(ks), normss, label='slow')

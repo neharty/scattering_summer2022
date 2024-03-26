@@ -157,13 +157,12 @@ cdef class PyScat:
     
     cdef double complex[:, :, :] make_root_matrix(self):
         cdef size_t p, q
-        cdef double complex[:, :, :] ST = 1j*np.zeros((self.ncyls, self.ncyls, 4*self.nmode+1))
+        cdef double complex[:, :, :] ST = np.zeros((self.ncyls, self.ncyls, 4*self.nmode+1), dtype=np.complex128)
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp
         for p in self.labels:
             for q in self.labels:
                 tmp = self.make_root_vect_1cyl(p, q)
                 for i in range(4*self.nmode+1):
-                    #tmp = np.nan_to_num(tmp, copy=False)
                     ST[p, q, i] = tmp[i]
         self.ST = ST
         return ST
@@ -179,12 +178,11 @@ cdef class PyScat:
                                                                            np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
         #r = root matrix
         #x = input vector
-        #return np.convolve(r, x)
         
         #return ifft(fft(r)*fft(x))
-        #return np.fft.ifft(np.fft.fft(r)*np.fft.fft(x))
-        return circulant(r) @ x
-
+        #return circulant(r) @ x
+        return np.fft.ifft(np.fft.fft(r)*np.fft.fft(x))
+        
     cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] toeplitz_mvp(self, 
                      np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] c, 
                      np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] r, 
@@ -194,10 +192,7 @@ cdef class PyScat:
         #x = input vector
         
         #zero pad to a circulant matrix form
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rnew = np.hstack((c, 0, np.flip(r[1:]))) #np.zeros(len(c)+1+len(r[1:]), dtype=np.complex128)
-        #rnew[:len(c)] = c[:]
-        #rnew[len(c)] = 0
-        #rnew[len(c)+1:] = np.flip(r[1:])
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rnew = np.hstack((c, 0, np.flip(r[1:])))
         
         #zero pad input vector
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xnew = np.zeros(2*len(x), dtype=np.complex128)
@@ -210,38 +205,43 @@ cdef class PyScat:
         #split up the x coeffs
 
         cdef double complex[:, :] xs = np.reshape(x, (self.ncyls, 2*self.nmode+1))
-        cdef double complex[:, :] mulscat = 1j*np.zeros((self.ncyls, 2*self.nmode+1))
+        cdef double complex[:, :] mulscat = np.zeros((self.ncyls, 2*self.nmode+1), dtype=np.complex128)
 
         #computes the block MVPs and stores in a multidimensional list
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp2
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp = np.zeros(2*self.nmode+1, dtype=np.complex128)
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp2 = np.zeros(2*self.nmode+1, dtype=np.complex128)
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] row
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] col
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rv
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rv = np.zeros(4*self.nmode+1, dtype=np.complex128)
         cdef long Nq
         cdef size_t i
-        cdef double complex[:, :, :] SCmvp = 1j*np.zeros((self.ncyls, self.ncyls, 2*self.nmode+1))
+        cdef double complex[:, :, :] SCmvp = np.zeros((self.ncyls, self.ncyls, 2*self.nmode+1), dtype=np.complex128)
+        
         for p in self.labels:
             for q in self.labels:
                 if p==q:
-                    tmp = np.asarray(xs[q, :])
+                    for i in range(2*self.nmode+1):
+                        tmp[i] = xs[q, i]
                 else:
-                    tmp2 = np.asarray(xs[q, :])/np.asarray(self.hm[q, :])
-                    #tmp = np.convolve(self.ST[p, q, :], tmp2, mode='valid')
+                    for i in range(2*self.nmode+1):
+                        tmp2[i] = xs[q, i]/self.hm[q, i]
+                    for i in range(4*self.nmode+1):
+                        rv[i] = self.ST[p, q, i]
+                        
                     Nq = self.cyls[q].sum_index
-                    rv = np.asarray(self.ST[p][q])
                     col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
                     row = np.array(rv[2*Nq:], dtype=np.complex128)
                     tmp = self.toeplitz_mvp(row, col, tmp2)
+                    
+                    for i in range(2*self.nmode+1):
+                        tmp[i] *= self.jm[p, i]
+                    
                 for i in range(2*self.nmode+1):
                     SCmvp[p, q, i] = tmp[i]
         
-        #TODO: remove this double loop
         for p in self.labels:
             for q in self.labels:
                 for i in range(2*self.nmode+1):
-                    if p != q:
-                        SCmvp[p, q, i] *= self.jm[p, i]
                     mulscat[p, i] += SCmvp[p, q, i]
 
         return np.hstack(np.asarray(mulscat))

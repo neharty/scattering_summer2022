@@ -13,7 +13,6 @@ import copy
 import gc
 import uuid
 from Ncyl.scython_reduced.wrapper import PyScat
-#from tests.cpp_tests.eigen.gmres.full_gmres.wrapper import PyScat
 
 class cyl:
     '''
@@ -386,13 +385,7 @@ class scattering(cyl):
     def circulant_mvp(self, r, x):
         #r = root matrix
         #x = input vector
-        #print(np.max(np.abs(ifft(fft(r)*fft(x)) - circulant(r) @ x)))
-        scale = np.max(np.abs(r))
-        tmp1 = ifft(fft(r)*fft(x))
-        tmp2 = circulant(r) @ x
-        tmp = np.max(np.abs(tmp1 - tmp2))
-        tmp3 = tmp/np.max(np.abs(tmp2))
-        return tmp1
+        return ifft(fft(r)*fft(x))
 
     def toeplitz_mvp(self, c, r, x):
         #c = col matrix
