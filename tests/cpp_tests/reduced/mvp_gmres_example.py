@@ -2,7 +2,7 @@ import numpy as np
 #from scipy.sparse.linalg import gmres
 from scipy.signal import convolve
 from tests.cpp_tests.reduced.wrapper import PyScat
-from Ncyl.cqm_reduced import scattering, time_domain_scattering, cyl
+from Ncyl.cqm import scattering, time_domain_scattering, cyl
 from waveforms.waveforms import gaussian
 from utils import example_setups
 from time import process_time

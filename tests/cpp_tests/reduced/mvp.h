@@ -23,6 +23,7 @@ namespace Eigen{
 
 class MatReplacement : public Eigen::EigenBase<MatReplacement> {
     public:
+        vector<vector<complex<double>>> STin;
         vector<vector<vector<complex<double>>>> ST; 
         vector<vector<complex<double>>> JM; 
         vector<vector<complex<double>>> HM; 
@@ -31,9 +32,9 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         fftw_plan fodp;
         fftw_plan bwdp;
         fftw_plan bwodp;
-        int nmode; 
-        int ncyl;
-        int dim;
+        int nmode=0; 
+        int ncyl=0;
+        int dim=0;
         
         MatReplacement() {} // default constructor
         
@@ -70,9 +71,32 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         Index cols() const { return dim; }
         
         //setters
-        void set_ST(const vector<vector<vector<complex<double>>>>& st){this->ST = st;};
-        void set_JM(const vector<vector<complex<double>>>& jm){this->JM = jm;};
-        void set_HM(const vector<vector<complex<double>>>& hm){this->HM = hm;};
+        void set_STin(complex<double> *st){
+            vector<complex<double>> tmp(st, st + 4*nmode+1);
+            this->STin.push_back(tmp);
+        };
+
+        void set_ST(){
+            vector<vector<complex<double>>> tmp;
+            for (int p(0); p<ncyl; p++){
+                for (int q(0); q<ncyl; q++){
+                    tmp.push_back(this->STin[p*ncyl+q]);
+                }
+                this->ST.push_back(tmp);
+                tmp.clear();
+            }
+        };
+        
+        void set_JM(const complex<double> *jm){
+            vector<complex<double>> tmp(jm, jm+2*nmode+1);
+            this->JM.push_back(tmp);
+        };
+        
+
+        void set_HM(const complex<double> *hm){
+            vector<complex<double>> tmp(hm, hm+2*nmode+1);
+            this->HM.push_back(tmp);
+        };
 
         void set_maxiter(const int mit){this->maxiter=mit;};
         void set_restart(const int rsrt){this->restart=rsrt;};
@@ -87,10 +111,10 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         void mvp_setup(){
             // makes fftw plans
             N = 4*nmode+1;
-            xddum.resize(Nd); // dummy arrays for plan
-            yddum.resize(Nd);
-            xoddum.resize(Nod);
-            yoddum.resize(Nod);
+            xddum.resize(N); // dummy arrays for plan
+            yddum.resize(N);
+            xoddum.resize(N);
+            yoddum.resize(N);
 
             // forward fft diagonal plan
             fdp = fftw_plan_dft_1d(N, 
@@ -195,13 +219,13 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                     }else{
                         for(int i=0; i<(2*nmode+1); i++){ tmp2[i] = xs[q][i]/HM[q][i]; }
                         reverse_copy(begin(ST[p][q]), begin(ST[p][q]) + (2*nmode+1), begin(col));
-                        cout << "col" << endl;
+                        //cout << "col" << endl;
 
                         copy(begin(ST[p][q])+(2*nmode), end(ST[p][q]), begin(row)); 
-                        cout << "row" << endl;
+                        //cout << "row" << endl;
 
                         tmp = toeplitz_mvp(row, col, tmp2, fdp, bwdp);
-                        cout << "mvp" << endl;
+                        //cout << "mvp" << endl;
                         for(int i=0; i<2*nmode+1; i++){ SCmvp[p][q][i] = tmp[i]; }
                     }
                 }

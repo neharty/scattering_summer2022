@@ -386,7 +386,7 @@ class scattering(cyl):
         #r = root matrix
         #x = input vector
         return ifft(fft(r)*fft(x))
-
+        
     def toeplitz_mvp(self, c, r, x):
         #c = col matrix
         #r = root matrix
@@ -404,14 +404,7 @@ class scattering(cyl):
     
     def mvp(self, x):
         x = np.array(x, dtype=np.complex128)
-
-        #split up the x coeffs
-        xs = [
-            np.array(
-                x[self.lengths[i-1]:self.lengths[i]], dtype=np.complex128
-                ) for i in range(1, len(self.lengths))
-            ]
-
+        xs = np.reshape(x, (self.ncyls, 2*self.nmode+1))
         mulscat = [1j*np.zeros(len(xn)) for xn in xs]
         
         SCmvp = []
@@ -422,7 +415,6 @@ class scattering(cyl):
                 if p != q:
                     # off-diagonal matrix multiplication
                     Nq = self.cyls[q].sum_index
-                    #Np = self.cyls[p].sum_index
                     rv = self.ST[p][q]
                     col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
                     row = np.array(rv[2*Nq:], dtype=np.complex128)

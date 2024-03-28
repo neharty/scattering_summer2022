@@ -18,9 +18,10 @@ cdef extern from "mvp.h":
         vector[vector[vector[double complex]]] ST 
         vector[vector[double complex]] JM
         vector[vector[double complex]] HM
-        void set_ST(vector[vector[vector[double complex]]]&)
-        void set_JM(vector[vector[double complex]]&)
-        void set_HM(vector[vector[double complex]]&)
+        void set_STin(double complex*)
+        void set_ST()
+        void set_JM(double complex*)
+        void set_HM(double complex*)
         void set_maxiter(int)
         void set_restart(int)
         void set_tol(double)
@@ -41,12 +42,9 @@ cdef class PyScat:
     cdef public int nmode
     cdef public long ncyls
     cdef public long[:] labels
-    cdef public double complex[:, :, :] ST
-    cdef public double complex[:, :] JM
-    cdef public double complex[:, :] HM
-    cdef public vector[vector[vector[double complex]]] STv
-    cdef public vector[vector[double complex]] JMv
-    cdef public vector[vector[double complex]] HMv
+    cdef public double complex[:,:,:] ST
+    cdef public double complex[:,:] JM
+    cdef public double complex[:,:] HM
  
     def __init__(self, object cyls, double complex k, int nmode):
         self.cppmvp = MatReplacement(nmode, len(cyls))
@@ -178,7 +176,7 @@ cdef class PyScat:
             for q in self.labels:
                 tmp = self.make_root_vect_1cyl(p, q)
                 for i in range(4*self.nmode+1):
-                    ST[p, q, i] = tmp[i]        
+                    ST[p, q, i] = tmp[i]  
         return ST
     
     def make_root_matrix_py(self):
@@ -187,8 +185,6 @@ cdef class PyScat:
     def mvp_init(self): 
         cdef int ncyl = len(self.cyls)
         cdef int vlen = ncyl*(2*self.nmode+1)
-        cdef vector[vector[double complex]] empty_2vect, vect2 
-        cdef vector[double complex] empty_vect, vect
         
         cdef int dim = len(self.cyls)*(2*self.nmode+1)
         cdef long[:] lengths = np.zeros(len(self.cyls) + 1, dtype=int)
@@ -198,48 +194,26 @@ cdef class PyScat:
         
         cdef double complex tmp
         
-        #make stv
-        for p in range(ncyl):
-            for q in range(ncyl):
-                for i in range(4*self.nmode+1):
-                    tmp = self.ST[p, q, i]
-                    if np.isfinite(tmp):
-                        vect.push_back(tmp)
-                    else:
-                        vect.push_back(0j)
-                vect2.push_back(vect)
-                vect = empty_vect
-            self.STv.push_back(vect2)
-            vect2 = empty_2vect
-
-        #make jmv
-        vect = empty_vect
-        for p in range(ncyl):
-            for i in range(2*self.nmode+1):
-                tmp = self.JM[p, i]
-                if np.isfinite(tmp):
-                    vect.push_back(tmp)
-                else:
-                    vect.push_back(0j)
-            self.JMv.push_back(vect)
-            vect = empty_vect
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmpST 
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmpJM 
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmpHM 
         
-        #make hmv
-        vect = empty_vect
-        for p in range(ncyl):
-            for i in range(2*self.nmode+1):
-                tmp = self.HM[p, i]
-                if np.isfinite(tmp):
-                    vect.push_back(tmp)
-                else:
-                    vect.push_back(0j)
-            self.HMv.push_back(vect)
-            vect = empty_vect
-
-        #initialize mvp variables
-        self.cppmvp.set_ST(self.STv)
-        self.cppmvp.set_JM(self.JMv)
-        self.cppmvp.set_HM(self.HMv)
+        #pass mvp variable to cpp
+        print('setting JM and HM')
+        for p in range(len(self.cyls)): 
+            tmpJM = np.asarray(self.JM[p, :])
+            self.cppmvp.set_JM(&tmpJM[0])
+            tmpHM = np.asarray(self.HM[p, :])
+            self.cppmvp.set_HM(&tmpHM[0])
+        
+        print('get ready to crash')
+        for p in range(len(self.cyls)):
+            for q in range(len(self.cyls)):
+                tmpST = np.asarray(self.ST[p,q, :])
+                self.cppmvp.set_STin(&tmpST[0])
+        print('good so far')
+        self.cppmvp.set_ST()
+        print('did we make it?')
         self.cppmvp.mvp_setup() 
 
     def gmres_setup(self, int restart, int maxiter, double tol):

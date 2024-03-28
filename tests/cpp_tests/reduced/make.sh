@@ -1,3 +1,3 @@
 clear
 python3 setup.py build_ext --inplace
-python3 mvp_gmres_example.py
+python3 test_all_parts.py

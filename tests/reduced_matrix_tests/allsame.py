@@ -1,26 +1,26 @@
 import numpy as np
 from Ncyl.cqm import time_domain_scattering, cyl
-from Ncyl.cqm_reduced import time_domain_scattering as tdr
+#from Ncyl.cqm_reduced import time_domain_scattering as tdr
 from waveforms.waveforms import gaussian, gaussian_deriv
 from utils import example_setups
 from time import process_time, time
 import matplotlib.pyplot as plt
 from integrators.integrators import IRK3, IRK5
 
-Nmode = 8
+Nmode = 15
 Nt=12
 tint=IRK5()
-T=40
-wv=gaussian(time_shift=12,
+T=20
+wv=gaussian(time_shift=6,
             sigma=0.2)
-X, Y = np.meshgrid([12], [0])
+X, Y = np.meshgrid([6], [0])
 np.random.seed(1)
 rad = 1
-cyls = example_setups.uniform_grid_NxN(3, ['d'], rad, 3*rad, sum_num=Nmode)
+cyls = example_setups.uniform_grid_NxN(2, ['d'], rad, 3*rad, sum_num=Nmode)
 
 #%%
 #explicit reduced
-tds = tdr(
+tds = time_domain_scattering(
         cyls,
         wv,
         T,
@@ -31,12 +31,12 @@ tds = tdr(
         scargs={'method':'explicit'}
         )
 t = time()
-#Usc = tds.make_U_sc(X, Y)
+Usc = tds.make_U_sc(X, Y)
 tpy = time() - t
 
 #%%
 #python gmres reduced
-tdsgm = tdr(
+tdsgm = time_domain_scattering(
         cyls,
         wv,
         T,
@@ -53,7 +53,7 @@ tpygm = time() - t
 print('---------------------')
 #%%
 # cython gmres reduced
-tdsgmc = tdr(
+tdsgmc = time_domain_scattering(
         cyls,
         wv,
         T,
@@ -68,30 +68,49 @@ t = time()
 Uscgmc = tdsgmc.make_U_sc(X, Y)
 tpygmc = time() - t
 
-#%%
-#nonreduced, cython gmres
-#tdscpp = time_domain_scattering(
-#                             cyls,
-#                             wv,
-#                             T,
-#                             modes=Nmode,
-#                             sampnum=2**Nt,
-#                             timeint=tint,
-#                            use_par=True,
-#                             scargs={'method':'gmres'},
-#                             use_cpp=True
-#                             )
-#t = time()
-#Usccpp = tdscpp.make_U_sc(X, Y)
-#tcp = time() - t
+# #%%
+# #nonreduced, explicit
+# tdsnr = time_domain_scattering(
+#         cyls,
+#         wv,
+#         T,
+#         modes=Nmode,
+#         sampnum=2**Nt,
+#         timeint=tint,
+#         use_par=True,
+#         scargs={'method':'explicit', 'use_reduced_system':False}
+#         )
+# t = time()
+# Uscnr = tdsnr.make_U_sc(X, Y)
+# tpynr = time() - t
+
+
+# #%%
+# #nonreduced, cython gmres
+# tdscpp = time_domain_scattering(
+#                              cyls,
+#                              wv,
+#                              T,
+#                              modes=Nmode,
+#                              sampnum=2**Nt,
+#                              timeint=tint,
+#                              use_par=True,
+#                              scargs={'method':'gmres', 'use_reduced_system':False},
+#                              use_cpp=True
+#                              )
+# t = time()
+# Usccpp = tdscpp.make_U_sc(X, Y)
+# tcp = time() - t
 
 #%%
-#plt.plot(tds.times, Usc[0,0,:])
+plt.plot(tds.times, Usc[0,0,:])
 plt.plot(tdsgm.times, Uscgm[0,0,:])
 plt.plot(tdsgmc.times, Uscgmc[0,0,:])
-#plt.plot(tdscpp.times[:], Usccpp[0,0,:])
-#print(np.max(np.abs(Uscgm - Usc)))
-#print(np.max(np.abs(Uscgmc - Usc)))
-#print(np.max(np.abs(Usc-Usccpp)))
-print(tpy, tpygm, tpygmc)
+# plt.plot(tdsnr.times, Uscnr[0,0,:])
+# plt.plot(tdscpp.times, Usccpp[0,0,:])
+# print(np.max(np.abs(Uscgm - Usc)))
+# print(np.max(np.abs(Uscgmc - Usc)))
+# print(np.max(np.abs(Uscnr - Usc)))
+# print(np.max(np.abs(Usc-Usccpp)))
+# print(tpy, tpygm, tpygmc, tpynr, tcp)
 plt.show()
