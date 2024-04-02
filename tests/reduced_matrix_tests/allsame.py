@@ -10,13 +10,15 @@ from integrators.integrators import IRK3, IRK5
 Nmode = 15
 Nt=12
 tint=IRK5()
-T=20
-wv=gaussian(time_shift=6,
+T=80
+wv=gaussian_deriv(time_shift=6,
             sigma=0.2)
 X, Y = np.meshgrid([6], [0])
 np.random.seed(1)
 rad = 1
 cyls = example_setups.uniform_grid_NxN(2, ['d'], rad, 3*rad, sum_num=Nmode)
+
+times = []
 
 #%%
 #explicit reduced
@@ -33,6 +35,7 @@ tds = time_domain_scattering(
 t = time()
 Usc = tds.make_U_sc(X, Y)
 tpy = time() - t
+times += [tpy]
 
 #%%
 #python gmres reduced
@@ -50,7 +53,9 @@ tdsgm = time_domain_scattering(
 t = time()
 Uscgm = tdsgm.make_U_sc(X, Y)
 tpygm = time() - t
+times += [tpygm]
 print('---------------------')
+
 #%%
 # cython gmres reduced
 tdsgmc = time_domain_scattering(
@@ -61,12 +66,31 @@ tdsgmc = time_domain_scattering(
         sampnum=2**Nt,
         timeint=tint,
         use_par=True,
-        use_cpp=True,
+        use_cython=True,
         scargs={'method':'gmres'}
         )
 t = time()
 Uscgmc = tdsgmc.make_U_sc(X, Y)
 tpygmc = time() - t
+times += [tpygmc]
+
+#%%
+# cpp gmres reduced
+tdsgmcpp = time_domain_scattering(
+        cyls,
+        wv,
+        T,
+        modes=Nmode,
+        sampnum=2**Nt,
+        timeint=tint,
+        use_par=True,
+        use_cython=True,
+        scargs={'method':'gmres'}
+        )
+t = time()
+Uscgmcpp = tdsgmcpp.make_U_sc(X, Y)
+tpygmcpp = time() - t
+times += [tpygmcpp]
 
 # #%%
 # #nonreduced, explicit
@@ -103,14 +127,18 @@ tpygmc = time() - t
 # tcp = time() - t
 
 #%%
-plt.plot(tds.times, Usc[0,0,:])
-plt.plot(tdsgm.times, Uscgm[0,0,:])
-plt.plot(tdsgmc.times, Uscgmc[0,0,:])
+plt.plot(tds.times, Usc[0,0,:], label='explicit')
+plt.plot(tdsgm.times, Uscgm[0,0,:], label='python gmres')
+plt.plot(tdsgmc.times, Uscgmc[0,0,:], label='cython gmres')
+#plt.plot(tdsgmcpp.times, Uscgmcpp[0,0,:], label='cpp gmres')
 # plt.plot(tdsnr.times, Uscnr[0,0,:])
 # plt.plot(tdscpp.times, Usccpp[0,0,:])
-# print(np.max(np.abs(Uscgm - Usc)))
-# print(np.max(np.abs(Uscgmc - Usc)))
+print(np.max(np.abs(Uscgm - Usc)))
+print(np.max(np.abs(Uscgmc - Usc)))
 # print(np.max(np.abs(Uscnr - Usc)))
 # print(np.max(np.abs(Usc-Usccpp)))
 # print(tpy, tpygm, tpygmc, tpynr, tcp)
+print(times)
+plt.legend()
+plt.tight_layout()
 plt.show()

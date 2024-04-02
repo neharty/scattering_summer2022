@@ -27,6 +27,7 @@ cdef class PyScat:
     cdef public long[:] labels
     cdef public long gmres_iter
     cdef public double complex [:, :, :] ST
+    cdef public double complex [:, :, :] CT
     cdef public double complex [:, :] jm
     cdef public double complex [:, :] hm
     cdef public double complex [:, :] jhm
@@ -92,7 +93,14 @@ cdef class PyScat:
             retv[:2*self.nmode+1] = self.S1(idxd_q, idxa_p[0], b)
             retv[2*self.nmode+1:] = self.S2(idxd_q[-1], idxa_p[1:], b)
         return np.asarray(retv)
-
+    
+    cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] make_circulant_root_1cyl(self, int i, int sc):
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] STtmp = self.make_root_vect_1cyl(i, sc)
+        cdef int Nq = self.cyls[sc].sum_index
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] col = np.array(np.flip(STtmp[:2*Nq+1]), dtype=np.complex128)
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] row = np.array(STtmp[2*Nq:], dtype=np.complex128)
+        return np.hstack((row, 0, np.flip(col[1:])))
+        
     cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] jmode(self, object cyl, np.ndarray[dtype=np.int64_t, ndim=1, mode='c'] m):
         cdef str bc = cyl.bc
         cdef double radius = cyl.radius
@@ -190,6 +198,18 @@ cdef class PyScat:
         self.ST = ST
         return ST
     
+    cdef double complex[:, :, :] make_circulant_root_allcyls(self):
+        cdef size_t p, q
+        cdef double complex[:, :, :] CT = np.zeros((self.ncyls, self.ncyls, 2*(2*self.nmode+1)), dtype=np.complex128)
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp
+        for p in self.labels:
+            for q in self.labels:
+                tmp = self.make_circulant_root_1cyl(p, q)
+                for i in range(2*(2*self.nmode+1)):
+                    CT[p, q, i] = tmp[i]
+        self.CT = CT
+        return CT
+    
     def make_root_matrix_py(self):
         return np.asarray(self.make_root_matrix())
     
@@ -201,27 +221,23 @@ cdef class PyScat:
                                                                            np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
         #r = root matrix
         #x = input vector
-        if self.use_fft_mvp:
-            return ifft(fft(r)*fft(x))
-        else:
-            return circulant(r) @ x
+        # if self.use_fft_mvp:
+        #     return ifft(fft(r)*fft(x))
+        # else:
+        return circulant(r) @ x
 
     cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] toeplitz_mvp(self, 
-                     np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] c, 
-                     np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] r, 
+                     np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] c,  
                      np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
         #c = col matrix
         #r = root matrix
         #x = input vector
         
-        #zero pad to a circulant matrix form
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rnew = np.hstack((c, 0, np.flip(r[1:])))
-        
         #zero pad input vector
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xnew = np.zeros(2*len(x), dtype=np.complex128)
         xnew[:len(x)] = x[:]
         
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] res = self.circulant_mvp(rnew, xnew)
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] res = self.circulant_mvp(c, xnew)
         return res[:len(x)]
     
     cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] mvp(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x):
@@ -235,7 +251,7 @@ cdef class PyScat:
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmp2 = np.zeros(2*self.nmode+1, dtype=np.complex128)
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] row
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] col
-        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rv = np.zeros(4*self.nmode+1, dtype=np.complex128)
+        cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] rv = np.zeros(2*(2*self.nmode+1), dtype=np.complex128)
         cdef long Nq
         cdef size_t i
         cdef double complex[:, :, :] SCmvp = np.zeros((self.ncyls, self.ncyls, 2*self.nmode+1), dtype=np.complex128)
@@ -251,13 +267,10 @@ cdef class PyScat:
                             tmp2[i] = xs[q, i]/self.hm[q, i]
                         else:
                             tmp2[i] = xs[q, i]
-                    for i in range(4*self.nmode+1):
-                        rv[i] = self.ST[p, q, i]
-                        
-                    Nq = self.cyls[q].sum_index
-                    col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
-                    row = np.array(rv[2*Nq:], dtype=np.complex128)
-                    tmp = self.toeplitz_mvp(row, col, tmp2)
+                    for i in range(2*(2*self.nmode+1)):
+                        rv[i] = self.CT[p, q, i]
+                    
+                    tmp = self.toeplitz_mvp(rv, tmp2)
                     
                     for i in range(2*self.nmode+1):
                         if self.use_reduced_system:
@@ -278,19 +291,22 @@ cdef class PyScat:
     def mvp_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] x not None):
         return self.mvp(x)
     
+    def make_all_data(self):
+        #self.make_root_matrix()
+        self.make_circulant_root_allcyls()
+        if self.use_reduced_system:
+            self.make_jm()
+            self.make_hm()
+        else:
+            self.make_jhm()
+                
     def gmres_py(self, np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] xin not None,
               long restart,
               double tol,
               bool debug=False):
         
         #initialize root matrix data
-        if self.use_reduced_system:
-            self.make_jm()
-            self.make_hm()
-        else:
-            self.make_jhm()
-            
-        self.make_root_matrix()
+        self.make_all_data()
         
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] test0
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] test1

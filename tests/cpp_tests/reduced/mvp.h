@@ -143,7 +143,7 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                             reinterpret_cast<fftw_complex*>(yoddum.data()), 
                             FFTW_BACKWARD, 
                             FFTW_MEASURE);
-           cout << "mvp initialized" << endl;
+           //cout << "mvp initialized" << endl;
         }
         
         void conv_ptr(const complex<double>* fptr, const int flen, const complex<double>* gptr, const int glen, complex<double>* xout){
@@ -263,7 +263,8 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
                 xnew[i] = x[i];
             }
             
-            vector<complex<double>> rflip(r.rbegin(), r.rend());
+            vector<complex<double>> rflip(x.size()-1);
+            reverse_copy(r.begin()+1, r.end(), rflip.begin());
             for(int i=1; i<x.size(); i++){
                 rnew[i+x.size()-1] = rflip[i];
             }
@@ -278,7 +279,8 @@ class MatReplacement : public Eigen::EigenBase<MatReplacement> {
         }
 
         vector<complex<double>> convolve(const vector<complex<double>>& f, const vector<complex<double>>& g, const fftw_plan& fp, const fftw_plan& bp) const {
-            
+            // circular convolution for circulant MVP
+
             int n = int(f.size());
             vector<complex<double>> fin = f;
             vector<complex<double>> gin = g;

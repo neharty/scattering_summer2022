@@ -199,21 +199,21 @@ cdef class PyScat:
         cdef np.ndarray[dtype=np.complex128_t, ndim=1, mode='c'] tmpHM 
         
         #pass mvp variable to cpp
-        print('setting JM and HM')
+        #print('setting JM and HM')
         for p in range(len(self.cyls)): 
             tmpJM = np.asarray(self.JM[p, :])
             self.cppmvp.set_JM(&tmpJM[0])
             tmpHM = np.asarray(self.HM[p, :])
             self.cppmvp.set_HM(&tmpHM[0])
         
-        print('get ready to crash')
+        #print('get ready to crash')
         for p in range(len(self.cyls)):
             for q in range(len(self.cyls)):
                 tmpST = np.asarray(self.ST[p,q, :])
                 self.cppmvp.set_STin(&tmpST[0])
-        print('good so far')
+        #print('good so far')
         self.cppmvp.set_ST()
-        print('did we make it?')
+        #print('did we make it?')
         self.cppmvp.mvp_setup() 
 
     def gmres_setup(self, int restart, int maxiter, double tol):

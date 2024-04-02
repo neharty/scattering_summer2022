@@ -108,6 +108,7 @@ class scattering(cyl):
         self.pargs = pargs
 
         self.ST = None
+        self.CT = None
         self.jhm = None
         self.jm = None
         self.hm = None
@@ -330,6 +331,13 @@ class scattering(cyl):
             jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
             return np.hstack((jS1, jS2))
     
+    def make_circulant_root_1cyl(self, i, sc):
+        STtmp = self.make_root_vect_1cyl(i, sc)
+        Nq = self.cyls[sc].sum_index
+        col = np.array(np.flip(STtmp[:2*Nq+1]), dtype=np.complex128)
+        row = np.array(STtmp[2*Nq:], dtype=np.complex128)
+        return np.hstack((row, 0, np.flip(col[1:])))
+        
     def make_root_matrix(self):
         if self.ST is None:
             self.ST = np.array(
@@ -340,8 +348,22 @@ class scattering(cyl):
                 )
         return self.ST
     
+    def make_circulant_root_allcyls(self):
+        if self.CT is None:
+            self.CT = np.array(
+                [
+                    [self.make_circulant_root_1cyl(p, q) for q in self.labels] 
+                    for p in self.labels
+                ], dtype=object
+                )
+        return self.CT
+    
     def make_all_data(self):
-        self.make_root_matrix()
+        if self.method=='explicit':
+            self.make_root_matrix()
+        else:
+            self.make_circulant_root_allcyls()
+        
         if self.use_reduced_system:
             self.make_jm()
             self.make_hm()
@@ -486,13 +508,16 @@ class scattering(cyl):
         else:
             return circulant(r) @ x
         
-    def toeplitz_mvp(self, c, r, x):
+    def toeplitz_mvp(self, c, x, r=None):
         #c = col matrix
         #r = root matrix
         #x = input vector
         
         #zero pad to a circulant matrix form
-        rnew = np.hstack((c, 0, np.flip(r[1:])))
+        if r is None:
+            rnew = c
+        else:
+            rnew = np.hstack((c, 0, np.flip(r[1:])))
         
         #zero pad input vector
         xnew = np.zeros(2*len(x), dtype=np.complex128)
@@ -513,15 +538,19 @@ class scattering(cyl):
             for q in self.labels: # scattered label
                 if p != q:
                     # off-diagonal matrix multiplication
-                    Nq = self.cyls[q].sum_index
-                    rv = self.ST[p][q]
-                    col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
-                    row = np.array(rv[2*Nq:], dtype=np.complex128)
+                    if self.ST is not None:
+                        Nq = self.cyls[q].sum_index
+                        rv = self.ST[p][q]
+                        col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
+                        row = np.array(rv[2*Nq:], dtype=np.complex128)
+                    if self.CT is not None:
+                        row = np.array(self.CT[p][q], dtype=np.complex128)
+                        col = None
                     if self.use_reduced_system:
-                        tmparr = self.toeplitz_mvp(row, col, np.array(xs[q]/self.hm[q]))
+                        tmparr = self.toeplitz_mvp(row, np.array(xs[q]/self.hm[q]), col)
                         tmparr *= self.jm[p]
                     else:
-                        tmparr = self.toeplitz_mvp(row, col, np.array(xs[q]))
+                        tmparr = self.toeplitz_mvp(row, np.array(xs[q]), col)
                         tmparr *= self.jm[p]
                         tmparr /= self.hm[p]
                     tmp += [tmparr]
@@ -550,6 +579,19 @@ class scattering(cyl):
         
         if self.use_cython:
             ps = PyScat(self.cyls, self.k, self.sum_index, self.use_reduced_system)
+            ps.make_all_data()
+            ps.use_fft_mvp = False
+            #check wether to use fft mvp or not
+            # if len(self.cyls) > 1:
+            #     ps.use_fft_mvp = True
+            #     test0 = ps.mvp_py(self.rhs) # test mvp with fft
+            #     ps.use_fft_mvp = False
+            #     test1 = ps.mvp_py(self.rhs)
+            #     if np.max(np.abs(test0 - test1)) < self.fft_mvp_tol:
+            #         ps.use_fft_mvp = True
+            #     else:
+            #         ps.use_fft_mvp = False
+            
             tmp = ps.gmres_py(self.rhs, self.gmres_restart, self.gmres_tol)
             print('k done:', self.k)
             if np.all(np.isfinite(tmp[0])):
