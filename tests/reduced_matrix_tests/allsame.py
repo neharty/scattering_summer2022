@@ -65,7 +65,7 @@ tdsgmc = time_domain_scattering(
         modes=Nmode,
         sampnum=2**Nt,
         timeint=tint,
-        use_par=True,
+        use_par=False,
         use_cython=True,
         scargs={'method':'gmres'}
         )
@@ -83,7 +83,7 @@ tdsgmcpp = time_domain_scattering(
         modes=Nmode,
         sampnum=2**Nt,
         timeint=tint,
-        use_par=True,
+        use_par=False,
         use_cython=True,
         scargs={'method':'gmres'}
         )
