@@ -3,7 +3,7 @@
 #SBATCH --qos=low
 #SBATCH --account=peterp
 #SBATCH --nodes=1
-#SBATCH --mem-per-cpu=8GB
+#SBATCH --mem-per-cpu=16GB
 #SBATCH --ntasks=1
 #SBATCH --sockets-per-node=1
 #SBATCH --cores-per-socket=4
@@ -11,7 +11,7 @@
 #SBATCH --array=1-3
 #SBATCH --hint=nomultithread
 #SBATCH --nodes=1
-#SBATCH --time=10-0
+#SBATCH --time=10:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=neharty.slurm@gmail.com
 #SBATCH -o /project/peterp/nh287/test_logs/%x_%j.out

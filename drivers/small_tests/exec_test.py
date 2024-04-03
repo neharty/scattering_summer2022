@@ -12,7 +12,7 @@ import os
 import configparser
 
 parser = argparse.ArgumentParser()
-parser.add_argument('seed', dtype=int, help='random number seed')
+parser.add_argument('seed', type=int, help='random number seed')
 parser.add_argument('cfg', help='config file location')
 parser.add_argument('fout', help='full data output path')
 args = parser.parse_args()
@@ -50,7 +50,7 @@ if tmpimp == 'none':
 else:
     imp = getattr(impedance, config['CYLS']['impedance'])
 
-np.random.seed(int(config['CYLS']['seed']))
+np.random.seed(args.seed)
 if config['CYLS']['geometry'] == 'circ':
     #big circle
     cyls = example_setups.random_circ_hex_vol_frac(
@@ -96,9 +96,7 @@ tds = time_domain_scattering(
                         wv, 
                         T, 
                         sampnum = 2**int(config['TDS']['Nt']), 
-                        modes=int(config['TDS']['Nmodes']),
                         timeint=tint,
-                        balanced_system=config['TDS'].getboolean('balanced_system'),
                         use_par=config['TDS'].getboolean('use_par'),
                         use_cython=config['TDS'].getboolean('use_cython'),
                         scargs={'method':'gmres'}
@@ -110,7 +108,7 @@ print('time domain sim done')
 print('writing data')
 
 #write out the data
-dataout = os.path.join(args.fout, args.seed)
+dataout = os.path.join(args.fout, str(args.seed))
 if not os.path.exists(dataout):
     os.makedirs(dataout)
 
