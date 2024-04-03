@@ -11,7 +11,7 @@ import copy
 import gc
 import uuid
 from Ncyl.scython.wrapper import PyScat
-from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
+#from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
 
 class cyl:
     '''
