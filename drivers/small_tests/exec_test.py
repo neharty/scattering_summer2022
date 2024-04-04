@@ -24,9 +24,10 @@ config.read(args.cfg)
 
 
 #make data output folder
-dataout = os.path.join(args.fout, 
+dataout = os.path.join(
+        args.fout, 
         config['CYLS']['geometry'],
-        str(args.seed))
+        'seed_' + str(args.seed))
 if not os.path.exists(dataout):
     os.makedirs(dataout)
 
@@ -67,32 +68,48 @@ else:
 np.random.seed(args.seed)
 if config['CYLS']['geometry'] == 'circ':
     #big circle
+    rout = float(config['CYLS']['rout'])
+    a = float(config['CYLS']['a'])
+    rho = float(config['CYLS']['rho'])
+    rin = float(config['CYLS']['rin'])
     cyls = example_setups.random_circ_hex_vol_frac(
-        float(config['CYLS']['rout']), 
+        rout, 
         ast.literal_eval(config['CYLS']['bcs']), 
-        float(config['CYLS']['a']),
-        float(config['CYLS']['rho']),
-        minspace = float(config['CYLS']['a'])*float(config['CYLS']['dmin']), 
+        a,
+        rho,
+        minspace = a*float(config['CYLS']['dmin']), 
         measurement_points=(X, Y), 
-        rin=float(config['CYLS']['rin']), 
+        rin=rin, 
         impedance=imp,
         bc_mode=config['CYLS']['bc_mode']
         )
+    log.info('actual percentage fill is %f', 
+            len(cyls)*a**2/(rout**2 - rin**2))
+
 elif config['CYLS']['geometry'] == 'rect':
-    #little circle
+    #rectangle
+    Lx = float(config['CYLS']['Lx'])
+    Ly = float(config['CYLS']['Ly'])
+    a = float(config['CYLS']['a'])
+    rho = float(config['CYLS']['rho'])
+    Lxin = float(config['CYLS']['Lxin'])
+    Lyin = float(config['CYLS']['Lyin'])
     cyls = example_setups.random_box_hex_vol_frac(
-        float(config['CYLS']['Lx']), 
-        float(config['CYLS']['Ly']), 
+        Lx, 
+        Ly, 
         ast.literal_eval(config['CYLS']['bcs']), 
-        float(config['CYLS']['a']), 
-        float(config['CYLS']['rho']),
+        a, 
+        rho,
         minspace = float(config['CYLS']['a'])*float(config['CYLS']['dmin']), 
         measurement_points=(X, Y),
-        Lxin=float(config['CYLS']['Lxin']),
-        Lyin=float(config['CYLS']['Lyin']),
+        Lxin=Lxin,
+        Lyin=Lyin,
         impedance=imp,
         bc_mode=config['CYLS']['bc_mode']
         )
+    log.info('actual percentage fill is %f', 
+            len(cyls)*a**2*np.pi/(4*(Lx*Ly - Lxin*Lyin)))
+
 print('num of cyls:', len(cyls))
 log.info('number of cyls is %d', len(cyls))
 

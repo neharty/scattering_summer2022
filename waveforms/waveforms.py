@@ -15,7 +15,7 @@ class waveform(ABC):
                  src_type = 'planewave'
                  ):
         self.inc_angle = inc_angle
-        self.phi = np.pi+self.inc_angle
+        self.phi = np.pi+self.inc_angle #angle of incidence  is the line-of-sight angle
         self.time_shift = time_shift
         self.src_type = src_type
         self.r0 = np.array(r0)
@@ -83,7 +83,29 @@ class gaussian(waveform):
             dg[i] = self.d_inparg(x, y, t).dot(n[i])
         dg *= v
         return dg
-        
+
+class gaussian_norm_width(gaussian):
+    # a gaussian with a width parameter defined as the half-maximum width
+    def __init__(
+                 self,
+                 inc_angle = 0,
+                 time_shift=0,
+                 r0 = [0,0],
+                 src_type = 'planewave',
+                 width = 1,
+                 cutoff=1e-10,
+                 amp=1
+                ):
+        super().__init__(
+                    inc_angle = inc_angle,
+                    time_shift=time_shift,
+                    r0=r0,
+                    src_type=src_type
+                    sigma=(2*width)**2/np.log(2*amp), 
+                    cutoff=cutoff,
+                    amp=1
+                    )
+
 class gaussian_deriv(waveform):
     def __init__(
                  self, 
