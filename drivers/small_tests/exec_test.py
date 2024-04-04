@@ -27,6 +27,8 @@ config.read(args.cfg)
 dataout = os.path.join(
         args.fout, 
         config['CYLS']['geometry'],
+        'pulsewidth_'+config['CYLS']['width'],
+        'volfrac_'+config['CYLS']['rho'],
         'seed_' + str(args.seed))
 if not os.path.exists(dataout):
     os.makedirs(dataout)
@@ -41,13 +43,13 @@ if config['WAVE']['type'] == 'g':
     wv = gaussian(
             time_shift=float(config['WAVE']['time_shift']), 
             src_type=config['WAVE']['src_type'],
-            sigma=float(config['WAVE']['sigma']),
+            sigma=float(config['WAVE']['width']),
             r0=ast.literal_eval(config['WAVE']['r0']))
 elif config['WAVE']['type'] == 'dg':
     wv = gaussian_deriv(
             time_shift=float(config['WAVE']['time_shift']), 
             src_type=config['WAVE']['src_type'],
-            sigma=float(config['WAVE']['sigma']),
+            sigma=float(config['WAVE']['width']),
             r0=ast.literal_eval(config['WAVE']['r0']))
 
 # measurement points
