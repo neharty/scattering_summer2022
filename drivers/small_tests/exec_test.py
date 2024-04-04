@@ -6,6 +6,8 @@ from integrators.integrators import IRK3, IRK5
 import impedance
 import pickle
 import ast
+from time import time
+import logging
 
 import argparse
 import os
@@ -19,6 +21,18 @@ args = parser.parse_args()
 
 config = configparser.ConfigParser()
 config.read(args.cfg)
+
+
+#make data output folder
+dataout = os.path.join(args.fout, 
+        config['CYLS']['geometry'],
+        str(args.seed))
+if not os.path.exists(dataout):
+    os.makedirs(dataout)
+
+#debug output file
+log = logging.getLogger(__name__)
+logging.basicConfig(filename=os.path.join(dataout, 'debug.log'), level=logging.DEBUG)
 
 # wave setup
 print('generating wave')
@@ -37,7 +51,7 @@ elif config['WAVE']['type'] == 'dg':
 
 # measurement points
 thetas = np.arange(8)*np.pi/4
-r = np.array([2.5, 5, 7.5, 10])
+r = np.array([11, 12, 13, 14, 15])
 R, ANG = np.meshgrid(r, thetas)
 X = R*np.cos(ANG)
 Y = R*np.sin(ANG)
@@ -80,6 +94,7 @@ elif config['CYLS']['geometry'] == 'rect':
         bc_mode=config['CYLS']['bc_mode']
         )
 print('num of cyls:', len(cyls))
+log.info('number of cyls is %d', len(cyls))
 
 #set up time domain sim
 T = float(config['TDS']['T'])
@@ -91,6 +106,7 @@ elif tmptint == 'irk3':
 elif tmptint == 'irk5':
     tint = IRK5()
 print('setting up time domain simulation')
+solvetime = time()
 tds = time_domain_scattering(
                         cyls, 
                         wv, 
@@ -99,24 +115,24 @@ tds = time_domain_scattering(
                         timeint=tint,
                         use_par=config['TDS'].getboolean('use_par'),
                         use_cython=config['TDS'].getboolean('use_cython'),
+                        cpus=int(config['TDS']['cpus']),
                         scargs={'method':'gmres'}
                         )
 
 t = tds.times
 U = tds.make_U_sc(X, Y)
+solvetime = time() - solvetime
+log.info('this run took %f seconds', solvetime)
+log.info('used 2*%d+1 modes for each cyl', tds.modes)
 print('time domain sim done')
 print('writing data')
 
 #write out the data
-dataout = os.path.join(args.fout, str(args.seed))
-if not os.path.exists(dataout):
-    os.makedirs(dataout)
-
 for ang in range(len(thetas)):
     for rdx in range(len(r)):
         fname = f'{r[rdx]:.3f}_{thetas[ang]:.3f}.dat'
         arr = [[t[i], U[ang, rdx, i]] for i in range(len(t))]
-        np.savetxt(dataout+fname, arr)
+        np.savetxt(os.path.join(dataout, fname), arr)
 
 #copy the config file to the data output directory
 os.system('cp '+args.cfg+' '+os.path.join(dataout, 'config_copy.cfg'))
