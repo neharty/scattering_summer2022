@@ -341,7 +341,7 @@ def random_box_hex(Lx, Ly, bc, radius, initspace, minspace=0, sum_num=None, impe
     return cctmp.tolist()
 
 def random_box_hex_vol_frac(Lx, Ly, bc, r, rho, minspace=0, sum_num=0, impedance=None, center=None, measurement_points=None, remove_center=False, bc_mode='uniform', Lxin=0, Lyin=0):
-    n_act = int(round(4*rho*(Lx-Lxin)*(Ly-Lyin)/(np.pi*r**2))) #circles needed for the specified volume fraction
+    n_act = int(round(4*rho*(Lx*Ly-Lxin*Lyin)/(np.pi*r**2))) #circles needed for the specified volume fraction
     
     ncurr = 0
     gam = (Lx-Lxin)/(Ly-Lyin)
