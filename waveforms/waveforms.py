@@ -100,7 +100,7 @@ class gaussian_norm_width(gaussian):
                     inc_angle = inc_angle,
                     time_shift=time_shift,
                     r0=r0,
-                    src_type=src_type
+                    src_type=src_type,
                     sigma=(2*width)**2/np.log(2*amp), 
                     cutoff=cutoff,
                     amp=1

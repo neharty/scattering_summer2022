@@ -1,6 +1,6 @@
 import numpy as np
 from Ncyl.cqm import cyl, time_domain_scattering
-from waveforms.waveforms import gaussian, gaussian_deriv
+from waveforms.waveforms import gaussian_norm_width, gaussian_deriv
 from utils import example_setups
 from integrators.integrators import IRK3, IRK5
 import impedance
@@ -27,9 +27,10 @@ config.read(args.cfg)
 dataout = os.path.join(
         args.fout, 
         config['CYLS']['geometry'],
-        'pulsewidth_'+config['CYLS']['width'],
         'volfrac_'+config['CYLS']['rho'],
-        'seed_' + str(args.seed))
+        'pulsewidth_'+config['WAVE']['width'],
+        'seed_' + str(args.seed)
+        )
 if not os.path.exists(dataout):
     os.makedirs(dataout)
 
@@ -40,7 +41,7 @@ logging.basicConfig(filename=os.path.join(dataout, 'debug.log'), level=logging.D
 # wave setup
 print('generating wave')
 if config['WAVE']['type'] == 'g':
-    wv = gaussian(
+    wv = gaussian_norm_width(
             time_shift=float(config['WAVE']['time_shift']), 
             src_type=config['WAVE']['src_type'],
             sigma=float(config['WAVE']['width']),

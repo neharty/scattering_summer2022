@@ -13,7 +13,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=10:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=neharty.slurm@gmail.com
+#SBATCH --mail-user=nh287@njit.edu
 #SBATCH -o /project/peterp/nh287/test_logs/%x_%j.out
 #SBATCH -e /project/peterp/nh287/test_logs/%x_%j.out
 #SBATCH --open-mode=append
