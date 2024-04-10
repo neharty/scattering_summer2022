@@ -1,7 +1,7 @@
 import numpy as np
 from Ncyl.cqm import time_domain_scattering, cyl
 #from Ncyl.cqm_reduced import time_domain_scattering as tdr
-from waveforms.waveforms import gaussian, gaussian_deriv
+from waveforms.waveforms import gaussian_norm_width, gaussian_deriv
 from utils import example_setups
 from time import process_time, time
 import matplotlib.pyplot as plt
@@ -11,8 +11,8 @@ Nmode = 15
 Nt=12
 tint=IRK5()
 T=80
-wv=gaussian_deriv(time_shift=6,
-            sigma=0.2)
+wv=gaussian_norm_width(time_shift=6,
+            width=1)
 X, Y = np.meshgrid([6], [0])
 np.random.seed(1)
 rad = 1

@@ -148,6 +148,60 @@ class gaussian_deriv(waveform):
         dg *= v
         return dg
 
+class switched_sinewave(waveform):
+    def __init__(self,
+                 inc_angle=np.pi, 
+                 time_shift=0,
+                 sharpness = 1, 
+                 omega = 2*np.pi):
+        super().__init__(time_shift=time_shift, inc_angle=inc_angle)
+        self.sharpness = sharpness
+        self.omega=omega
+        
+    def profile(self, z):
+        return 0.5*(1+np.tanh(z/self.sharpness))*np.sin(self.omega*z)
+        
+    def td_deriv(self, x, y, t, n):
+        pass
+
+class gauss_mod_sine(waveform):
+    def __init__(self, 
+                 inc_angle = np.pi, 
+                 time_shift=0, 
+                 amp=1, 
+                 omega = 1,
+                 alpha=1, 
+                 cutoff=1e-10):
+        self.amp = amp
+        self.omega = omega
+        self.alpha = alpha
+        self.cutoff = 1e-10
+        super().__init__(inc_angle = inc_angle, time_shift = time_shift)
+        
+    #def profile(self, z):
+    #    return self.amp*np.exp(-self.alpha*z**2)*np.sin(self.omega*z)
+    
+    def box(self, x, l):
+        mask1 = (x <= l)
+        mask2 = (x >= -l)
+        return mask1*mask2
+
+    def profile(self, z):
+        #waveform profile, centered at the origin
+        tmp = self.amp*np.exp(-self.alpha*(z**2))*np.sin(self.omega*z)
+
+        #cutoff width
+        l = np.sqrt(-np.log(self.cutoff)/self.alpha)+1
+        return self.box(z, l)*tmp  
+    
+    def td_deriv(self, x, y, t, n):
+        dv = self.amp*np.exp(-self.alpha*self.inparg(x, y, t)**2)*(self.omega*np.cos(self.alpha*self.inparg(x, y, t)) - 2*self.alpha*self.inparg(x, y, t)*np.sin(self.omega*self.inparg(x, y, t)))
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= dv
+        return dg
+
 class kachanovska(waveform):
     #wave from kachanovska 
     def __init__(self, inc_angle = -np.pi/2, time_shift=2):
