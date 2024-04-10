@@ -17,11 +17,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('seed', type=int, help='random number seed')
 parser.add_argument('cfg', help='config file location')
 parser.add_argument('fout', help='full data output path')
+parser.add_argument('job_id', help='job id (usually from slurm)')
 args = parser.parse_args()
 
 config = configparser.ConfigParser()
 config.read(args.cfg)
-
 
 #make data output folder
 dataout = os.path.join(
@@ -44,7 +44,7 @@ if config['WAVE']['type'] == 'g':
     wv = gaussian_norm_width(
             time_shift=float(config['WAVE']['time_shift']), 
             src_type=config['WAVE']['src_type'],
-            sigma=float(config['WAVE']['width']),
+            width=float(config['WAVE']['width']),
             r0=ast.literal_eval(config['WAVE']['r0']))
 elif config['WAVE']['type'] == 'dg':
     wv = gaussian_deriv(
@@ -133,6 +133,7 @@ tds = time_domain_scattering(
                         T, 
                         sampnum = 2**int(config['TDS']['Nt']), 
                         timeint=tint,
+                        mode_tol=float(config['TDS']['mode_tol']),
                         use_par=config['TDS'].getboolean('use_par'),
                         use_cython=config['TDS'].getboolean('use_cython'),
                         cpus=int(config['TDS']['cpus']),

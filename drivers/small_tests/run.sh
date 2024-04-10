@@ -1,4 +1,4 @@
-for CFG_TYPE in circle rect
+for CFG_TYPE in rect
 do
         CFG=/home/nh287/scattering/drivers/small_tests/${CFG_TYPE}_config.cfg
         export CFG
