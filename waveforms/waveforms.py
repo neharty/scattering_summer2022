@@ -11,8 +11,10 @@ class waveform(ABC):
                  self, 
                  inc_angle = 0, 
                  time_shift = 0, 
+                 window_length = 0,
                  r0 = np.array([0, 0]), 
-                 src_type = 'planewave'
+                 src_type = 'planewave',
+                 lag = 0
                  ):
         self.inc_angle = inc_angle
         self.phi = np.pi+self.inc_angle #angle of incidence  is the line-of-sight angle
@@ -20,13 +22,18 @@ class waveform(ABC):
         self.src_type = src_type
         self.r0 = np.array(r0)
         self.times = None #used for point source times
-        
+        self.lag = lag
+        self.window_length = window_length
         
     def inparg(self, x, y, t):
         return t - (x*np.cos(self.phi) + y*np.sin(self.phi)) - self.time_shift
         
     def d_inparg(self, x, y, t):
         return -np.array([np.cos(self.phi), np.sin(self.phi)])
+    
+    @abstractmethod
+    def window(self, x):
+        pass
     
     @abstractmethod
     def profile(self, z):
@@ -52,7 +59,8 @@ class gaussian(waveform):
                  src_type = 'planewave',
                  sigma = 0.2, 
                  cutoff=1e-10,
-                 amp=1
+                 amp=1, 
+                 lag = 0
                 ):
         super().__init__(time_shift=time_shift, 
                          inc_angle=inc_angle, 
@@ -61,20 +69,18 @@ class gaussian(waveform):
         self.cutoff = cutoff #used to truncate signal
         self.sigma = sigma
         self.amp = amp
+        self.lag = lag
+        self.window_length = np.sqrt(-self.sigma*np.log(self.cutoff))+1
     
-    def box(self, x, l):
-        mask1 = (x <= l)
-        mask2 = (x >= -l)
+    def window(self, x):
+        mask1 = (x <= self.window_length)
+        mask2 = (x >= -self.window_length)
         return mask1*mask2
 
     def profile(self, z):
         #waveform profile, centered at the origin
-        s = self.sigma
-        tmp = self.amp*np.exp(-(z**2)/s)
-
-        #cutoff width
-        l = np.sqrt(-s*np.log(self.cutoff))+1
-        return self.box(z, l)*tmp  
+        tmp = self.amp*np.exp(-(z**2)/self.sigma)
+        return self.window(z)*tmp  
     
     def td_deriv(self, x, y, t, n):
         v= (-self.inparg(x, y, t)*2/self.sigma)*self.td_wave(x, y, t)
@@ -94,7 +100,8 @@ class gaussian_norm_width(gaussian):
                  src_type = 'planewave',
                  width = 1,
                  cutoff=1e-10,
-                 amp=1
+                 amp=1, 
+                 lag = 0
                 ):
         super().__init__(
                     inc_angle = inc_angle,
@@ -103,7 +110,8 @@ class gaussian_norm_width(gaussian):
                     src_type=src_type,
                     sigma=(2*width)**2/np.log(2*amp), 
                     cutoff=cutoff,
-                    amp=1
+                    amp=amp,
+                    lag=lag
                     )
 
 class gaussian_deriv(waveform):
@@ -125,20 +133,18 @@ class gaussian_deriv(waveform):
         self.cutoff = cutoff #used to truncate signal
         self.sigma = sigma
         self.amp = amp
+        self.window_length = np.sqrt(self.sigma*np.log(np.exp(0.5)*np.sqrt(2/self.sigma)/self.cutoff))+1
     
-    def box(self, x, l):
-        mask1 = (x <= l)
-        mask2 = (x >= -l)
+    def window(self, x):
+        mask1 = (x <= self.window_length)
+        mask2 = (x >= -self.window_length)
         return mask1*mask2
-
+    
     def profile(self, z):
         #waveform profile, centered at the origin
         s = self.sigma
         tmp = self.amp*np.sqrt(2/s)*z*np.exp(0.5-(z**2)/s)
-
-        #approximate cutoff width
-        l = np.sqrt(s*np.log(np.exp(0.5)*np.sqrt(2/s)/self.cutoff))+1
-        return self.box(z, l)*tmp
+        return self.window(z)*tmp
     
     def td_deriv(self, x, y, t, n):
         v = self.amp*np.sqrt(2/self.sigma)*np.exp(0.5-(self.inparg(x, y, t)**2)/self.sigma)*(1 - 2*(self.inparg(x, y, t))**2/(self.sigma))
@@ -149,19 +155,27 @@ class gaussian_deriv(waveform):
         return dg
 
 class switched_sinewave(waveform):
+    #sine wave with a tanh switch
     def __init__(self,
                  inc_angle=np.pi, 
                  time_shift=0,
-                 sharpness = 1, 
-                 omega = 2*np.pi):
+                 sharpness = 0.1, 
+                 omega = 2*np.pi, 
+                 window_length = 1):
         super().__init__(time_shift=time_shift, inc_angle=inc_angle)
         self.sharpness = sharpness
         self.omega=omega
-        
+        self.window_length = window_length
+    
+    def window(self, x):
+        mask = (x >= -self.window_length)
+        return mask
+    
     def profile(self, z):
-        return 0.5*(1+np.tanh(z/self.sharpness))*np.sin(self.omega*z)
+        return self.window(z)*0.5*(1+np.tanh(z/self.sharpness))*np.sin(self.omega*z)
         
     def td_deriv(self, x, y, t, n):
+        #TODO: need to implement this
         pass
 
 class gauss_mod_sine(waveform):
@@ -171,28 +185,25 @@ class gauss_mod_sine(waveform):
                  amp=1, 
                  omega = 1,
                  alpha=1, 
-                 cutoff=1e-10):
+                 cutoff=1e-10,
+                 lag = 0
+                 ):
         self.amp = amp
         self.omega = omega
         self.alpha = alpha
         self.cutoff = 1e-10
-        super().__init__(inc_angle = inc_angle, time_shift = time_shift)
-        
-    #def profile(self, z):
-    #    return self.amp*np.exp(-self.alpha*z**2)*np.sin(self.omega*z)
+        super().__init__(inc_angle = inc_angle, time_shift = time_shift, lag=lag)
+        self.window_length = np.sqrt(-np.log(self.cutoff)/self.alpha)+1
     
-    def box(self, x, l):
-        mask1 = (x <= l)
-        mask2 = (x >= -l)
+    def window(self, x):
+        mask1 = (x <= self.window_length)
+        mask2 = (x >= -self.window_length)
         return mask1*mask2
 
     def profile(self, z):
         #waveform profile, centered at the origin
         tmp = self.amp*np.exp(-self.alpha*(z**2))*np.sin(self.omega*z)
-
-        #cutoff width
-        l = np.sqrt(-np.log(self.cutoff)/self.alpha)+1
-        return self.box(z, l)*tmp  
+        return self.window(z)*tmp  
     
     def td_deriv(self, x, y, t, n):
         dv = self.amp*np.exp(-self.alpha*self.inparg(x, y, t)**2)*(self.omega*np.cos(self.alpha*self.inparg(x, y, t)) - 2*self.alpha*self.inparg(x, y, t)*np.sin(self.omega*self.inparg(x, y, t)))

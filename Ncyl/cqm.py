@@ -600,6 +600,7 @@ class scattering(cyl):
                 self.method='explicit'
                 return (self.scattering_coeffs(), 0)
         elif self.use_cpp:
+            #NOTE: this is unable to be used, since the C++ solver is not implemented
             ps = PyScatC(self.cyls, self.k, self.sum_index)
             ps.mvp_init()
             ps.gmres_setup(self.gmres_restart, 2*self.gmres_restart, self.gmres_tol)
@@ -856,7 +857,20 @@ class time_domain_scattering(scattering):
             self.pinvmats = np.array([np.linalg.inv(p) for p in self.pmats])     
         
         self.lammat = self.lam**np.arange(0, len(self.times))
-        
+    
+    def set_timeshift(self):
+        if self.waveform.time_shift == 0:
+            if self.waveform.src_type == 'planewave':
+                #dot product
+                incvect = [np.cos(self.waveform.inc_angle), np.sin(self.waveform.inc_angle)]
+                pos = [c.pos for c in self.cyls]
+                projmag = [np.dot(p, incvect) for p in pos]
+                maxcyl = self.cyls[np.argmax(projmag)]
+                projmagmax = np.max(projmag)
+                self.waveform.time_shift = self.waveform.window_length + projmagmax + maxcyl.radius + self.waveform.lag
+            else:
+                self.waveform.time_shift = self.waveform.windwow_length + self.waveform.lag
+    
     def mode_select(self, x, y):
         #make distance matrix
         dist_matrix = np.zeros((len(self.cyls), len(self.cyls))) 
@@ -1450,6 +1464,9 @@ class time_domain_scattering(scattering):
         return self.u_sc
     
     def make_U_sc(self, x, y):
+        #set waveform variables
+        self.set_timeshift()
+        
         #select Nmodes
         if self.modes is None:
             self.modes=self.mode_select(x, y)
