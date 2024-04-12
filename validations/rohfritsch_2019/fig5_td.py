@@ -14,7 +14,7 @@ from utils.plot_cyls import plot_cyls
 #wv = gaussian_norm_width(time_shift=10, inc_angle=np.pi, width=0.4)
 wv = gauss_mod_sine(omega=7, alpha=5, lag = 6)
 
-T = 20*np.pi
+T = 40*np.pi
 tint = IRK5()
 #length units are in cm here
 cyls = example_setups.uniform_grid_NxN(2, 'd', 0.1, 1)
@@ -40,7 +40,7 @@ tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
-                             sampnum=2**12 ,
+                             sampnum=2**14,
                              modes=8,
                              timeint=tint,
                              use_cython=True,
@@ -109,7 +109,7 @@ plt.show()
 #plt.xlabel('k')
 #plt.ylabel('amplitude')
 #plt.show()
-idx = 46
+idx = 88
 # plt.plot(tds.times, U[0, 100, :])
 # plt.show()
 trace = np.abs(freqdat[0, :, idx])/np.max(np.abs(freqdat[0, :, idx]))
