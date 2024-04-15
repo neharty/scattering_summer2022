@@ -21,5 +21,5 @@
 DO=/project/peterp/nh287/data/cond_num/
 export DO
 
-python3 -u /home/nh287/scattering/drivers/rates_of_convergence_circle/exec.py 1 ${VF} ${SLURM_ARRAY_TASK_ID} ${CFG} ${DO}
-mv /project/peterp/nh287/logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.out ${DO}/${CTYPE}/volfrac_${VF}/Nmode_${SLURM_ARRA_TASK_ID}/seed_1
+python3 -u /home/nh287/scattering/tests/cond_num_tests/exec.py 1 ${VF} ${SLURM_ARRAY_TASK_ID} ${CFG} ${DO}
+mv /project/peterp/nh287/logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.out ${DO}/${CTYPE}volfrac_${VF}/Nmode_${SLURM_ARRA_TASK_ID}/seed_1

@@ -8,7 +8,7 @@
 #SBATCH --sockets-per-node=1
 #SBATCH --cores-per-socket=8
 #SBATCH --threads-per-core=1
-#SBATCH --array=900-904
+#SBATCH --array=1-200
 #SBATCH --hint=nomultithread
 #SBATCH --nodes=1
 #SBATCH --time=1-00:00:00

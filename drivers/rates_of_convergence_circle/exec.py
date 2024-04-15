@@ -43,13 +43,11 @@ logging.basicConfig(filename=os.path.join(dataout, 'debug.log'), level=logging.D
 print('generating wave')
 if config['WAVE']['type'] == 'g':
     wv = gaussian_norm_width(
-            time_shift=float(config['WAVE']['time_shift']), 
             src_type=config['WAVE']['src_type'],
             width=args.width,
             r0=ast.literal_eval(config['WAVE']['r0']))
 elif config['WAVE']['type'] == 'dg':
     wv = gaussian_deriv(
-            time_shift=float(config['WAVE']['time_shift']), 
             src_type=config['WAVE']['src_type'],
             sigma=args.width,
             r0=ast.literal_eval(config['WAVE']['r0']))

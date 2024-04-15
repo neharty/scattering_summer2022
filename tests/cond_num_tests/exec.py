@@ -134,10 +134,10 @@ condnum0 = []
 condnum1 = []
 condnum2 = []
 for i in range(3):
-    ks = tds.ks[:, i]
+    ks = 1j*tds.evals[:, i]/tds.dt
     for k in ks:
         print(i, k)
-        sc = scattering(cyls, np.zeros(len(cyls)*(2*args.Nmode+1)), k=k, use_2cyl_modes=False)
+        sc = scattering(cyls, np.zeros(len(cyls)*(2*args.Nmode+1)), k=k, use_2cyl_modes=False, sum_index=args.Nmode)
         A = sc.make_scattering_blocks()
         if i == 0:
             condnum0 += [np.linalg.cond(A)]
