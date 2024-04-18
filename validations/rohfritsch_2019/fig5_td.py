@@ -14,6 +14,22 @@ from utils.plot_cyls import plot_cyls
 #wv = gaussian_norm_width(time_shift=10, inc_angle=np.pi, width=0.4)
 wv = gauss_mod_sine(omega=7, alpha=5, lag = 6)
 
+#graph the gaussian
+wave = wv.profile(np.linspace(0, 40*np.pi, 2**14+1)-20*np.pi)
+plt.plot(np.linspace(0, 40*np.pi, 2**14+1), wave)
+plt.show()
+freqdat = rfft(wave[:-1])
+freqs = rfftfreq(len(wave[:-1]), d=40*np.pi/2**14)
+ka = 0.1*2*np.pi*freqs
+
+plt.plot(ka, np.abs(freqdat))
+plt.xlabel('ka')
+plt.ylabel('amplitude')
+print(ka[140], np.abs(freqdat[140]))
+print(ka[np.argmax(np.abs(freqdat))])
+plt.show()
+
+
 T = 40*np.pi
 tint = IRK5()
 #length units are in cm here

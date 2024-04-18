@@ -1319,6 +1319,7 @@ class time_domain_scattering(scattering):
                 use_cython=self.use_cython,
                 **self.scargs
             )
+            print('wavenumber index ' + str(idx)+ ' / '+str(self.rhs_maxidx))
             if self.save_coeffs and not self.use_coeffs:
                 utmp, self.coeff_mat[idx] = sc.make_u_sc(x, y)
             elif self.save_coeffs and self.use_coeffs:
@@ -1389,8 +1390,10 @@ class time_domain_scattering(scattering):
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt
         wmat = [None for k in ks]
-                 
+        
         for i in range(len(ks)):
+            wvidx = len(self.timeint.c)*idx + i
+            print('wavenumber index ' + str(wvidx) + ' / ' + str((self.rhs_maxidx)*len(self.timeint.c) - 1))
             if self.use_disk:
                 rhs = []
                 for c in self.cyls:
@@ -1472,8 +1475,10 @@ class time_domain_scattering(scattering):
             self.modes=self.mode_select(x, y)
         
         if self.timeint is None:
+            # BDF2
             self.make_time_harmonic_soln(x, y)
         else:
+            # IRK timestepping
             self.make_time_harmonic_soln_highorder(x, y)
             
         if self.save_coeffs:
