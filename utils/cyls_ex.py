@@ -13,9 +13,9 @@ Y = R*np.sin(ANG)
 
 np.random.seed(1)
 Rmax = 10
-radius = 0.3
+radius = 0.5
 vfill = 0.3
-minspace = radius*1
+minspace = radius*0.125
 # cyls = example_setups.random_circ_hex_vol_frac(
 #             Rmax,
 #             ['d', 'n'], 
@@ -26,23 +26,22 @@ minspace = radius*1
 #             bc_mode='uniform',
 #             rin=0
 #         )
-# Lx = 5
-# Lxin = 2
-# Ly = 10
-# Lyin = 5
-# cyls = example_setups.random_box_hex_vol_frac(
-#         5, 
-#         10, 
-#         ['d', 'n'], 
-#         radius, 
-#         vfill, 
-#         bc_mode='permuted', 
-#         minspace=minspace, 
-#         Lxin = Lxin,
-#         Lyin = Lyin
-#         )
+Lx = 10
+Lxin = 5
+Ly = 10
+Lyin = 5
+cyls = example_setups.random_box_hex_vol_frac(
+        10, 
+        10, 
+        'd', 
+        radius, 
+        vfill, 
+        minspace=minspace, 
+        Lxin = Lxin,
+        Lyin = Lyin
+        )
 
-cyls = example_setups.uniform_grid_NxN(3, ['d', 'n', 'i'], 1, 3, impedance=1, bc_mode='repeated')
+#cyls = example_setups.uniform_grid_NxN(3, ['d', 'n', 'i'], 1, 3, impedance=1, bc_mode='repeated')
 #%%
 #check for overlap with measurement points
 cnrs = [c.pos for c in cyls]
@@ -70,7 +69,7 @@ print(ismindist)
 fig, ax = plot_cyls_pub(cyls)
 #ax.plot(X, Y, 'kx')
 plt.show()
-print(len(cyls), len(cyls)*(radius**2)*np.pi/(4*(Lx-Lxin)*(Ly-Lyin)))#, len(cyls)*(radius**2)/Rmax**2)
+print(len(cyls), len(cyls)*(radius**2)*np.pi/(4*(Lx*Ly-Lxin*Lyin)))#, len(cyls)*(radius**2)/Rmax**2)
 
 # cyls = pickle.load(open('/home/nick/scattering/data/time_domain_tests/average_fl_waveform/cyls/bad/n/cyls.p', 'rb'))
 # fig, ax = plot_cyls(cyls)

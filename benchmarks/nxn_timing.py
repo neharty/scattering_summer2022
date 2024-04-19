@@ -38,7 +38,7 @@ for N in Ns:
     X, Y = np.meshgrid([xmax+3], [0])
     
     #explicit
-    print(Nmode, args.Ncyl, 'starting explicit')
+    print(Nmode, N, 'starting explicit')
     tds = time_domain_scattering(
                                   cyls,
                                   wv,
@@ -52,10 +52,10 @@ for N in Ns:
     t = time()
     Usc = tds.make_U_sc(X, Y)
     exptime += [time() - t]
-    print(Nmode, args.Ncyl, 'explicit took '+str(exptime[-1])+' s')
+    print(Nmode, N, 'explicit took '+str(exptime[-1])+' s')
     
     #no cpp
-    print(Nmode, args.Ncyl, 'starting python gmres')
+    print(Nmode, N, 'starting python gmres')
     tds = time_domain_scattering(
                                   cyls,
                                   wv,
@@ -69,10 +69,10 @@ for N in Ns:
     t = time()
     Usc = tds.make_U_sc(X, Y)
     pytime += [time() - t]
-    print(Nmode, args.Ncyl, 'python gmres took '+str(pytime[-1])+' s')
+    print(Nmode, N, 'python gmres took '+str(pytime[-1])+' s')
     
     #with cpp
-    print(Nmode, args.Ncyl, 'starting cython gmres')
+    print(Nmode, N, 'starting cython gmres')
     tdscpp = time_domain_scattering(
                                  cyls,
                                  wv,
@@ -87,7 +87,7 @@ for N in Ns:
     t = time()
     Usccpp = tdscpp.make_U_sc(X, Y)
     cptime += [time() - t]
-    print(Nmode, args.Ncyl, 'cython gmres took '+str(cptime[-1])+' s')
+    print(Nmode, N, 'cython gmres took '+str(cptime[-1])+' s')
 
 fout = '/home/nick/scattering/data/benchmarks/timing/nxn_timing/'
 fout = os.path.join(fout, 'Ncyls_'+str(args.Ncyl), 'Nmode_' + str(args.Nmode))
