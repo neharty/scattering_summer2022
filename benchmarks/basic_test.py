@@ -31,7 +31,7 @@ tds = time_domain_scattering(
                              scargs={'method':'gmres'}
                              )
 X, Y = np.meshgrid([6], [0])
-Ux = tds.make_U_sc(X, Y)
-
-plt.plot(tds.times, Ux[0,0,:])
+Ux = tds.make_U_sc(np.array([6, -6]), np.array([0, 0]))
+#%%
+plt.plot(tds.times, Ux[1,:])
 plt.show()

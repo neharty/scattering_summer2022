@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import example_setups
-from Ncyl.cqm import time_domain_scattering, cyl
+from Ncyl.cqm import time_domain_scattering, cyl, scattering
 from waveforms.waveforms import gaussian_norm_width, switched_sinewave, gauss_mod_sine
 from integrators.integrators import IRK5
 import os

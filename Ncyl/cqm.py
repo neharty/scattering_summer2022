@@ -1452,17 +1452,17 @@ class time_domain_scattering(scattering):
             pool.close()
             pool.join()
             for i in idxs:
-                self.u_sc[:, :, i] = tmp[i]
+                self.u_sc[..., i] = tmp[i]
             del tmp
         else:
             #serial algorithm
             for i in idxs:
-                self.u_sc[:, :, i] = self.highorder_solve(i, x, y)
+                self.u_sc[..., i] = self.highorder_solve(i, x, y)
         
         #copy solutions as conjugates for negative frequency components
         if self.use_conj:
             for n in range(self.sampnum//2):
-                self.u_sc[:, :, -1-n] = self.u_sc[:, :, n+1].conjugate()
+                self.u_sc[..., -1-n] = self.u_sc[..., n+1].conjugate()
         
         return self.u_sc
     
@@ -1537,12 +1537,12 @@ class time_domain_scattering(scattering):
         self.U = np.zeros(self.U_sc.shape)
         for i in range(len(self.times)):
             if self.waveform.src_type == 'planewave':
-                self.U[:, :, i] = self.U_sc[:, :, i] + \
+                self.U[..., i] = self.U_sc[:, :, i] + \
                     (scattering.mask(self, x, y)*\
                      self.waveform.td_wave(x, y, self.times[i]))
             else:
                 #point source wave
-                self.U[:, :, i] = self.U_sc[:, :, i] + \
+                self.U[..., i] = self.U_sc[..., i] + \
                         self.make_U_inc(x, y)
                 
         return self.U
