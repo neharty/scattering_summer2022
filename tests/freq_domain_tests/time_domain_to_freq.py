@@ -8,12 +8,14 @@ import os
 from scipy.fft import rfft, irfft, rfftfreq
 import os
 import argparse
+import pickle
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('seed', help='random number gen seed', type=int)
 parser.add_argument('Nt', help = 'number of time samples', type=int)
 parser.add_argument('Nmodes', help = 'number theta modes', type=int)
+parser.add_argument('Npoints', help = 'number of measurement points around scattering region', type = int)
 parser.add_argument('T', help = 'final computation time', type=float)
 parser.add_argument('rho', help='volume fill percentage', type=float)
 parser.add_argument('R', help='radius of scatterer-containing disk', type=float)
@@ -32,7 +34,7 @@ wv = gaussian_norm_width(time_shift=0, inc_angle=np.pi, width=args.width, lag=1)
 T = args.T
 tint = IRK5()
 
-thetas = np.linspace(0, 2*np.pi, 1000, False)
+thetas = np.linspace(0, 2*np.pi, args.Npoints, False)
 r = args.R + 1
 X = r*np.cos(thetas)
 Y = r*np.sin(thetas)
@@ -77,13 +79,21 @@ pw = rfft(wv.profile(np.linspace(0, T, 2**args.Nt)-T//2))
 if not os.path.exists(args.fout):
     os.makedirs(args.fout)
 
+tracearr = []
 for kidx in range(len(ka)):
     if ka[kidx] < args.ka_cutoff:
-        fname = f'{r:.3f}_{ka[kidx]:.3f}_td2freq.dat'
         freqdat = rfft(U[..., :-1])
         ff = freqdat[:, kidx]
         amp = pw[kidx]
-        trace = np.abs(ff)/np.abs(amp)
-        arr = [[thetas[i], trace[i]] for i in range(len(thetas))]
-        np.savetxt(os.path.join(args.fout , fname), arr)
+        tracearr += [np.abs(ff)/np.abs(amp)]
+
+# save ka values
+kaarr = [[i+1, ka[i]] for i in range(len(ka))]
+np.savetxt(os.path.join(args.fout, 'kavals.dat'), kaarr)
+
+# save freq domain data
+fname = f'{r:.3f}_td2freq_ka_vs_angle.dat'
+tracearr = np.array(tracearr)
+arr = [[thetas[i], tracearr[:, i]] for i in range(len(thetas))]
+np.savetxt(os.path.join(args.fout , fname), arr)
 

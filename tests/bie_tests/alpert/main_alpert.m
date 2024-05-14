@@ -146,11 +146,13 @@ tt       = linspace(0,2*pi*(1 - 1/ntot),ntot);
 [C,curvelen,xxint,xxext] = LOCAL_construct_cont(tt,nint,next,flag_geom);
 h        = curvelen/ntot;
 
-order = 2; % order param
+order = 6; % order param
 [xx, ww, nskip] = alpert_log(order); % order of method
 ninterp = order + 3; % order + 3
- 
+
+xxnew = [xx, -xx];
 xx = [-xx(end: -1: 1), xx];
+wwnew = [ww, ww];
 ww = [ ww(end: -1: 1), ww];
 
 [Y_g1,   X_g1   ] = meshgrid(C(1,:), C(1,:));
@@ -175,15 +177,15 @@ spt    = t+x*h;
 spt    = mod(spt,curvelen);
 [C_corr,~,~,~] = LOCAL_construct_cont(spt,nint,next,flag_geom);
 
-t_g1  = reshape(C_corr(1,:)',ntot,length(xx));
-t_g2  = reshape(C_corr(4,:)',ntot,length(xx));
-t_dg1 = reshape(C_corr(2,:)',ntot,length(xx));
+t_g1  = reshape(C_corr(1,:)',ntot,length(xx)); % shifted x values
+t_g2  = reshape(C_corr(4,:)',ntot,length(xx)); % shifted y values
+t_dg1 = reshape(C_corr(2,:)',ntot,length(xx)); 
 t_dg2 = reshape(C_corr(5,:)',ntot,length(xx));
 dt    = sqrt(C_corr(2,:).^2 + C_corr(5,:).^2);
 dt    = reshape(dt',ntot,length(xx));
 
-kr = LOCAL_eval_kernel(s_g1,t_g1,s_g2,t_g2,t_dg1,t_dg2,kh,flag_pot);
-kr = kr.*dt*h;
+krtmp = LOCAL_eval_kernel(s_g1,t_g1,s_g2,t_g2,t_dg1,t_dg2,kh,flag_pot);
+kr = krtmp.*dt*h;
 
 B = zeros(size(A));
 
@@ -199,32 +201,12 @@ for i = 1:length(xx)
   B(iii) = B(iii) + ww(i)*tmprmat.*tmpkron;
 end
 
-% 
-% % this works for a circle ONLY
-% Bvect = zeros(ntot, 1);
-% 
-% for xidx = 1:length(xx)
-%     ind = floor(xx(xidx) - ninterp/2 + 1) + (0 : ninterp - 1)
-%     L   = lagrangeInterp(ind, xx(xidx)); 
-%     for i = 1:length(ind)
-%         indx = ind(i);
-%         if indx < 0
-%             indx = indx + ntot + 1;
-%         else
-%             indx = indx + 1;
-%         end
-%         Bvect(indx) = Bvect(indx) + ww(xidx)*L(i)*kr(indx, xidx);
-%     end
-% end
-% 
-% Bnew = toeplitz(Bvect, Bvect);
-% Berr = abs(B - Bnew);
-
 Bnew = zeros(size(A));
-for i = 1:ntot
-    for xidx = 1:length(xx)
-        ind = floor(xx(xidx) - ninterp/2 + 1) + (0 : ninterp - 1); % offset indices
-        L   = lagrangeInterp(ind, xx(xidx)); 
+
+for xidx = 1:length(xx)
+    ind = floor(xx(xidx) - ninterp/2 + 1) + (0 : ninterp - 1); % offset indices
+    L   = lagrangeInterp(ind, xx(xidx));
+    for i = 1:ntot
         for j = 1:length(ind)
             indx = ind(j) + i;
             if indx <= 0
@@ -238,6 +220,7 @@ for i = 1:ntot
 end
 
 Berr = abs(B - Bnew);
+max(Berr, [], 'all')
 
 % Aerr = abs(A - toeplitz(A(:, 1), A(1, :)));
 

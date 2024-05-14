@@ -3,47 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz
 from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
+from integrators.alpert import alpert2, alpert6, alpert10, alpert16
 #from Ncyl.cqm import scattering
 
-# quadrature parameters
-# for h^6|log h|
-chi=[4.004884194926570e-03, 
-      7.745655373336686e-02,
-      3.972849993523248e-01,
-      1.075673352915104e+00,
-      2.003796927111872e+00, 
-      -4.004884194926570e-03, 
-      -7.745655373336686e-02,
-      -3.972849993523248e-01,
-      -1.075673352915104e+00,
-      -2.003796927111872e+00]
-    
-w=[1.671879691147102e-02,
-    1.636958371447360e-01,
-    4.981856569770637e-01,
-    8.372266245578912e-01,
-    9.841730844088381e-01,
-    1.671879691147102e-02,
-    1.636958371447360e-01,
-    4.981856569770637e-01,
-    8.372266245578912e-01,
-    9.841730844088381e-01]
-
-m = 5
-a = 3
-l = 6
-M = l + 3
-
-#---------------------
-# 2nd order alpert
-# chi = [1.591549430918953e-01, -1.591549430918953e-01]
-# w = [5.000000000000000e-01, 5.000000000000000e-01]
-
-# m=1
-# a=1
-# l=2
-# M=l+3
-#------------------
+bie = alpert16()
 
 # wavenumber
 k = 2
@@ -57,27 +20,22 @@ def ll(i, j, N):
     else:
         return b
 
-def o_np(n, p):
-    #use 1-indexing
-    p-=1
-    return np.floor(chi[p] - M/2) + n
-
-def n_pq(p, q):
-    p-=1
-    return q - np.floor(chi[p] - M/2) 
-
-def L_np(n, p, x):
-    tmp = 1
-    for q in range(1, M+1):
-        if n != q:
-            tmp *= (x - o_np(q, p))/(o_np(n, p) - o_np(q, p))
+def L_np(Op, x):
+    tmp = np.ones(len(Op))
+    for i in range(len(Op)):
+        for j in range(len(Op)):
+            if i != j:
+                tmp[i] *= (x - Op[j])/(Op[i] - Op[j])
     return tmp
 
 def G(xp, yp):
     return 1j*hankel1(0, k*np.linalg.norm(xp - yp))/4
 
-def make_b(x, dx):
-    N = len(x)
+def make_b(xfn, dxfn, N):
+    t = np.linspace(0, 2*np.pi, N, False)
+    x = [xfn(ti) for ti in t]
+    dx = [dxfn(ti) for ti  in t]
+    
     h = 2*np.pi/N
     B = np.zeros((N, N), dtype=np.complex128)
     
@@ -85,35 +43,43 @@ def make_b(x, dx):
     for i in range(N):
         for j in range(N):
             ds = np.linalg.norm(dx[j])*h
-            if np.abs(ll(i, j, N)) >=a:
+            if np.abs(ll(i, j, N)) >=bie.dist:
                 B[i, j] = ds*G(x[i], x[j])
     return B
 
-def make_c(x, dx):
-    N = len(x)
+def make_c(xfn, dxfn, N):
+    t = np.linspace(0, 2*np.pi, N, False)
+    x = np.array([xfn(ti) for ti in t])
+    dx = np.array([dxfn(ti) for ti in t])
+    
     h = 2*np.pi/N
     C = np.zeros((N, N), dtype=np.complex128)
     
-    #Lmat = [[L_np(n_pq(p, d), p, chi[p-1]) for p in range(1, 2*m+1)] for d in np.arange(-N//2, N//2 + 1)]
-    Omat = [[o_np(n, p) for n in range(1, M+1)] for p in range(1, 2*m+1)]
+    m = len(bie.nodemat)
+    xalp = np.array([[xfn(ti + bie.nodemat[p]*h) for ti in t] for p in range(m)])
+    dxalp = np.array([[dxfn(ti + bie.nodemat[p]*h) for ti in t] for p in range(m)])
     
-    for i in range(N):
-        for p in range(1, 2*m+1):
-            Op = Omat[p-1] 
-            #L   = lagrangeInterp(ind, xx(xidx)); 
+    for p in range(m):
+        Op = np.floor(bie.nodemat[p] - bie.M/2 + 1) + np.arange(0, bie.M)
+        Lmat = L_np(Op, bie.nodemat[p])
+        for i in range(N):
             for dist in Op:
                 idx = i + dist
                 if idx >= N:
-                    idx = N - idx
+                    # print(idx)
+                    idx = idx - N
+                    # print(idx)
                 idx = int(idx)
-                ds = np.linalg.norm(dx[idx])*h
-                C[i, idx] += w[p-1]*G(0, chi[p-1]*h)*L_np(n_pq(p, dist), p, chi[p-1])*ds
+                ds = np.linalg.norm(dxalp[p][i])
+                kervaltmp = G(x[i], xalp[p][i])
+                kerval = kervaltmp*ds*h
+                C[i, idx] += bie.weightmat[p]*Lmat[np.where(Op == dist)]*kerval
     
     return C
     
-def coeff_matrix(x, dx):
-    B = make_b(x, dx)
-    C = make_c(x, dx)
+def coeff_matrix(xfn, dxfn, N):
+    B = make_b(xfn, dxfn, N)
+    C = make_c(xfn, dxfn, N)
     return B + C
 
 lmat = np.zeros((7, 7))
@@ -125,29 +91,43 @@ print(lmat)
 #%%
 #boundary curves
 def circ(theta):
-    return np.array([np.cos(theta), np.sin(theta)])
+    # circle
+    # return np.array([np.cos(theta), np.sin(theta)])
+    
+    # starfish
     # r = 9/20 - (1/9)*np.cos(5*theta)
     # return r*np.array([np.cos(theta), np.sin(theta)])
     
+    #star
+    r = 0.3
+    k = 5
+    return np.array([1.5*np.cos(theta) + (r/2)*np.cos((k+1)*theta) + (r/2)*np.cos((k-1)*theta),
+            np.sin(theta) + (r/2)*np.sin((k+1)*theta) - (r/2)*np.sin((k-1)*theta)])
+    
 def dcirc(theta):
-    return np.array([-np.sin(theta), np.cos(theta)])
+    # circle
+    # return np.array([-np.sin(theta), np.cos(theta)])
+
+    # starfish
     # r = 9/20 - (1/9)*np.cos(5*theta)
     # dr = (5/9)*np.sin(5*theta)
     # fdg = dr*np.array([np.cos(theta), np.sin(theta)])
     # gdf = r*np.array([-np.sin(theta), np.cos(theta)])
     # return fdg + gdf
+    
+    #star
+    r = 0.3
+    k = 5
+    return np.array([-1.5*np.sin(theta) - (r/2)*(k+1)*np.sin((k+1)*theta) - (r/2)*(k-1)*np.sin((k-1)*theta),
+            np.cos(theta) + (r/2)*(k+1)*np.cos((k+1)*theta) - (r/2)*(k-1)*np.cos((k-1)*theta)])
 
 def run1(N):
     Np = N
     angs = np.linspace(0, 2*np.pi, Np, endpoint=False)
     
-    #discretize boundary
-    points = [circ(t) for t in angs]
-    dpoints = [dcirc(t) for t in angs]
-    
     #coefficient matrix
-    B = make_b(points, dpoints)
-    C = make_c(points, dpoints)
+    B = make_b(circ, dcirc, Np)
+    C = make_c(circ, dcirc, Np)
     
     A = B + C
     
@@ -165,7 +145,7 @@ def run1(N):
     measurepts = 3*np.array([[np.cos(a), np.sin(a)] for a in measureangs])
     
     def usc(xp):
-        yfn = [G(xp, points[i])*sol[i]*np.linalg.norm(dpoints[i]) for i in range(Np)]
+        yfn = [G(xp, circ(angs[i]))*sol[i]*np.linalg.norm(dcirc(angs[i])) for i in range(Np)]
         h = angs[1]
         tmp = 0j
         for i in range(Np):
@@ -195,5 +175,5 @@ for N in 2**pows:
 
 #%%
 plt.loglog(2*np.pi/2**pows, errv, '.-')
-#plt.loglog(2*np.pi/2**pows, np.abs(np.log2((2*np.pi/2**pows)))*(2*np.pi/2**pows)**6, 'k--')
+plt.loglog(2*np.pi/2**pows, 10**15*np.abs(np.log2((2*np.pi/2**pows)))*(2*np.pi/2**pows)**16, 'k--')
 plt.show()

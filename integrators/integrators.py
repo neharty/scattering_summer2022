@@ -7,10 +7,11 @@ class integrator(ABC):
     '''
         Template class for butcher tables
     '''
-    def __init__(self, A, b, c):
+    def __init__(self, A, b, c, order):
         self.A = A
         self.b = b
         self.c = c
+        self.order = order
 
 
 class IRK3(integrator):
@@ -19,8 +20,7 @@ class IRK3(integrator):
                          [3/4, 1/4]])
         bmat = np.array([3/4, 1/4])
         cmat = np.array([1/3, 1])
-        self.order = 3
-        super().__init__(Amat, bmat, cmat)
+        super().__init__(Amat, bmat, cmat, 3)
         
 class IRK5(integrator):
     def __init__(self):
@@ -29,5 +29,4 @@ class IRK5(integrator):
                       [4/9 - np.sqrt(6)/36, 4/9 + np.sqrt(6)/36, 1/9]])
         b = np.array([4/9 - np.sqrt(6)/36, 4/9 + np.sqrt(6)/36, 1/9])
         c = np.array([2/5 - np.sqrt(6)/10, 2/5 + np.sqrt(6)/10, 1])
-        self.order=5
-        super().__init__(A, b, c)
+        super().__init__(A, b, c, 5)
