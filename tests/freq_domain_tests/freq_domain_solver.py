@@ -53,7 +53,7 @@ for i in range(len(ks)):
     u = sc.make_u_sc(X, Y)
    
 
-    trace = np.abs(u)
+    trace = np.abs(u)/np.max(np.abs(u))
     tracearr[:, i+1] = trace[:]
 
 fname = f'{r:.3f}_realkfreq.dat'

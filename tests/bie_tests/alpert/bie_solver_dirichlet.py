@@ -6,10 +6,10 @@ from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
 from integrators.alpert import alpert2, alpert6, alpert10, alpert16
 #from Ncyl.cqm import scattering
 
-bie = alpert10()
+bie = alpert6()
 
 # wavenumber
-k = 2
+k = 2 + 2j
 
 def ll(i, j, N):
     # from Erli's code
@@ -33,18 +33,20 @@ def G(xp, yp):
 
 def make_b(xfn, dxfn, N):
     t = np.linspace(0, 2*np.pi, N, False)
-    x = [xfn(ti) for ti in t]
-    dx = [dxfn(ti) for ti  in t]
+    x = np.array([xfn(ti) for ti in t])
+    dx = np.array([dxfn(ti) for ti  in t], dtype=np.complex128)
     
     h = 2*np.pi/N
-    B = np.zeros((N, N), dtype=np.complex128)
-    
+    B = np.array([[G(xp, yp) for yp in x] for xp in x])
+
     # construct B matrix
     for i in range(N):
         for j in range(N):
-            ds = np.linalg.norm(dx[j])*h
-            if np.abs(ll(i, j, N)) >=bie.dist:
-                B[i, j] = ds*G(x[i], x[j])
+            if np.abs(ll(i, j, N)) < bie.dist:
+                B[i, j] = 0
+    
+    B = B @ np.diag(np.linalg.norm(dx, axis=1))
+    B *=h
     return B
 
 def make_c(xfn, dxfn, N):
@@ -74,7 +76,6 @@ def make_c(xfn, dxfn, N):
                 kervaltmp = G(x[i], xalp[p][i])
                 kerval = kervaltmp*ds*h
                 C[i, idx] += bie.weightmat[p]*Lmat[np.where(Op == dist)]*kerval
-    
     return C
     
 def coeff_matrix(xfn, dxfn, N):
@@ -92,34 +93,34 @@ print(lmat)
 #boundary curves
 def circ(theta):
     # circle
-    # return np.array([np.cos(theta), np.sin(theta)])
+    return np.array([np.cos(theta), np.sin(theta)])
     
     # starfish
-    # r = 9/20 - (1/9)*np.cos(5*theta)
-    # return r*np.array([np.cos(theta), np.sin(theta)])
+    #r = 9/20 - (1/9)*np.cos(5*theta)
+    #return r*np.array([np.cos(theta), np.sin(theta)])
     
     #star
-    r = 0.3
-    k = 5
-    return np.array([1.5*np.cos(theta) + (r/2)*np.cos((k+1)*theta) + (r/2)*np.cos((k-1)*theta),
-            np.sin(theta) + (r/2)*np.sin((k+1)*theta) - (r/2)*np.sin((k-1)*theta)])
+    #r = 0.3
+    #k = 5
+    #return np.array([1.5*np.cos(theta) + (r/2)*np.cos((k+1)*theta) + (r/2)*np.cos((k-1)*theta),
+    #        np.sin(theta) + (r/2)*np.sin((k+1)*theta) - (r/2)*np.sin((k-1)*theta)])
     
 def dcirc(theta):
     # circle
-    # return np.array([-np.sin(theta), np.cos(theta)])
+    return np.array([-np.sin(theta), np.cos(theta)])
 
     # starfish
-    # r = 9/20 - (1/9)*np.cos(5*theta)
-    # dr = (5/9)*np.sin(5*theta)
-    # fdg = dr*np.array([np.cos(theta), np.sin(theta)])
-    # gdf = r*np.array([-np.sin(theta), np.cos(theta)])
-    # return fdg + gdf
+    #r = 9/20 - (1/9)*np.cos(5*theta)
+    #dr = (5/9)*np.sin(5*theta)
+    #fdg = dr*np.array([np.cos(theta), np.sin(theta)])
+    #gdf = r*np.array([-np.sin(theta), np.cos(theta)])
+    #return fdg + gdf
     
     #star
-    r = 0.3
-    k = 5
-    return np.array([-1.5*np.sin(theta) - (r/2)*(k+1)*np.sin((k+1)*theta) - (r/2)*(k-1)*np.sin((k-1)*theta),
-            np.cos(theta) + (r/2)*(k+1)*np.cos((k+1)*theta) - (r/2)*(k-1)*np.cos((k-1)*theta)])
+    #r = 0.3
+    #k = 5
+    #return np.array([-1.5*np.sin(theta) - (r/2)*(k+1)*np.sin((k+1)*theta) - (r/2)*(k-1)*np.sin((k-1)*theta),
+    #        np.cos(theta) + (r/2)*(k+1)*np.cos((k+1)*theta) - (r/2)*(k-1)*np.cos((k-1)*theta)])
 
 #rhs data
 def source(x):
@@ -161,7 +162,7 @@ def run1(N):
     print(actual)
     print(alpertsol)
     print(err)
-    print(np.max(err)/np.max(np.abs(actual)))
+    #print(np.max(err)/np.max(np.abs(actual)))
     print()
     return err
 
@@ -169,10 +170,10 @@ run1(2**5)
 
 #sweep Np
 pows = np.arange(5,11)
-errv = []
+errvc = []
 for N in 2**pows:
     err = run1(N)
-    errv += [err]
+    errvc += [err]
 
 #%%
 t = np.linspace(0, 2*np.pi, 1001)
@@ -180,13 +181,13 @@ pts = circ(t)
 plt.plot(pts[0, :], pts[1, :])
 plt.plot(measurepts[:, 0], measurepts[:, 1], 'kx')
 plt.plot([0,0,0.3], [0.5, -0.5, 0], 'k*')
-plt.savefig('/home/nick/scattering/tests/bie_tests/alpert/starfish.pdf')
+#plt.savefig('/home/nick/scattering/tests/bie_tests/alpert/starfish.pdf')
 plt.show()
 
-plt.loglog(2*np.pi/2**pows, errv, '.-', label='infty-error')
-plt.loglog(2*np.pi/2**pows, 10**7*np.abs(np.log2((2*np.pi/2**pows)))*(2*np.pi/2**pows)**10, 'k--', label='log|h|h^10')
+plt.loglog(2*np.pi/2**pows, errvc, '.-', label='infty-error')
+plt.loglog(2*np.pi/2**pows, 1e-2*np.abs(np.log2((2*np.pi/2**pows)))*(2*np.pi/2**pows)**6, 'k--', label='log|h|h^16')
 plt.xlabel('h')
 plt.legend()
 plt.tight_layout()
-plt.savefig('/home/nick/scattering/tests/bie_tests/alpert/error.pdf')
-plt.show()
+#plt.savefig('/home/nick/scattering/tests/bie_tests/alpert/error.pdf')
+#plt.show()

@@ -149,17 +149,21 @@ ka = 2*np.pi*freqs*args.radius
 #find the incident planewave amplitude
 pw = np.abs(rfft(wv.profile(np.linspace(0, T, 2**args.Nt)-T//2)))
 pw = pw[1:] # get rid of 0-freq
+pwmask = (pw > 1e-5)
 ka = ka[1:] # discard 0-freq soln
+ka = ka[pwmask]
 
 #transform the time domain data
 freqdat = np.abs(rfft(U[..., :-1]))
 freqdat = freqdat[:, 1:] #discard ka=0 solution
+freqdat = freqdat[:, pwmask]
 print(len(ka), freqdat.shape)
 for i in range(len(ka)):
-    if pw[i] > 1e-12:
-        freqdat[:, i] /= pw[i]
-    else:
-        freqdat[:, i] = 0
+    # if pw[i] > 1e-5:
+    #     freqdat[:, i] /= pw[i]
+    # else:
+    #     freqdat[:, i] = 0
+    freqdat[:, i] /= np.max(np.abs(freqdat[:, i]))
 
 # save ka values
 kaarr = [[i+2, ka[i]] for i in range(len(ka))]
