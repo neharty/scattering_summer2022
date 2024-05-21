@@ -194,7 +194,8 @@ class scattering(cyl):
             gmres_restart = None,
             gmres_maxiter = None,
             fast_matrix_build = True,
-            use_2cyl_modes = True
+            use_2cyl_modes = True,
+            use_reduced_system = True
             ):
  
         self.cyls = cyls
@@ -225,6 +226,7 @@ class scattering(cyl):
         self.use_mat = use_mat
         self.fast_matrix_build = fast_matrix_build
         self.use_2cyl_modes = use_2cyl_modes
+        self.use_reduced_system = use_reduced_system
 
         self.precond = precond
         self.precond_dist = precond_dist
@@ -233,7 +235,10 @@ class scattering(cyl):
 
         self.ST = None
         self.jhm = None
+        self.jm = None
+        self.hm = None
         self.u = None
+        self.scattering_coeff_vect = None
         self.gmres_iter = 0
         self.gmres_res = np.array([])
         self.mvp_counter = 0
@@ -355,32 +360,70 @@ class scattering(cyl):
     def Shat(self, m, n, v):
         # v is in cartesian coords
         return self.phihat(m-n, v)
-
-    def jh(self, cyl, m):
-        #cyl = incident circle
+    
+    def jmode(self, cyl, m):
         bc = cyl.bc
         radius = cyl.radius
+        
         if bc == 'd':
-            try:
-                return jv(m, self.k*radius)/hankel1(m, self.k*radius)
-            except:
-                print(m)  
-                print(self.k*radius) 
-                print(jv(m, self.k*radius))
-                print(hankel1(m, self.k*radius))
-                return jv(m, self.k*radius)/hankel1(m, self.k*radius)
+            st = jv(m, self.k*radius)
         elif bc == 'n':
-            return jvp(m, self.k*radius)/h1vp(m, self.k*radius)
+            st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
             imp = cyl.impedance(self.k)
-            return(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))/\
-                (h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
+            st = self.k*(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))
         else:
             print('invalid bc')
+        
+        return st
     
-    def mulscat_term(self, cyl, n, m, b):
+    def hmode(self, cyl, m):
+        bc = cyl.bc
+        radius = cyl.radius
+        
+        if bc == 'd':
+            st = hankel1(m, self.k*radius)
+        elif bc == 'n':
+            st = self.k*h1vp(m, self.k*radius)
+        elif bc == 'i':
+            imp = cyl.impedance(self.k)
+            st = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
+        else:
+            print('invalid bc')
+        
+        return st
+    
+    def jh(self, cyl, m):
         #cyl = incident circle
-        return self.jh(cyl, m)*self.S(n, m, b)
+        # bc = cyl.bc
+        # radius = cyl.radius
+        # if bc == 'd':
+        #     try:
+        #         return jv(m, self.k*radius)/hankel1(m, self.k*radius)
+        #     except:
+        #         print(m)  
+        #         print(self.k*radius) 
+        #         print(jv(m, self.k*radius))
+        #         print(hankel1(m, self.k*radius))
+        #         return jv(m, self.k*radius)/hankel1(m, self.k*radius)
+        # elif bc == 'n':
+        #     return jvp(m, self.k*radius)/h1vp(m, self.k*radius)
+        # elif bc == 'i':
+        #     imp = cyl.impedance(self.k)
+        #     return(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))/\
+        #         (h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
+        # else:
+        #     print('invalid bc')
+        return self.jmode(cyl, m)/self.hmode(cyl, m)
+    
+    def mulscat_term(self, cyl_p, n, m, b, cyl_q=None):
+        if self.use_reduced_system:
+            return self.jmode(cyl_p, m)*self.S(n, m, b)/self.hmode(cyl_q, n)
+        else:
+            tmp = self.jh(cyl, m)*self.S(n, m, b)
+            if not np.isfinite(tmp):
+                return 0
+            return tmp
     
     def highfreq_modes(self, k, a):
         ka = k*a
@@ -433,8 +476,10 @@ class scattering(cyl):
             )
 
         #compute the coefficint vectors
-        carr = csc.scattering_coeffs()
-        narr = nsc.scattering_coeffs()
+        csc.get_scattering_coeffs()
+        carr = csc.scattering_coeff_vect
+        nsc.get_scattering_coeffs()
+        narr = nsc.scattering_coeff_vect
         #print(np.abs(carr[0]), np.abs(narr[0]))
         while np.abs(carr[0]) >= self.sum_tol or np.abs(narr[0]) >= self.sum_tol:
             print(np.abs(narr[0]))
@@ -446,7 +491,8 @@ class scattering(cyl):
                 method='explicit', 
                 sum_index=currmodes+1
                 )
-            narr = nsc.scattering_coeffs()
+            nsc.scattering_coeffs()
+            narr = nsc.scattering_coeff_vect
         return currmodes
 
     def make_dist_matrix(self):
@@ -482,10 +528,22 @@ class scattering(cyl):
         if self.ST is None:
             self.ST = np.array([[self.make_root_vect_1cyl(p, q) for q in self.labels] for p in self.labels], dtype=object)
         return self.ST
-
+    
+    def make_all_data(self):
+        if self.method=='explicit':
+            self.make_root_matrix()
+        else:
+            self.make_circulant_root_allcyls()
+        
+        if self.use_reduced_system:
+            self.make_jm()
+            self.make_hm()
+        else:
+            self.make_jhm()
+    
     def make_direct_scattering_block(self, cyl):
         return np.eye(2*cyl.sum_index + 1)
-
+    
     def make_mul_scattering_block(self, cyl_i, cyl_sc):
         # makes 1 off-diagonal block, 
         # cyl_i = incident cylinder, 
@@ -500,7 +558,10 @@ class scattering(cyl):
         for i in range(len(idxa_i)):
             for j in range(len(idxa_sc)):
                 m, n = idxa_i[i], idxa_sc[j]
-                scm[i,j] = self.mulscat_term(cyl_i, n, m, b)
+                if self.use_reduced_system:
+                    scm[i,j] = self.mulscat_term(cyl_i, n, m, b, cyl_sc)
+                else:
+                    scm[i,j] = self.mulscat_term(cyl_i, n, m, b)
         return scm
     
     def make_mul_scattering_block_root(self, cyl_i, cyl_sc):
@@ -511,10 +572,16 @@ class scattering(cyl):
         row = rv[2*Nq:]
         S = toeplitz(row, col)
         D = np.diag(self.jhm[cyl_i.label])
-        return D @ S
+        if self.use_reduced_system:
+            J = np.diag(self.jm[cyl_i.label])
+            Hinv = np.diag(1/self.hm[cyl_sc.label])
+            return J @ S @ Hinv
+        else:
+            D = np.diag(self.jhm[cyl_i.label])
+            return D @ S
 
     def make_scattering_blocks_blockform(self):
-        self.make_jhm()
+        self.make_all_data()
         scat_mat = [[None for i in self.labels] for j in self.labels]
         for i in self.labels:
             for j in self.labels:
@@ -540,7 +607,10 @@ class scattering(cyl):
 
     def make_rhs_vector_1cyl(self, label):
         idxa = np.arange(-self.cyls[label].sum_index, self.cyls[label].sum_index + 1)
-        jvect = self.jh(self.cyls[label], idxa)
+        if self.use_reduced_system:
+            jvect = self.jmode(self.cyls[label], idxa)
+        else:
+            jvect = self.jh(self.cyls[label], idxa)
         return -np.multiply(jvect, self.make_d_coeffs_1cyl(label))
 
     def make_rhs_vector(self):
@@ -558,7 +628,29 @@ class scattering(cyl):
                     )
                 self.jhm[p] = self.jh(self.cyls[p], idxa_p)
         return self.jhm
-
+    
+    def make_jm(self):
+        if self.jm is None:
+            self.jm = [None for p in self.labels]
+            for p in self.labels:
+                idxa_p = np.arange(
+                    -self.cyls[p].sum_index, 
+                    self.cyls[p].sum_index+1
+                    )
+                self.jm[p] = self.jmode(self.cyls[p], idxa_p)
+        return self.jm
+    
+    def make_hm(self):
+        if self.hm is None:
+            self.hm = [None for p in self.labels]
+            for p in self.labels:
+                idxa_p = np.arange(
+                    -self.cyls[p].sum_index, 
+                    self.cyls[p].sum_index+1
+                    )
+                self.hm[p] = self.hmode(self.cyls[p], idxa_p)
+        return self.hm
+    
     def mvp(self, x):
         x = np.array(x, dtype=np.complex128)
 
@@ -681,16 +773,16 @@ class scattering(cyl):
 
             elif self.method == 'explicit':
                 cs = self.scattering_coeffs()
-
+        
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
             for j in range(2*self.cyls[l].sum_index + 1):
                 idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index + 1)
-                u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
-        '''
-        for l in self.__labels:
-                u_sc += cs[self.__lengths[l] + j]*self.phi(idxa[j], R)
-        '''
+                if self.use_reduced_system:
+                    u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)/self.hmode(self.cyls[l], idxa[j])
+                else:
+                    u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
+                    
         self.u_sc = u_sc*self.mask(x,y)
         return self.u_sc
 
@@ -715,7 +807,27 @@ class scattering(cyl):
         return mask
 
     def get_scattering_coeffs(self):
-        return self.scattering_coeffs()
+        if self.scattering_coeff_vect == None:
+            print(self.method, self.freq)
+            if self.method == 'gmres':
+                cs, ecode = self.scattering_coeffs()
+                if ecode != 0:
+                    print('GMRES failed, switching to explicit')
+                    self.method = 'explicit'
+                    cs = self.scattering_coeffs()
+            elif self.method == 'explicit':
+                cs = self.scattering_coeffs()
+                
+            if self.use_reduced_system:
+                for l in self.labels:
+                    for j in range(2*self.cyls[l].sum_index + 1):
+                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index + 1)
+                        cs /= self.hmode(self.cyls[l], idxa[j])
+            
+            self.scattering_coeff_vect = cs
+            return cs
+        else:
+            return self.scattering_coeff_vect
 
     def set_u(self, x, y, recompute=False):
         if self.u == None:

@@ -811,7 +811,9 @@ class time_domain_scattering(scattering):
             i+=1
             
         self.labels = [c.label for c in self.cyls]
-            
+        
+        self.u_sc = None # initialize to prevent repeat computations
+        
         self.init_vars()
         
     def init_vars(self):
@@ -1340,12 +1342,12 @@ class time_domain_scattering(scattering):
         else:
             #serial algorithm
             for i in range(len(self.ks)):
-                self.u_sc[:, :, i] = comp(i)
+                self.u_sc[..., i] = comp(i)
         
         #copy solutions as conjugates for negative frequency components
         if self.use_conj:
             for n in range(self.sampnum//2):
-                self.u_sc[:, :, -1-n] = self.u_sc[:, :, n+1].conjugate()
+                self.u_sc[..., -1-n] = self.u_sc[..., n+1].conjugate()
         
         return self.u_sc
     
@@ -1476,10 +1478,12 @@ class time_domain_scattering(scattering):
         
         if self.timeint is None:
             # BDF2
-            self.make_time_harmonic_soln(x, y)
+            if self.u_sc is None:
+                self.make_time_harmonic_soln(x, y)
         else:
             # IRK timestepping
-            self.make_time_harmonic_soln_highorder(x, y)
+            if self.u_sc is None:
+                self.make_time_harmonic_soln_highorder(x, y)
             
         if self.save_coeffs:
             self.use_coeffs = True

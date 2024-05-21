@@ -45,6 +45,11 @@ def phihat(n, v):
     r, theta = cart_to_polar(v)
     return jv(n, k*r)*np.exp(1j*n*theta)
 
+def phihatstar(n, v):
+    # v s in cartesian coords
+    r, theta = cart_to_polar(v)
+    return jv(n, k*r)*np.exp(-1j*n*theta)
+
 def ll(i, j):
     # from Erli's code
     a = np.mod(i-j, N)
@@ -102,7 +107,8 @@ def make_c(xfn, dxfn):
                 ds = np.linalg.norm(dxalp[p][i])
                 kervaltmp = G(x[i], xalp[p][i])
                 kerval = kervaltmp*ds*h
-                C[i, idx] += bie.weightmat[p]*Lmat[np.where(Op == dist)]*kerval
+                lidx = np.where(Op == dist)[0][0]
+                C[i, idx] += bie.weightmat[p]*Lmat[lidx]*kerval
     return C
     
 def coeff_matrix(xfn, dxfn):
@@ -112,10 +118,11 @@ def coeff_matrix(xfn, dxfn):
 
 def Tnm(n, mu):
     #trapezoidal rule
-    yfn = [np.conj(phihat(n, scgeom.curve(t[i])))*mu[i]*np.linalg.norm(scgeom.dcurve(t[i])) for i in range(N)]
+    yfn = np.array([phihatstar(n, scgeom.bdy(t[i]))*mu[i]*np.linalg.norm(scgeom.dbdy(t[i])) for i in range(N)])
     tmp = 0j
     for i in range(N):
-        tmp += h*yfn[i]
+        tmp += yfn[i]
+    tmp *= h
     return tmp
 
 def main():
@@ -124,24 +131,20 @@ def main():
     T = np.zeros((M, M), dtype=np.complex128)
     mumat = []
     
-    A = coeff_matrix(scgeom.curve, scgeom.dcurve)
+    A = coeff_matrix(scgeom.bdy, scgeom.dbdy)
     
     for n in idxarr:
         # find the density for 1 mode
-        rhs = -np.array([phihat(n, scgeom.curve(t[i])) for i in range(N)])
+        rhs = -np.array([phihat(n, scgeom.bdy(t[i])) for i in range(N)])
         mumat += [np.linalg.solve(A, rhs)]
         #print(mumat)
         tmp = np.max(np.abs(mumat[-1] + 1/((1j*np.pi/2)*hankel1(n, k*1))*np.exp(1j*n*t)))
         print(tmp)
-        if tmp > 1e-5:
-            plt.plot(t, mumat[-1]) 
-            plt.plot(t, -1/((1j*np.pi/2)*hankel1(n, k*1))*np.exp(1j*n*t), '--')
-            plt.show()
         
     for n in range(M):
         for m in range(M):
             # compute the T matrix entries using trapezoidal rule
-            T[n, m] =  Tnm(idxarr[n], mumat[m])
+            T[n, m] = 1j*Tnm(idxarr[n], mumat[m])/4
     
     outstr = f'tmatrix_{args.geometry}_alpert{args.alpertorder}_kr{args.kr:.3f}_ki{args.ki:.3f}_Npoints{args.Npoints}_Nmodes{args.Nmodes}.dat'
     np.savetxt(os.path.join(args.dout, outstr), T)

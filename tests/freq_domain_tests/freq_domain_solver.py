@@ -46,14 +46,15 @@ for i in range(len(ks)):
     sc = scattering(cyls, 
                     freq = k/(2*np.pi), 
                     inc_angle=0, #NOTE: this uses the nonstandard (i.e. Martin's) definition of incident angle
-                    method='explicit')
+                    method='explicit', 
+                    use_reduced_system=False)
     if args.Nmodes > cyls[0].sum_index:
         for c in cyls:
             c.sum_index = args.Nmodes
     u = sc.make_u_sc(X, Y)
    
 
-    trace = np.abs(u)/np.max(np.abs(u))
+    trace = np.abs(u)#/np.max(np.abs(u))
     tracearr[:, i+1] = trace[:]
 
 fname = f'{r:.3f}_realkfreq.dat'
