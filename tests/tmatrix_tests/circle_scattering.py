@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.special import hankel1
+from scipy.special import hankel1, jv
 import matplotlib.pyplot as plt
 from utils import example_setups
 from Ncyl.cqm import time_domain_scattering, scattering, cyl
@@ -28,7 +28,8 @@ tds = time_domain_scattering(
                              use_par=False,
                              scargs={'method':'explicit'}
                              )
-Uref = tds.make_U_sc(np.array([6]), np.array([0]))
+x, y = np.array([6]), np.array([0])
+Uref = tds.make_U_sc(x, y)
 #%%
 arr = [[k.real, k.imag] for k in tds.ks]
 np.savetxt(f'/home/nick/scattering/tests/tmatrix_tests/bdf2k_T{T}_Nt{Nt}.dat', arr)
@@ -39,6 +40,8 @@ geometry = 'cyl'
 alpertorder = 6
 Npoints = 500
 Nmodes = 10
+
+lengths = np.array([i*(2*Nmodes+1) for i in range(len(cyls))])
 
 def cart_to_polar(v):
     return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -52,8 +55,14 @@ def S(m, n, v, k):
     # v is in cartesian coords
     return phi(m-n, v, k)
 
+def jmode(cyl, m, k):
+    bc = cyl.bc
+    radius = cyl.radius
+    
+    return jv(m, k*radius)
+
 def make_direct_scattering_block(cyl):
-    return np.eye(2*cyl.sum_index + 1)
+    return np.eye(2*Nmodes + 1)
 
 def make_mul_scattering_block(cyl_i, cyl_sc, k):
     # makes 1 off-diagonal block, 
@@ -61,9 +70,9 @@ def make_mul_scattering_block(cyl_i, cyl_sc, k):
     # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
   
     b = cyl_i.pos - cyl_sc.pos
-    scm = 1j*np.zeros((2*cyl_i.sum_index + 1, 2*cyl_sc.sum_index + 1))
-    idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
-    idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)
+    scm = 1j*np.zeros((2*Nmodes + 1, 2*Nmodes + 1))
+    idxa_i = np.arange(-Nmodes, Nmodes+1)
+    idxa_sc = np.arange(-Nmodes, Nmodes+1)
 
     for i in range(len(idxa_i)):
         for j in range(len(idxa_sc)):
@@ -83,19 +92,57 @@ def make_scattering_blocks_blockform(Tmat, k):
                 scat_mat[i][j] = -Tmat @ tmp
     return np.block(scat_mat)
 
+def make_tmat(k):
+    M = 2*Nmodes+1
+    idx = np.arange(-Nmodes, Nmodes+1)
+    T = np.zeros((M, M), dtype=np.complex128)
+
+    for n in range(M):
+        for m in range(M):
+            nindx, mindx = idx[n], idx[m]
+            if n==m:
+                nidx = idx[n]
+                T[n, m] = -jv(nidx, k*1)/hankel1(nidx, k*1)
+    return T
+
+def make_u_sc(x, y, coeff_vect):
+    r, theta = cart_to_polar([x, y])
+    u_sc = 1j*np.zeros(r.shape)
+    cs = coeff_vect
+    del r
+    del theta
+    
+    for l in range(len(cyls)):
+        R = np.array([x - cyls[l].pos[0], y - cyls[l].pos[1]])
+        for j in range(2*Nmodes + 1):
+            idxa = np.arange(-Nmodes, Nmodes+1)
+            u_sc += cs[lengths[l] + j]*phi(idxa[j], R, k)
+
+    #note: need to zero out inside circle
+    return u_sc
+
 errs = []
+tmaterr = []
 u_sctmp = 1j*np.zeros(tds.u_sc.shape)
 for k in tds.ks:
     idx = np.where(tds.ks == k)[0][0]
     kr = k.real
     ki = k.imag
+    
     fstr = f'tmatrix_{geometry}_alpert{alpertorder}_kr{kr}_ki{ki}_Npoints{Npoints}_Nmodes{Nmodes}.dat'
     fname = os.path.join('/home/nick/scattering/tmatrix/data/', fstr)
     Tfile = np.loadtxt(fname, dtype=np.complex128)# this is the same for all circles
+    Tfn = make_tmat(k)
+    tmaterr += [np.amax(np.abs(Tfile - Tfn))]
     
+    # make RHS data from z-transform data
     rhs = tds.rhsmat[np.where(k == tds.ks)[0][0]]
+    for l in range(len(cyls)):
+        for j in range(2*Nmodes + 1):
+            idxa = np.arange(-Nmodes, Nmodes+1)
+            rhs[lengths[l] + j] = rhs[lengths[l] + j]/jmode(cyls[l], idxa[j], k) # d coefficients
+        rhs[lengths[l]:lengths[l]+2*Nmodes + 1] = -Tfile @ rhs[lengths[l]:lengths[l]+2*Nmodes + 1]
     
-    # make RHS data
     sc = scattering(cyls, np.zeros(len(cyls)*21), k=k, sum_index=10, method='explicit', use_reduced_system=False)
     
     A = sc.make_scattering_blocks() # regular matrix, not using T matrix data
@@ -104,11 +151,23 @@ for k in tds.ks:
     #make the same using the T-matrix data
     B = make_scattering_blocks_blockform(Tfile, k)
     xt = np.linalg.solve(B, rhs)
+    u_sctmp[..., idx] = make_u_sc(x, y, xt)
     
     tmp = np.max(np.abs(xact-xt))
     errs += [tmp]
     print(tmp)
 
-#%%    
-plt.loglog(np.abs(tds.ks), errs)
+#copy conjugates
+for n in range((2**Nt)//2):
+    u_sctmp[..., -1-n] = u_sctmp[..., n+1].conjugate()
     
+#assign to tds u_sc
+tds.u_sc = u_sctmp
+Utmat = tds.make_U_sc(x, y)
+#%%    
+# plt.loglog(np.abs(tds.ks), errs)
+# plt.show()
+# plt.loglog(np.abs(tds.ks), tmaterr)
+plt.plot(tds.times, Uref[0, :])
+plt.plot(tds.times, Utmat[0, :])
+print(np.max(np.abs(Uref[0, :] - Utmat[0, :])))

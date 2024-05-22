@@ -11,6 +11,7 @@ import copy
 import gc
 import uuid
 from Ncyl.scython.wrapper import PyScat
+import os
 #from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
 
 class cyl:
@@ -35,7 +36,7 @@ class cyl:
     def get_label(self):
         return self.label
 
-class scattering(cyl):
+class freq_domain_scattering(cyl):
     
     '''
     Class to solve the Helmholtz equation for an
@@ -45,16 +46,15 @@ class scattering(cyl):
     
     def __init__(
             self, 
-            cyls, 
-            rhs,
+            scats, 
+            rhs_cyl,
+            k = 1,
             sum_index = None,
             sum_tol = 1e-10,
             gmres_tol = 1e-10,
             rhs_tol = 1e-10,
             mat_tol = 1e-10,
-            k = 1,
             wavespeed = 1,
-            inc_angle = np.pi,
             precond = None,
             precond_dist = 0,
             precond_matrix = None,
@@ -68,15 +68,14 @@ class scattering(cyl):
             fast_matrix_build = True,
             use_2cyl_modes = False,
             use_foldy_lax = False,
-            balanced_system=True,
             save_coeffs = False,
             use_cpp = False,
             use_cython=False,
-            use_reduced_system = True
+            use_reduced_system = True,
+            tmatrix_path = '/home/nick/scattering/tmatrix/data/'
             ):
  
-        self.cyls = cyls
-        self.rhs = rhs
+        self.scats = scats
 
         #self.labels = np.arange(len(self.cyls))
         self.labels = np.array([c.label for c  in self.cyls])
@@ -84,7 +83,6 @@ class scattering(cyl):
 
         self.wavespeed = wavespeed
         self.k = k/self.wavespeed
-        self.inc_angle = inc_angle
         self.gmres_tol = gmres_tol
         self.gmres_restart = gmres_restart
         self.rhs_tol = rhs_tol
@@ -96,7 +94,6 @@ class scattering(cyl):
         self.fast_matrix_build = fast_matrix_build
         self.use_2cyl_modes = use_2cyl_modes
         self.fl = use_foldy_lax
-        self.balanced_system = balanced_system
         self.save_coeffs = save_coeffs
         self.use_cpp = use_cpp
         self.use_cython = use_cython
@@ -158,16 +155,11 @@ class scattering(cyl):
             if self.fl:
                 self.lengths = np.arange(len(self.cyls))
             else:
-                if self.balanced_system:
-                    self.lengths[i+1] = 2*self.cyls[i].sum_index + 1 + self.lengths[i]
-                else:
-                    self.lengths[i+1] = 2*self.cyls[i].sum_index + self.lengths[i]
+                self.lengths[i+1] = 2*self.cyls[i].sum_index + 1 + self.lengths[i]
         
-        if self.balanced_system:
-            self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index + 1 for l in self.labels]))
-        else:
-            self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index for l in self.labels]))
-       
+        #dimension of the scattering matrix
+        self.scat_matrix_dim = int(np.sum([2*self.cyls[l].sum_index + 1 for l in self.labels]))
+
         # default gmres to unrestarted (restart = dim of matrix)
         if self.gmres_restart is None:
             self.gmres_restart = self.scat_matrix_dim
@@ -185,20 +177,14 @@ class scattering(cyl):
         
         self.u_sc = None
         
-        self.rhs = np.array(self.rhs, dtype=np.complex128)
-        if not self.use_reduced_system:
-            #divide the rhs blocks by hankel functions, depending on the boundary conditions
-            for l in self.labels:
-                if self.balanced_system:
-                    for j in range(2*self.cyls[l].sum_index + 1):
-                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index+1)
-                        self.rhs[self.lengths[l] + j] = self.rhs[self.lengths[l] + j]/self.hmode(self.cyls[l], idxa[j])
-                else:
-                    for j in range(2*self.cyls[l].sum_index):
-                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
-                        self.rhs[self.lengths[l] + j] = self.rhs[self.lengths[l] + j]/self.hmode(self.cyls[l], idxa[j])
-            self.rhs = np.nan_to_num(self.rhs, copy=False)
-            
+        # assume the rhs is on the boundary of a circle
+        # divide the rhs blocks by bessel functions, depending on the boundary conditions
+        for l in self.labels:
+            for j in range(2*self.cyls[l].sum_index + 1):
+                idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index+1)
+                rhs_cyl[self.lengths[l] + j] = rhs_cyl[self.lengths[l] + j]/self.jmode(self.cyls[l], idxa[j])
+        #self.rhs = np.nan_to_num(self.rhs, copy=False)
+        self.rhs = np.array(rhs_cyl, dtype=np.complex128)
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -206,23 +192,23 @@ class scattering(cyl):
     def polar_to_cart(self, v):
         return (v[0]*np.cos(v[1]), v[0]*np.sin(v[1]))
 
-    def phi(self, n, v):
+    def psi(self, n, v):
         # v is in cartesian coords
         r, theta = self.cart_to_polar(v)
         return hankel1(n, self.k*r)*np.exp(1j*n*theta)
 
-    def phihat(self, n, v):
+    def psihat(self, n, v):
         # v s in cartesian coords
         r, theta = self.cart_to_polar(v)
         return jv(n, self.k*r)*np.exp(1j*n*theta)
 
     def S(self, m, n, v):
         # v is in cartesian coords
-        return self.phi(m-n, v)
+        return self.psi(m-n, v)
 
     def Shat(self, m, n, v):
         # v is in cartesian coords
-        return self.phihat(m-n, v)
+        return self.psihat(m-n, v)
     
     def jmode(self, cyl, m):
         bc = cyl.bc
@@ -239,63 +225,10 @@ class scattering(cyl):
             print('invalid bc')
         
         return st
-    
-    def hmode(self, cyl, m):
-        bc = cyl.bc
-        radius = cyl.radius
-        
-        if bc == 'd':
-            st = hankel1(m, self.k*radius)
-        elif bc == 'n':
-            st = self.k*h1vp(m, self.k*radius)
-        elif bc == 'i':
-            imp = cyl.impedance(self.k)
-            st = self.k*(h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
-        else:
-            print('invalid bc')
-        
-        return st
-    
-    def jh(self, cyl, m):
-        return self.jmode(cyl, m)/self.hmode(cyl, m)
-    
-    def dirichlet_asymptotic(self, cyl, n, m, b, theta):
-        k = self.k
-        a = cyl.radius
-        return np.exp(-1j*n*np.pi/2) \
-            *(np.exp(1j*(k*(a+b)-np.pi/2)) + np.exp(1j*(k*(b-a) + m*np.pi))) \
-            /(np.pi*k*np.sqrt(a*b)) \
-            *np.exp(1j*(n-m)*theta)
-            
-    def neumann_asymptotic(self, cyl, n, m, b, theta):
-        k = self.k
-        a = cyl.radius
-        return k*1j*np.exp(-1j*n*np.pi/2) \
-            *(np.exp(1j*(k*(a+b)-np.pi/2)) - np.exp(1j*(k*(b-a) + m*np.pi))) \
-            /(np.pi*k*np.sqrt(a*b)) \
-            *np.exp(1j*(n-m)*theta)
             
     def mulscat_term(self, cyl_p, n, m, b, cyl_q=None):
-        if self.use_reduced_system:
-            return self.jmode(cyl_p, m)*self.S(n, m, b)/self.hmode(cyl_q, n)
-        else:
-            tmp = self.jh(cyl, m)*self.S(n, m, b)
-            if not np.isfinite(tmp):
-                # TODO: the asymptotics here are not correct if dividing by hankel1
-                # k = self.k
-                # a = cyl.radius
-                # b, theta = self.cart_to_polar(b)
-                # if cyl.bc == 'd':
-                #     return self.dirichlet_asymptotic(cyl, n, m, b, theta)
-                # elif cyl.bc == 'n':
-                #     return self.neumann_asymptotic(cyl, n, m, b, theta)
-                # elif cyl.bc == 'i':
-                #     imp = cyl.impedance(k)
-                #     return (self.neumann_asymptotic(cyl, n, m, b, theta) -\
-                #               1j*k*imp*self.dirichlet_asymptotic(cyl, n, m, b, theta))
-                return 0
-            return tmp
-        
+        return self.jmode(cyl_p, m)*self.S(n, m, b)/self.hmode(cyl_q, n)
+
     def directscat_term(self, cyl, m):
         return np.eye(2*cyl.sum_index + 1)
 
@@ -321,12 +254,10 @@ class scattering(cyl):
             cyl_i = self.cyls[i]
             cyl_sc = self.cyls[sc]
             b = cyl_i.pos - cyl_sc.pos
-            if self.balanced_system:
-                idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
-                idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)[::-1]
-            else:
-                idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
-                idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)[::-1]
+
+            idxa_p = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
+            idxd_q = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)[::-1]
+
             jS1 = [self.S(n, idxa_p[0], b) for n in idxd_q]
             jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
             return np.hstack((jS1, jS2))
@@ -358,6 +289,13 @@ class scattering(cyl):
                 )
         return self.CT
     
+    def load_tmatrix(self):
+        # search through folder for matching file names
+        nms = {s.name for s in self.scats}
+        
+        # load all relevant files
+        pass
+    
     def make_all_data(self):
         if self.method=='explicit':
             self.make_root_matrix()
@@ -379,14 +317,9 @@ class scattering(cyl):
         # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
       
         b = cyl_i.pos - cyl_sc.pos
-        if self.balanced_system:
-            scm = 1j*np.zeros((2*cyl_i.sum_index + 1, 2*cyl_sc.sum_index + 1))
-            idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
-            idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)
-        else:
-            scm = 1j*np.zeros((2*cyl_i.sum_index, 2*cyl_sc.sum_index))
-            idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index)
-            idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index)
+        scm = 1j*np.zeros((2*cyl_i.sum_index + 1, 2*cyl_sc.sum_index + 1))
+        idxa_i = np.arange(-cyl_i.sum_index, cyl_i.sum_index+1)
+        idxa_sc = np.arange(-cyl_sc.sum_index, cyl_sc.sum_index+1)
 
         for i in range(len(idxa_i)):
             for j in range(len(idxa_sc)):
@@ -401,12 +334,10 @@ class scattering(cyl):
         rv = self.make_root_vect_1cyl(cyl_i.label, cyl_sc.label)
         Nq = cyl_sc.sum_index
         Np = cyl_i.sum_index
-        if self.balanced_system:
-            col = np.flip(rv[:2*Nq+1])
-            row = rv[2*Nq:]
-        else:
-            col = np.flip(rv[:2*Nq])
-            row = rv[2*Nq-1:]
+        
+        col = np.flip(rv[:2*Nq+1])
+        row = rv[2*Nq:]
+
         S = toeplitz(row, col)
         if self.use_reduced_system:
             J = np.diag(self.jm[cyl_i.label])
@@ -453,16 +384,11 @@ class scattering(cyl):
         if self.jhm is None:
             self.jhm = [None for p in self.labels]
             for p in self.labels:
-                if self.balanced_system:
-                    idxa_p = np.arange(
-                        -self.cyls[p].sum_index, 
-                        self.cyls[p].sum_index+1
-                        )
-                else:
-                    idxa_p = np.arange(
-                        -self.cyls[p].sum_index, 
-                        self.cyls[p].sum_index
-                        )
+                idxa_p = np.arange(
+                    -self.cyls[p].sum_index, 
+                    self.cyls[p].sum_index+1
+                    )
+
                 self.jhm[p] = self.jh(self.cyls[p], idxa_p)
         return self.jhm
     
@@ -470,16 +396,11 @@ class scattering(cyl):
         if self.jm is None:
             self.jm = [None for p in self.labels]
             for p in self.labels:
-                if self.balanced_system:
-                    idxa_p = np.arange(
-                        -self.cyls[p].sum_index, 
-                        self.cyls[p].sum_index+1
-                        )
-                else:
-                    idxa_p = np.arange(
-                        -self.cyls[p].sum_index, 
-                        self.cyls[p].sum_index
-                        )
+                idxa_p = np.arange(
+                    -self.cyls[p].sum_index, 
+                    self.cyls[p].sum_index+1
+                    )
+
                 self.jm[p] = self.jmode(self.cyls[p], idxa_p)
         return self.jm
     
@@ -487,16 +408,11 @@ class scattering(cyl):
         if self.hm is None:
             self.hm = [None for p in self.labels]
             for p in self.labels:
-                if self.balanced_system:
-                    idxa_p = np.arange(
-                        -self.cyls[p].sum_index, 
-                        self.cyls[p].sum_index+1
-                        )
-                else:
-                    idxa_p = np.arange(
-                        -self.cyls[p].sum_index, 
-                        self.cyls[p].sum_index
-                        )
+                idxa_p = np.arange(
+                    -self.cyls[p].sum_index, 
+                    self.cyls[p].sum_index+1
+                    )
+
                 self.hm[p] = self.hmode(self.cyls[p], idxa_p)
         return self.hm
     
@@ -719,22 +635,14 @@ class scattering(cyl):
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
             if self.fl:
-                u_sc += cs[self.lengths[l]]*self.phi(0, R)
+                u_sc += cs[self.lengths[l]]*self.psi(0, R)
             else:
-                if self.balanced_system:
-                    for j in range(2*self.cyls[l].sum_index + 1):
-                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index+1)
-                        if self.use_reduced_system:
-                            u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)/self.hmode(self.cyls[l], idxa[j])
-                        else:
-                            u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
-                else:
-                    for j in range(2*self.cyls[l].sum_index):
-                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index)
-                        if self.use_reduced_system:
-                            u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)/self.hmode(self.cyls[l], idxa[j])
-                        else:
-                            u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
+                for j in range(2*self.cyls[l].sum_index + 1):
+                    idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index+1)
+                    if self.use_reduced_system:
+                        u_sc += cs[self.lengths[l] + j]*self.psi(idxa[j], R)/self.hmode(self.cyls[l], idxa[j])
+                    else:
+                        u_sc += cs[self.lengths[l] + j]*self.psi(idxa[j], R)
 
         self.u_sc = u_sc*self.mask(x,y)
         if self.save_coeffs:
@@ -755,7 +663,7 @@ class scattering(cyl):
             mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         return mask
   
-class time_domain_scattering(scattering):
+class time_domain_scattering(freq_domain_scattering):
     def __init__(self,
                  cyls,
                  waveform,
@@ -770,7 +678,6 @@ class time_domain_scattering(scattering):
                  use_conj=True,
                  use_foldy_lax=False,
                  timeint=None,
-                 balanced_system=True, 
                  use_disk=False,
                  save_coeffs = False,
                  use_cpp = False,
@@ -796,7 +703,6 @@ class time_domain_scattering(scattering):
         self.use_conj = use_conj
         self.fl = use_foldy_lax
         self.timeint = timeint
-        self.balanced_system = balanced_system
         self.use_disk = use_disk
         self.save_coeffs = save_coeffs
         self.coeff_mat = None
@@ -811,7 +717,9 @@ class time_domain_scattering(scattering):
             i+=1
             
         self.labels = [c.label for c in self.cyls]
-            
+        
+        self.u_sc = None # initialize to prevent repeat computations
+        
         self.init_vars()
         
     def init_vars(self):
@@ -936,10 +844,9 @@ class time_domain_scattering(scattering):
     
     def td_bdy(self, cyl, c=0):
         bc = cyl.bc
-        if self.balanced_system:
-            n = 2*self.modes + 1
-        else:
-            n = 2*self.modes
+
+        n = 2*self.modes + 1
+
         N = len(self.times)
         r = cyl.radius
         p = np.array(cyl.pos)
@@ -988,10 +895,9 @@ class time_domain_scattering(scattering):
     
     def fd_bdy(self, cyl, coeffs):
         bc = cyl.bc
-        if self.balanced_system:
-            n = 2*self.modes + 1
-        else:
-            n = 2*self.modes
+
+        n = 2*self.modes + 1
+
         N = len(self.times)
         r = cyl.radius
         p = np.array(cyl.pos)
@@ -1069,10 +975,7 @@ class time_domain_scattering(scattering):
     
     def fourier_coeffs_bdy(self, v):
         #project the vector onto the fourier basis using ffts
-        if self.balanced_system:
-            n = 2*self.modes + 1
-        else:
-            n = 2*self.modes
+        n = 2*self.modes + 1
         
         if self.use_conj:
             N = len(self.times)//2 +1
@@ -1307,13 +1210,12 @@ class time_domain_scattering(scattering):
             if np.linalg.norm(rhs) < self.fft_tol:
                 return 1j*np.zeros(x.shape)
             
-            sc = scattering(
+            sc = freq_domain_scattering(
                 copy.deepcopy(self.cyls), 
                 rhs, 
                 k=self.ks[idx],
                 use_foldy_lax = self.fl,
                 sum_index=self.modes,
-                balanced_system=self.balanced_system,
                 save_coeffs = self.save_coeffs,
                 use_cpp=self.use_cpp,
                 use_cython=self.use_cython,
@@ -1340,12 +1242,12 @@ class time_domain_scattering(scattering):
         else:
             #serial algorithm
             for i in range(len(self.ks)):
-                self.u_sc[:, :, i] = comp(i)
+                self.u_sc[..., i] = comp(i)
         
         #copy solutions as conjugates for negative frequency components
         if self.use_conj:
             for n in range(self.sampnum//2):
-                self.u_sc[:, :, -1-n] = self.u_sc[:, :, n+1].conjugate()
+                self.u_sc[..., -1-n] = self.u_sc[..., n+1].conjugate()
         
         return self.u_sc
     
@@ -1407,12 +1309,11 @@ class time_domain_scattering(scattering):
             if np.linalg.norm(rhs) < self.fft_tol:
                 wmat[i] = 1j*np.zeros(x.shape)
             else:
-                sc = scattering(
+                sc = freq_domain_scattering(
                         copy.deepcopy(self.cyls), 
                         rhs, 
                         k=ks[i],
                         sum_index=self.modes,
-                        balanced_system=self.balanced_system,
                         save_coeffs = self.save_coeffs,
                         use_cpp=self.use_cpp,
                         use_cython=self.use_cython,
@@ -1476,10 +1377,12 @@ class time_domain_scattering(scattering):
         
         if self.timeint is None:
             # BDF2
-            self.make_time_harmonic_soln(x, y)
+            if self.u_sc is None:
+                self.make_time_harmonic_soln(x, y)
         else:
             # IRK timestepping
-            self.make_time_harmonic_soln_highorder(x, y)
+            if self.u_sc is None:
+                self.make_time_harmonic_soln_highorder(x, y)
             
         if self.save_coeffs:
             self.use_coeffs = True
@@ -1538,7 +1441,7 @@ class time_domain_scattering(scattering):
         for i in range(len(self.times)):
             if self.waveform.src_type == 'planewave':
                 self.U[..., i] = self.U_sc[:, :, i] + \
-                    (scattering.mask(self, x, y)*\
+                    (freq_domain_scattering.mask(self, x, y)*\
                      self.waveform.td_wave(x, y, self.times[i]))
             else:
                 #point source wave
