@@ -10,6 +10,7 @@ class scatterer(ABC):
         self.label = 0
         self.pos = np.array(pos) # center position of the scatterer
         self.radius = radius #radius of the circle enclosing the scatterer
+        self.rotation = rotation #rotation angle of the scatterer
         self.bc = bc #boundary condition
         self.impedance = impedance #impedance is a function handle for \eta
         
@@ -58,10 +59,11 @@ class starfish(scatterer):
         super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
         
     def bdy(self, t):
-        r = lambda x : 9/10 - (1/9)*np.cos(5*x) #has a max distance of 1
+        #might change these coefficients to 4/5 and 1/5
+        r = lambda x : 4/5 - (1/5)*np.cos(5*(x-self.rotation)) #has a max distance of 1
         return self.radius*r(t)*np.array([np.cos(t), np.sin(t)])
     
     def dbdy(self, t):
-        r = lambda x : 9/10 - (1/9)*np.cos(5*x)
-        dr = lambda x : (5/9)*np.sin(5*x) 
+        r = lambda x : 4/5 - (1/5)*np.cos(5*(x-self.rotate))
+        dr = lambda x : np.sin(5*(x-self.rotation)) 
         return self.radius*(r(t)*np.array([-np.sin(t), np.cos(t)])+dr(t)*np.array([np.cos(t), np.sin(t)]))

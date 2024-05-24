@@ -35,10 +35,6 @@ def plot_cyls(cyls):
     plt.tight_layout()
     
     return fig, ax
-    #if fname is None:
-    #    plt.show()
-    #else:
-    #    plt.savefig(fname)
 
 def plot_cyls_pub(cyls):
     fig, ax = plt.subplots()

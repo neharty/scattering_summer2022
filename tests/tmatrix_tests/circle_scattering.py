@@ -11,11 +11,11 @@ from utils.plot_cyls import plot_cyls
 import os
 
 #initialize problem
-wv = gaussian_norm_width(width = 0.5, lag = 1)
+wv = gaussian_norm_width(width = 0.3, lag = 1)
 
-T = 40*np.pi
+T = 40
 Nt = 14
-cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
+cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
 
 tds = time_domain_scattering(
                              cyls,
@@ -28,11 +28,12 @@ tds = time_domain_scattering(
                              use_par=False,
                              scargs={'method':'explicit'}
                              )
+
+arr = [[k.real, k.imag] for k in tds.ks[:2**Nt//2]]
+np.savetxt(f'/home/nick/scattering/tests/tmatrix_tests/bdf2k_T{T}_Nt{Nt}.dat', arr)
+
 x, y = np.array([6]), np.array([0])
 Uref = tds.make_U_sc(x, y)
-#%%
-arr = [[k.real, k.imag] for k in tds.ks]
-np.savetxt(f'/home/nick/scattering/tests/tmatrix_tests/bdf2k_T{T}_Nt{Nt}.dat', arr)
 
 # %%
 # solve the system using T-matrix methods
@@ -129,11 +130,12 @@ for k in tds.ks:
     kr = k.real
     ki = k.imag
     
-    fstr = f'tmatrix_{geometry}_alpert{alpertorder}_kr{kr}_ki{ki}_Npoints{Npoints}_Nmodes{Nmodes}.dat'
+    fstr = f'tmatrix_{geometry}_alpert{alpertorder}_kr{kr}_ki{ki}_Npoints{Npoints}_Nmodes20.dat'
     fname = os.path.join('/home/nick/scattering/tmatrix/data/', fstr)
     Tfile = np.loadtxt(fname, dtype=np.complex128)# this is the same for all circles
     Tfn = make_tmat(k)
-    tmaterr += [np.amax(np.abs(Tfile - Tfn))]
+    Tmatrix = Tfile[20-Nmodes:20-Nmodes + 2*Nmodes+1, 20-Nmodes:20-Nmodes + 2*Nmodes+1]
+    tmaterr += [np.amax(np.abs(Tmatrix - Tfn))]
     
     # make RHS data from z-transform data
     rhs = tds.rhsmat[np.where(k == tds.ks)[0][0]]
@@ -141,26 +143,29 @@ for k in tds.ks:
         for j in range(2*Nmodes + 1):
             idxa = np.arange(-Nmodes, Nmodes+1)
             rhs[lengths[l] + j] = rhs[lengths[l] + j]/jmode(cyls[l], idxa[j], k) # d coefficients
-        rhs[lengths[l]:lengths[l]+2*Nmodes + 1] = -Tfile @ rhs[lengths[l]:lengths[l]+2*Nmodes + 1]
+        rhs[lengths[l]:lengths[l]+2*Nmodes + 1] = -Tmatrix @ rhs[lengths[l]:lengths[l]+2*Nmodes + 1]
     
-    sc = scattering(cyls, np.zeros(len(cyls)*21), k=k, sum_index=10, method='explicit', use_reduced_system=False)
+    #sc = scattering(cyls, np.zeros(len(cyls)*21), k=k, sum_index=10, method='explicit', use_reduced_system=False)
     
-    A = sc.make_scattering_blocks() # regular matrix, not using T matrix data
-    xact = np.linalg.solve(A, rhs)
+    # A = sc.make_scattering_blocks() # regular matrix, not using T matrix data
+    # xact = np.linalg.solve(A, rhs)
     
     #make the same using the T-matrix data
-    B = make_scattering_blocks_blockform(Tfile, k)
+    B = make_scattering_blocks_blockform(Tmatrix, k)
     xt = np.linalg.solve(B, rhs)
     u_sctmp[..., idx] = make_u_sc(x, y, xt)
     
-    tmp = np.max(np.abs(xact-xt))
-    errs += [tmp]
-    print(tmp)
+    # tmp = np.max(np.abs(xact-xt))
+    # errs += [tmp]
+    # print(tmp)
+    print(k)
 
+#%%
 #copy conjugates
 for n in range((2**Nt)//2):
     u_sctmp[..., -1-n] = u_sctmp[..., n+1].conjugate()
-    
+uerrs = np.abs(u_sctmp - tds.u_sc)
+print(np.max(uerrs))
 #assign to tds u_sc
 tds.u_sc = u_sctmp
 Utmat = tds.make_U_sc(x, y)
@@ -168,6 +173,11 @@ Utmat = tds.make_U_sc(x, y)
 # plt.loglog(np.abs(tds.ks), errs)
 # plt.show()
 # plt.loglog(np.abs(tds.ks), tmaterr)
-plt.plot(tds.times, Uref[0, :])
-plt.plot(tds.times, Utmat[0, :])
+plt.plot(tds.times, Uref[0, :], label='old code')
+plt.plot(tds.times, Utmat[0, :], '--', label='t-matrix')
+plt.legend()
+plt.xlabel('t')
+plt.ylabel('u_sc')
+plt.tight_layout()
+plt.savefig('/home/nick/scattering/tests/tmatrix_tests/circle_scattering_3x3.pdf')
 print(np.max(np.abs(Uref[0, :] - Utmat[0, :])))

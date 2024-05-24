@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz
 from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
 from integrators.alpert import alpert2, alpert6, alpert10, alpert16
-from scatterers import cyl
+from scatterers import cyl, starfish
 import argparse
 import os
 
@@ -13,6 +13,9 @@ class Tmatrix():
                  k,
                  alpertorder,
                  geometry,
+                 bc,
+                 radius,
+                 rotation,
                  Npoints, 
                  Nmodes,
                  dout):
@@ -35,8 +38,15 @@ class Tmatrix():
         self.Npoints = Npoints
         self.t = np.linspace(0, 2*np.pi, self.Npoints, False)
         self.h = 2*np.pi/self.Npoints
+        
         self.geometry = geometry # string name of scatterer geometry
-        self.scgeom = cyl('d', [0,0], 1) #hardcoded for the moment
+        self.bc = bc
+        self.radius = radius
+        self.rotation = rotation
+        if self.geometry == 'cyl':
+            self.scgeom = cyl('d', [0,0], self.radius) #hardcoded for the moment
+        elif self.geometry == 'starfish':
+            self.scgeom = starfish('d', [0,0], 1, 0)
         
         self.dout = dout
     
