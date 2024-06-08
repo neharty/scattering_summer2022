@@ -108,7 +108,7 @@ class gaussian_norm_width(gaussian):
                     time_shift=time_shift,
                     r0=r0,
                     src_type=src_type,
-                    sigma=(2*width)**2/np.log(2*amp), 
+                    sigma=(width/2)**2/np.log(2*amp), 
                     cutoff=cutoff,
                     amp=amp,
                     lag=lag

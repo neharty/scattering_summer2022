@@ -48,7 +48,7 @@ fprintf(1,'                        int_qq                   sum(qqsrc)\n');
 flag_pot = 'h6';
 
 %%% Create the "correction matrix" and the full matrix.
-[A,     C,xxsrc,xxtrg,curvelen] = LOCAL_construct_A_diag(ntot,nsrc,ntrg,kh,flag_geom,flag_pot);
+[A,     C,xxsrc,xxtrg,curvelen] = LOCAL_construct_A_diag(ntot, nsrc, ntrg, kh, flag_geom, flag_pot);
 params = [curvelen,kh];
 
 %%% Compute the Dirichlet data and the solution.

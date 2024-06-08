@@ -78,11 +78,12 @@ from Ncyl.cqm import cyl, scattering
 cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
 pos = [c.pos for c in cyls]
 
-from scatterers import cyl, starfish
+from scatterers import cyl, starfish, bean
 from utils.plot_scatterers import plot_scatterers
 
 rangs = np.random.uniform(0, 2*np.pi, len(cyls))
 print(rangs)
-scrs = [starfish('d', pos[i], 1, rangs[i]) for i in range(len(cyls))]
+scrs = [bean('d', pos[i], 1, -np.pi/4) for i in range(len(cyls))]
 fig, ax = plot_scatterers(scrs)
+#plt.savefig('/home/nick/3x3_starfish_geometry.pdf')
 plt.show()

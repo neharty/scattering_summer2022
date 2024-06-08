@@ -443,9 +443,9 @@ class scattering(cyl):
         else:
             self.scat_mat = np.block(self.make_scattering_blocks_blockform())
             
-        if not np.isfinite(self.scat_mat).all():
-            self.fast_matrix_build = False
-            self.scat_mat = self.make_scattering_blocks()
+        # if not np.isfinite(self.scat_mat).all():
+        #     self.fast_matrix_build = False
+        #     self.scat_mat = self.make_scattering_blocks()
 
         return self.scat_mat
     

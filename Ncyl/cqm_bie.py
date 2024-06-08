@@ -11,37 +11,41 @@ import copy
 import gc
 import uuid
 from Ncyl.scython.wrapper import PyScat
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 #from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
 
 @dataclass
 class freq_domain_scattering:
+    # ------ required args ------- #
     scats: object
     rhs_cyls: np.ndarray
     k: complex
-    sum_index: object = None,
-    sum_tol: float = 1e-10,
-    gmres_tol: float = 1e-10,
-    rhs_tol: float = 1e-10,
-    mat_tol: float = 1e-10,
-    wavespeed: float = 1,
-    pargs: dict = {},
-    make_scat_matrix: bool = False,
-    use_mat: bool = False, #changed to true
-    method: str = 'gmres',
-    force_method: bool = False,
-    gmres_restart: object = None,
-    gmres_maxiter: object = None,
-    fast_matrix_build: bool = True,
-    use_2cyl_modes: bool = False,
-    use_foldy_lax: bool = False,
-    save_coeffs: bool = False,
-    use_cpp: bool = False,
-    use_cython: bool=False,
+    sum_index: object = None
+    sum_tol: float = 1e-10
+    gmres_tol: float = 1e-10
+    rhs_tol: float = 1e-10
+    mat_tol: float = 1e-10
+    wavespeed: float = 1
+    pargs: dict = field(default_factory=dict)
+    make_scat_matrix: bool = False
+    use_mat: bool = False #changed to true
+    method: str = 'gmres'
+    force_method: bool = False
+    gmres_restart: object = None
+    gmres_maxiter: object = None
+    fast_matrix_build: bool = True
+    use_2cyl_modes: bool = False
+    use_foldy_lax: bool = False
+    save_coeffs: bool = False
+    use_cpp: bool = False
+    use_cython: bool=False
+    
+    # ----- Tmatrix args ------- #
     tmatrix_path: str = '/home/nick/scattering/tmatrix/data/'
     alpertorder: int = 6 #use 6th order by default
     Npoints: int = 500
+    save_Tmat = True
             
     def __post_init__(self):
         self.fl = self.use_foldy_lax
@@ -114,8 +118,6 @@ class freq_domain_scattering:
         if self.gmres_maxiter is None:
             self.gmres_maxiter = 1
         
-        
-        
         if self.make_scat_matrix:
             self.scat_mat = np.zeros((self.scat_matrix_dim, self.scat_matrix_dim))
             self.scat_mat = self.make_scattering_blocks()
@@ -148,20 +150,19 @@ class freq_domain_scattering:
         # v is in cartesian coords
         return self.psihat(m-n, v)
     
-    def jmode(self, cyl, m):
-        bc = cyl.bc
-        radius = cyl.radius
+    def jmode(self, scr, m):
+        bc = scr.bc
+        radius = scr.radius
         
         if bc == 'd':
             st = jv(m, self.k*radius)
         elif bc == 'n':
             st = self.k*jvp(m, self.k*radius)
         elif bc == 'i':
-            imp = cyl.impedance(self.k)
+            imp = scr.impedance(self.k)
             st = self.k*(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))
         else:
-            print('invalid bc')
-        
+            print('invalid bc')  
         return st
 
     def directscat_term(self, cyl, m):
@@ -195,7 +196,8 @@ class freq_domain_scattering:
 
             jS1 = [self.S(n, idxa_p[0], b) for n in idxd_q]
             jS2 = [self.S(idxd_q[-1], n, b) for n in idxa_p[1:]]
-            return np.hstack((jS1, jS2))
+            #return np.hstack((jS1, jS2))
+            return np.array(jS1 + jS2)
     
     def make_circulant_root_1cyl(self, i, sc):
         STtmp = self.make_root_vect_1cyl(i, sc)
@@ -238,33 +240,41 @@ class freq_domain_scattering:
                 self.tdict[key]
             except KeyError:
                 #if not already loaded, then load the tmatrix file
-                kr = self.k.real[0]
-                ki = self.k.imag[0]
-                print(kr, ki)
-                #NOTE: need to include radius in these names
-                fstr = f'tmatrix_{geometry}_alpert{self.alpertorder}_kr{kr}_ki{ki}_Npoints{self.Npoints}_Nmodes20.dat' 
+                kr = self.k.real
+                ki = self.k.imag
+                fstr = f'tmatrix_{geometry}_bc-{s.bc}_radius{s.radius}_alpert{self.alpertorder}_kr{kr}_ki{ki}_Npoints{self.Npoints}_Nmodes20.dat' 
                 #t matrices are defined by their scatterer type and radius
-                tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
+                
+                try:
+                    tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
+                except FileNotFoundError:
+                    #if the file doesn't exist, then generate it and save it
+                    from tmatrix.scripts.generate_tmatrix import Tmatrix
+                    tmx = Tmatrix(self.k, self.alpertorder, geometry, s.bc, radius, self.Npoints, 20)
+                    T = tmx.make_tmatrix()
+                    if self.save_Tmat:
+                        np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
+                    tmattmp = T
+                
                 self.tdict[key] = tmattmp[20-self.sum_index:20-self.sum_index + 2*self.sum_index+1, 20-self.sum_index:20-self.sum_index + 2*self.sum_index+1]
-            self.rotmats[s] = np.array([[np.exp(1j*(m - n)*s.rotation) for n in idxa] for m in idxa])
+            self.rotmats[s] = np.array([[np.exp(1j*(n-m)*s.rotation) for n in idxa] for m in idxa])
     
     def make_rhs_data(self):
         # assume the rhs is on the boundary of a circle
         # divide the rhs blocks by bessel functions, depending on the boundary conditions
+        self.rhs = np.zeros(len(self.rhs_cyls), dtype = np.complex128)
         for s in self.scats:
             l = s.label
             for j in range(2*self.scats[l].sum_index + 1):
                 idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
-                self.rhs_cyls[self.lengths[l] + j] = self.rhs_cyls[self.lengths[l] + j]/self.jmode(self.scats[l], idxa[j])
+                self.rhs[self.lengths[l] + j] = self.rhs_cyls[self.lengths[l] + j]/self.jmode(self.scats[l], idxa[j])
             Tmat = self.tdict[(s.name, s.radius)]
             Rmat = self.rotmats[s]
-            self.rhs_cyls[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1] = -(Rmat*Tmat) @ self.rhs_cyls[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1]
-        #self.rhs = np.nan_to_num(self.rhs, copy=False)
-        self.rhs = np.array(self.rhs_cyls, dtype=np.complex128)
+            self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1] = -(Rmat*Tmat) @ self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1]
     
     def make_all_data(self):
         if self.method=='explicit':
-            #self.make_root_matrix()
+            self.make_root_matrix()
             self.load_tmatrix_data()
             self.make_rhs_data()
         else:
@@ -295,19 +305,11 @@ class freq_domain_scattering:
     def make_mul_scattering_block_root(self, sc_i, sc_sc):
         rv = self.make_root_vect_1cyl(sc_i.label, sc_sc.label)
         Nq = sc_sc.sum_index
-        Np = sc_i.sum_index
         
         col = np.flip(rv[:2*Nq+1])
         row = rv[2*Nq:]
 
         S = toeplitz(row, col)
-        # if self.use_reduced_system:
-        #     J = np.diag(self.jm[cyl_i.label])
-        #     Hinv = np.diag(1/self.hm[cyl_sc.label])
-        #     return J @ S @ Hinv
-        # else:
-        #     D = np.diag(self.jhm[cyl_i.label])
-        #     return D @ S
         Tmat = self.tdict[(sc_i.name, sc_i.radius)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ S
@@ -338,10 +340,6 @@ class freq_domain_scattering:
                         self.scat_mat[i][j] = self.mulscat_term(self.scats[j], 0, 0, b)
         else:
             self.scat_mat = np.block(self.make_scattering_blocks_blockform())
-            
-        # if not np.isfinite(self.scat_mat).all():
-        #     self.fast_matrix_build = False
-        #     self.scat_mat = self.make_scattering_blocks()
         return self.scat_mat
        
     def circulant_mvp(self, r, x):
@@ -515,15 +513,11 @@ class freq_domain_scattering:
     def scattering_coeffs_explicit(self):
         #check if rhs is zero-ish
         if np.max(np.abs(self.rhs)) < self.rhs_tol:
-            return np.zeros(len(self.rhs))
+            return np.zeros(len(self.rhs_cyls))
         
         if self.scat_mat is None:
             self.make_all_data()
             self.scat_mat = self.make_scattering_blocks()
-
-        # if not np.isfinite(self.scat_mat).all():
-        #     self.fast_matrix_build = False
-        #     self.scat_mat = self.make_scattering_blocks()
         
         try:
             soln = np.linalg.solve(self.scat_mat, self.rhs)
@@ -534,6 +528,7 @@ class freq_domain_scattering:
         return soln
     
     def scattering_coeffs(self):
+        self.make_all_data()
         if self.method == 'gmres':
             return self.scattering_coeffs_gmres()
             
@@ -588,52 +583,36 @@ class freq_domain_scattering:
             mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         return mask
   
-class time_domain_scattering(freq_domain_scattering):
-    def __init__(self,
-                 cyls,
-                 waveform,
-                 end_time,
-                 fft_tol = 1e-10,
-                 sampnum = None,
-                 modes = None,
-                 mode_start=1,
-                 mode_tol=1e-10,
-                 use_par=True,
-                 cpus=None,
-                 use_conj=True,
-                 use_foldy_lax=False,
-                 timeint=None,
-                 use_disk=False,
-                 save_coeffs = False,
-                 use_cpp = False,
-                 use_cython = False,
-                 wvargs={},
-                 scargs={}
-                 ):
-        self.cyls = cyls
-        self.waveform = waveform
+@dataclass
+class time_domain_scattering:
+    cyls: object
+    waveform: object
+    end_time: float
+    fft_tol: float = 1e-10
+    sampnum: int = -1
+    modes: int = -1
+    mode_start: int = 1
+    mode_tol: float = 1e-10
+    use_par: bool = True
+    cpus: int = -1
+    use_conj: bool = True
+    use_foldy_lax: bool= False
+    timeint: object = None
+    use_disk: bool = False
+    save_coeffs: bool = False
+    use_cpp: bool = False
+    use_cython: bool = False
+    wvargs: dict = field(default_factory=dict)
+    scargs: dict = field(default_factory=dict)
+  
+    def __post_init__(self):
+        self.fl = self.use_foldy_lax
         self.wvp = self.waveform.profile
-        self.end_time = end_time
-        self.fft_tol = fft_tol
         self.fftidx = []
-        self.sampnum = sampnum
-        self.modes = modes
-        self.mode_start = mode_start
-        self.mode_tol = mode_tol
-        self.use_par = use_par
-        self.cpus = cpus
-        if self.cpus is None:
+        if self.cpus < 0:
            self.cpus = cpu_count()
-        self.scargs = scargs
-        self.use_conj = use_conj
-        self.fl = use_foldy_lax
-        self.timeint = timeint
-        self.use_disk = use_disk
-        self.save_coeffs = save_coeffs
         self.coeff_mat = None
         self.use_coeffs = False #changed automatically after 1 computation is done
-        self.use_cpp = use_cpp
-        self.use_cython = use_cython
         
         # create 0-indexed labels for cylinders
         i = 0

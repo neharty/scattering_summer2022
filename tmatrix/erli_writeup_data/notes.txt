@@ -1,0 +1,3 @@
+the purpose of this folder is to determine whether or not there is an error in Erli's writeup, and therefore his implementation
+
+

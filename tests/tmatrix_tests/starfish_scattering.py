@@ -14,7 +14,7 @@ wv = gaussian_norm_width(width = 0.3, lag = 1)
 
 T = 40
 Nt = 14
-cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
+cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
 
 tds = time_domain_scattering(
                              cyls,
@@ -49,9 +49,9 @@ rangs = [3.36807,
          2.46758,
          5.59026,
          0.00585577]
-from scatterers import cyl, starfish
+from scatterers import cyl, starfish, bean
 from utils.plot_scatterers import plot_scatterers
-geometry = 'starfish'
+geometry = 'starfish'                #NOTE: need                 #NOTE: need to include radius in these namesto include radius in these names
 scrs = [starfish('d', pos[i], 1, rangs[i]) for i in range(len(cyls))]
 
 fig, ax = plot_scatterers(scrs)
@@ -148,14 +148,14 @@ u_sctmp = 1j*np.zeros(tds.u_sc.shape)
 idxa = np.arange(-Nmodes, Nmodes+1)
 rotmats = []
 for l in range(len(cyls)):
-    rotmats += [np.array([[np.exp(1j*(m - n)*rangs[l]) for n in idxa] for m in idxa])]
+    rotmats += [np.array([[np.exp(1j*(n-m)*rangs[l]) for n in idxa] for m in idxa])]
     
 for k in tds.ks:
     idx = np.where(tds.ks == k)[0][0]
     kr = k.real
     ki = k.imag
     
-    fstr = f'tmatrix_{geometry}_alpert{alpertorder}_kr{kr}_ki{ki}_Npoints{Npoints}_Nmodes20.dat'
+    fstr = f'tmatrix_{geometry}_bc-d_radius1_alpert{alpertorder}_kr{kr}_ki{ki}_Npoints{Npoints}_Nmodes20.dat'
     fname = os.path.join('/home/nick/scattering/tmatrix/data/', fstr)
     Tfile = np.loadtxt(fname, dtype=np.complex128)# this is the same for all circles
     Tfn = make_tmat(k)
@@ -163,7 +163,8 @@ for k in tds.ks:
     tmaterr += [np.amax(np.abs(Tmatrix - Tfn))]
     
     # make RHS data from z-transform data
-    rhs = tds.rhsmat[np.where(k == tds.ks)[0][0]]
+    rhsstart = tds.rhsmat[np.where(k == tds.ks)[0][0]]
+    rhs = rhsstart
     for l in range(len(cyls)):
         for j in range(2*Nmodes + 1):
             idxa = np.arange(-Nmodes, Nmodes+1)
@@ -175,6 +176,11 @@ for k in tds.ks:
     xt = np.linalg.solve(B, rhs)
     u_sctmp[..., idx] = make_u_sc(x, y, xt)
     print(k)
+    
+    if idx == 0:
+        rhs0 = rhs
+        rhsstart0 = rhsstart
+        B0 = B
 
 #copy conjugates
 for n in range((2**Nt)//2):

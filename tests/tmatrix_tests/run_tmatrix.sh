@@ -1,2 +1,7 @@
-#python3 /home/nick/scattering/tmatrix/scripts/run_generate_tmatrix.py 6 cyl /home/nick/scattering/tests/tmatrix_tests/bdf2k_T40_Nt14.dat 500 20 100 /home/nick/scattering/tmatrix/data/
-python3 /home/nick/scattering/tmatrix/scripts/run_generate_tmatrix.py 6 starfish /home/nick/scattering/tests/tmatrix_tests/bdf2k_T40_Nt14.dat 500 20 100 /home/nick/scattering/tmatrix/data/
+for bc in n d
+do
+for shape in starfish
+do
+    python3 /home/nick/scattering/tmatrix/scripts/run_generate_tmatrix.py 6 ${shape} /home/nick/scattering/tests/tmatrix_tests/bdf2k_T40_Nt15.dat ${bc} 1 64 20 120 0 /home/nick/scattering/tmatrix/data/
+done
+done

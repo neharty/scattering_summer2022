@@ -690,9 +690,9 @@ class scattering(cyl):
         rhs=self.make_rhs_vector()
         if np.max(np.abs(rhs)) < self.rhs_tol:
             if self.method == 'gmres':
-                return 1j*(np.zeros(rhs.shape), 0)
+                return (np.zeros(rhs.shape, dtype=np.complex128), 0) #solution with exit code
             elif self.method == 'explicit':
-                return 1j*np.zeros(rhs.shape)
+                return np.zeros(rhs.shape, dtype=np.complex128)
         
         if self.method == 'gmres':
             #set the vectors for fast matrix multiplication
