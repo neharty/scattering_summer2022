@@ -75,15 +75,11 @@ from Ncyl.cqm import cyl, scattering
 # # fig, ax = plot_cyls(cyls)
 # # plt.show()
 
-cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
-pos = [c.pos for c in cyls]
-
+from utils import example_setups_bie
 from scatterers import cyl, starfish, bean
 from utils.plot_scatterers import plot_scatterers
-
-rangs = np.random.uniform(0, 2*np.pi, len(cyls))
-print(rangs)
-scrs = [bean('d', pos[i], 1, -np.pi/4) for i in range(len(cyls))]
+pos = example_setups_bie.random_circ_hex_vol_frac(10, 0.5, 0.3)
+scrs = example_setups_bie.set_scats(pos, 0.5, ['d', 'n'], 'random', 0, 'random', 'starfish', 'uniform')
 fig, ax = plot_scatterers(scrs)
 #plt.savefig('/home/nick/3x3_starfish_geometry.pdf')
 plt.show()

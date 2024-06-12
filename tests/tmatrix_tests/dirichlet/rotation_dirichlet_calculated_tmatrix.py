@@ -11,7 +11,7 @@ from utils.plot_cyls import plot_cyls
 from scatterers import cyl, starfish, leaf, bean, fat_starfish
 from utils.plot_scatterers import plot_scatterers
 #initialize problem
-wv = gaussian_norm_width(width = 1.2, lag = 1, inc_angle=np.pi)
+wv = gaussian_norm_width(width = 1.2, lag = 1, inc_angle=0)
 
 T = 40
 Nt = 15
@@ -22,13 +22,13 @@ pos = [c.pos for c in cyls]
 # rangs = np.random.uniform(0, np.pi, len(cyls))
 rangs = [np.pi/2 for c in cyls]
 
-scrs = [fat_starfish('d', pos[i], 1, rangs[i]) for i in range(len(cyls))]
+scrs = [fat_starfish('d', pos[i], 1, 0) for i in range(len(cyls))]
 from scatterers import cyl
 fig, ax = plot_scatterers(scrs, npts = 500)
 plt.show()
 tint = None
 
-#calculate using the rotation matrix
+#calculate without rotation matrices
 tds = time_domain_scattering(
                              scrs,
                              wv,
@@ -42,12 +42,37 @@ tds = time_domain_scattering(
                                      'Npoints': 64,
                                      'tmatrix_path':'/home/nick/scattering/tmatrix/data/'}
                              )
-measurepts = np.array([[-6.0,0.0],[-5.0,0.0],[-5.0,1.5],[-5.0,-1.5],[-1.5,0.0],[1.5,0.0],[5.0,0.0],[5.0,1.5],[5.0,-1.5],[6.0,0.0]])
+measurepts = np.array([[6.0,0.0], [0., 6.], [-6., 0.], [0., -6.]])
 x, y = measurepts[:, 0], measurepts[:, 1]
 U = tds.make_U_sc(x, y)
+
+#%%
+wv = gaussian_norm_width(width = 1.2, lag = 1, inc_angle=np.pi/2)
+scrs = [fat_starfish('d', pos[i], 1, np.pi/2) for i in range(len(cyls))]
+tint = None
+
+#calculate with rotation matrices
+tdsrm = time_domain_scattering(
+                             scrs,
+                             wv,
+                             T,
+                             sampnum=2**Nt,
+                             modes=12,
+                             timeint=tint,
+                             use_cython=False,
+                             use_par=False,
+                             scargs={'method':'explicit', 
+                                     'Npoints': 64,
+                                     'tmatrix_path':'/home/nick/scattering/tmatrix/data/'}
+                             )
+Urm = tdsrm.make_U_sc(x, y)
+
 #%%
 #calculate using the explicit tmatrix
+wv = gaussian_norm_width(width = 1.2, lag = 1, inc_angle=np.pi/2)
 scrs = [fat_starfish('d', pos[i], 1, 0) for i in range(len(cyls))]
+fig, ax = plot_scatterers(scrs, npts = 500)
+plt.show()
 tdsr = time_domain_scattering(
                              scrs,
                              wv,
@@ -64,22 +89,34 @@ tdsr = time_domain_scattering(
 Ur = tdsr.make_U_sc(x, y)
 
 #%%
-plt.plot(tds.times, U[0, :], label='rot mat')
-plt.plot(tdsr.times, Ur[0, :], label = 'expl tmat')
+plt.plot(tds.times, U[0, :], label='direct')
+plt.plot(tdsrm.times, Urm[1, :], label='rot mat')
+plt.plot(tdsr.times, Ur[1, :], label = 'expl tmat')
 plt.xlabel('t')
 plt.ylabel('u_sc')
 plt.legend()
 plt.tight_layout()
-print(np.amax(np.abs(U - Ur)))
+plt.show()
+print(np.max(np.abs(U[0, :] - Ur[1, :])))
 
-arr = np.zeros((len(tds.times), len(x)+1))
-for i in range(len(tds.times)):
-    arr[i, 0] = tds.times[i] 
-    arr[i, 1:] = U[:, i]
-np.savetxt('/home/nick/scattering/tests/tmatrix_tests/dirichlet/starfish_scattering_3x3_dirichlet_rotmat_pid2.dat', arr)
+plt.plot(tds.times, U[2, :], label='rot mat')
+plt.plot(tdsrm.times, Urm[3, :], label='rot mat')
+plt.plot(tdsr.times, Ur[3, :], label = 'expl tmat')
+plt.xlabel('t')
+plt.ylabel('u_sc')
+plt.legend()
+plt.tight_layout()
+plt.show()
+print(np.max(np.abs(U[2, :] - Ur[3, :])))
 
-arr = np.zeros((len(tds.times), len(x)+1))
-for i in range(len(tds.times)):
-    arr[i, 0] = tdsr.times[i] 
-    arr[i, 1:] = Ur[:, i]
-np.savetxt('/home/nick/scattering/tests/tmatrix_tests/dirichlet/starfish_scattering_3x3_dirichlet_expltmat_pid2.dat', arr)
+# arr = np.zeros((len(tds.times), len(x)+1))
+# for i in range(len(tds.times)):
+#     arr[i, 0] = tds.times[i] 
+#     arr[i, 1:] = U[:, i]
+# np.savetxt('/home/nick/scattering/tests/tmatrix_tests/dirichlet/starfish_scattering_3x3_dirichlet_rotmat_pid2.dat', arr)
+
+# arr = np.zeros((len(tds.times), len(x)+1))
+# for i in range(len(tds.times)):
+#     arr[i, 0] = tdsr.times[i] 
+#     arr[i, 1:] = Ur[:, i]
+# np.savetxt('/home/nick/scattering/tests/tmatrix_tests/dirichlet/starfish_scattering_3x3_dirichlet_expltmat_pid2.dat', arr)

@@ -39,12 +39,12 @@ class cyl(scatterer):
     '''
         cylinder, or circle, in the plane
     '''
-    def __init__(self, bc, pos, radius, sum_index = None, impedance = None):
+    def __init__(self, bc, pos, radius, rotation=0., sum_index = None, impedance = None):
         self.label = 0
         self.name = 'cyl'
         self.uid = None
         self.maxidx = np.inf
-        super().__init__(bc, pos, radius, 0, sum_index, impedance, self.uid, self.maxidx)
+        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
     
     def r(self, t):
         return 1.0

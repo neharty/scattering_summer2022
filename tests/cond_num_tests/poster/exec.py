@@ -102,7 +102,8 @@ tds = time_domain_scattering(
                         timeint=tint,
                         modes = args.Nmode
                         )
-tds.fzt_boundary_allcyls_highorder() #reduces the number of right hand sides
+tds.set_timeshift()
+tds.fzt_boundary_allcyls_highorder() # reduce the number of right hand sides
 
 condnum0cqs = []
 condnum1cqs = []
@@ -124,8 +125,11 @@ condnum1rku = []
 condnum2rku = []
 arrrku = []
 
+kall = 1j*tds.evals[:, :]/tds.dt
+print(kall.shape)
+
 for i in range(3):
-    ks = 1j*tds.evals[:, i]/tds.dt
+    ks = kall[:, i]
     for k in ks:
         print(i, k)
         #cq, scaled
@@ -156,6 +160,7 @@ for i in range(3):
             else:
                 condnum0cqu += [0]
         if i == 1:
+            A = sc.make_scattering_blocks()
             if np.isfinite(np.abs(A)).all():
                 condnum1cqu += [np.linalg.cond(A)]
             else:
@@ -171,10 +176,11 @@ for i in range(3):
         A = sc.make_scattering_blocks()
         if i == 0:
             if np.isfinite(np.abs(A)).all():
-                condnum0rks += [np.linalg.cond(A)]
+                condnum0rks += [0]#[np.linalg.cond(A)]
             else:
                 condnum0rks += [0]
         if i == 1:
+            A = sc.make_scattering_blocks()
             if np.isfinite(np.abs(A)).all():
                 condnum1rks += [np.linalg.cond(A)]
             else:
@@ -214,16 +220,16 @@ print('writing data')
 # save the data
 fname = 'condnum.dat'
 
-arrcqs = [[np.abs(ks[i, 0]), condnum0cqs[i], np.abs([i, 1]), condnum1cqs[i], np.abs(ks[i, 2]), condnum2cqs[i]] for i in range(len(ks))]
+arrcqs = [[np.abs(kall[i, 0]), condnum0cqs[i], np.abs(kall[i, 1]), condnum1cqs[i], np.abs(kall[i, 2]), condnum2cqs[i]] for i in range(len(ks))]
 np.savetxt(os.path.join(dataout, 'cq_scaled', fname), arrcqs)
 
-arrcqu = [[np.abs(ks[i, 0]), condnum0cqu[i], np.abs(ks[i, 1]), condnum1cqu[i], np.abs(ks[i, 2]), condnum2cqu[i]] for i in range(len(ks))]
+arrcqu = [[np.abs(kall[i, 0]), condnum0cqu[i], np.abs(kall[i, 1]), condnum1cqu[i], np.abs(kall[i, 2]), condnum2cqu[i]] for i in range(len(ks))]
 np.savetxt(os.path.join(dataout, 'cq_unscaled', fname), arrcqu)
 
-arrrks = [[np.abs(ks[i, 0]), condnum0rks[i], np.abs(ks[i, 1]), condnum1rks[i], np.abs(ks[i, 2]), condnum2rks[i]] for i in range(len(ks))]
+arrrks = [[np.abs(kall[i, 0]), condnum0rks[i], np.abs(kall[i, 1]), condnum1rks[i], np.abs(kall[i, 2]), condnum2rks[i]] for i in range(len(ks))]
 np.savetxt(os.path.join(dataout, 'real_k_scaled', fname), arrrks)
 
-arrrku = [[np.abs(ks[i, 0]), condnum0rku[i], np.abs(ks[i, 1]), condnum1rku[i], np.abs(ks[i, 2]), condnum2rku[i]] for i in range(len(ks))]
+arrrku = [[np.abs(kall[i, 0]), condnum0rku[i], np.abs(kall[i, 1]), condnum1rku[i], np.abs(kall[i, 2]), condnum2rku[i]] for i in range(len(ks))]
 np.savetxt(os.path.join(dataout, 'real_k_unscaled', fname), arrrku)
 
 # #copy the config file to the data output directory

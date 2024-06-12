@@ -21,9 +21,11 @@ pos = [c.pos for c in cyls]
 scrs = [fat_starfish('n', pos[i], 1, 0) for i in range(len(cyls))]
 from scatterers import cyl
 fig, ax = plot_scatterers(scrs, npts = 500)
+plt.tight_layout()
+plt.savefig('/home/nick/scattering/tests/tmatrix_tests/starfish_scattering_3x3.pdf')
 plt.show()
 tint = None
-
+#%%
 tds = time_domain_scattering(
                              scrs,
                              wv,
@@ -59,4 +61,3 @@ for i in range(len(tds.times)):
     arr[i, 0] = tds.times[i] 
     arr[i, 1:] = U[:, i]
 np.savetxt('/home/nick/scattering/tests/tmatrix_tests/neumann/starfish_scattering_3x3_neumann_fixed_rhs.dat', arr)
-#plt.savefig('/home/nick/scattering/tests/tmatrix_tests/starfish_scattering_3x3.pdf')

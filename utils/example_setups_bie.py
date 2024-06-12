@@ -7,7 +7,7 @@ import os
 from scatterers import cyl, starfish, fat_starfish
 from collections import deque
 
-def set_scats(pos, bc, radius, bcmode, rotation, rotmode, scatterer_type, scrmode, sum_num=None, impedance=None):
+def set_scats(pos, radius, bc, bcmode, rotation, rotmode, scatterer_type, scrmode, sum_num=None, impedance=None):
     modes=['uniform', 'repeated', 'permuted', 'random']
     
     l = len(pos)
@@ -69,10 +69,20 @@ def set_scats(pos, bc, radius, bcmode, rotation, rotmode, scatterer_type, scrmod
         elif scatterer_type == 'starfish':
             scrs =[starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance) for i in range(l)]
         elif scatterer_type == 'fat_starfish':
-            scrs = [fat_starfish(bcs[i], pos[i], radius, rots[i], sum_num_impedance) for i in range(l)]
-    elif type(scatterer_type) is list:
+            scrs = [fat_starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance) for i in range(l)]
+    elif bcmode=='random':
+        scrsname = np.random.choice(scatterer_type, size=l)
+        scrsname = [scrsname[i].item() for i in range(l)]
+        scrs = []
+        for i in range(l):
+            if scrsname[i] == 'cyl':
+                tmp = [cyl(bcs[i], pos[i], radius, sum_num, impedance)]
+            elif scrsname[i] == 'starfish':
+                tmp = [starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance)]
+            elif scrsname[i] == 'fat_starfish':
+                tmp = [fat_starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance)]
+            scrs += tmp
         
-    
     return scrs
 
 def uniform_grid_NxN(N, radius, spacing, center=np.array([0, 0])):
@@ -138,7 +148,7 @@ def rectangular_lattice(Nx, Ny, radius, xspace, yspace, center=np.array([0., 0.]
 def triangular_lattice(Nx, Ny, radius, xspace, yspace, center = np.array([0., 0.])):
     cyls_main = list(rectangular_lattice(Nx, Ny, radius, xspace, yspace, center))
     cyls_off = list(rectangular_lattice(Nx-1, Ny-1, radius, xspace, yspace, center))
-    return cyls_main + cyls_off
+    return np.array(cyls_main + cyls_off)
 
 def triangular_lattice_square(N, radius, space, center=np.array([0., 0.])):
     return triangular_lattice(N, N, radius, space, space, center)
@@ -172,9 +182,8 @@ def random_pos(Lxmin, Lxmax, Lymin, Lymax, N, radius, dist, center=np.array([0.,
     return origins
 
 def random_hexagon(Nx, Ny, radius, dist, minspace=0, center=np.array([0., 0.])):
-    ctemp = triangular_lattice(Nx, Ny, radius, dist, dist) #dummy hexagonal configuration
-    cnum = len(ctemp)
-    pos = np.array([c.pos for c in ctemp])
+    pos = triangular_lattice(Nx, Ny, radius, dist, dist) #dummy hexagonal configuration
+    cnum = len(pos)
     xpos = pos[:, 0]
     ypos = pos[:, 1]
     
@@ -258,16 +267,15 @@ def random_circ(rmax, N, bc, radius, center=np.array([0., 0.])):
 def random_circ_hex(rmax, radius, initspace, minspace=0, center=np.array([0., 0.]), measurement_points=None, remove_center=False, rin=0):
     spc = initspace
     N = int((2*rmax - 2*radius)/spc)
-    ctmp = random_hexagon_square(N, radius, spc, minspace, center)
+    pos = random_hexagon_square(N, radius, spc, minspace, center).tolist()
     
     #delete circles overlapping a measurement point
     if measurement_points is not None:
         X, Y = measurement_points
         idxs = []
-        for i in range(len(ctmp)):
-            c = ctmp[i]
-            p = c.pos
-            rad = c.radius
+        for i in range(len(pos)):
+            p = pos[i]
+            rad = radius
             dist = np.sqrt((X - p[0])**2 + (Y - p[1])**2) 
             mask = dist <= rad
             if np.any(mask):
@@ -275,19 +283,19 @@ def random_circ_hex(rmax, radius, initspace, minspace=0, center=np.array([0., 0.
                 
         idxs = np.array(idxs)
         for i in idxs[::-1]:
-            ctmp.remove(ctmp[i])
+            pos.remove(pos[i])
     
-    rmask = np.array([np.linalg.norm(c.pos) < (rmax-radius) for c in ctmp])
+    rmask = np.array([np.linalg.norm(p) < (rmax-radius) for p in pos])
     if rin > 0:
-        rinmask = np.array([np.linalg.norm(c.pos) > (rin+radius) for c in ctmp])
+        rinmask = np.array([np.linalg.norm(p) > (rin+radius) for p in pos])
     else:
-        rinmask = np.array([True for c in ctmp])
+        rinmask = np.array([True for p in pos])
     
     if remove_center:
-        rmask2 = np.array([np.linalg.norm(c.pos) > radius for c in ctmp])
-        cctmp = np.asarray(ctmp)[rmask*rmask2*rinmask]
+        rmask2 = np.array([np.linalg.norm(p) > radius for p in pos])
+        cctmp = np.asarray(pos)[rmask*rmask2*rinmask]
     else:
-        cctmp=np.asarray(ctmp)[rmask*rinmask]
+        cctmp=np.asarray(pos)[rmask*rinmask]
         
     return cctmp
 
@@ -303,7 +311,7 @@ def random_circ_hex_vol_frac(R, r, rho, minspace=0, center=np.array([0., 0.]), m
         Nprev = N
         spc = (2*R - 2*r)/(N-1)
         #dummy circles for position setting
-        tmp = random_circ_hex(R, 'd', r, spc, minspace, sum_num, impedance, center, measurement_points, remove_center, rin=rin)
+        tmp = random_circ_hex(R, r, spc, minspace, center, measurement_points, remove_center, rin=rin).tolist()
         ncurr = len(tmp)
     
     if ncurr > n_act:
@@ -316,7 +324,7 @@ def random_circ_hex_vol_frac(R, r, rho, minspace=0, center=np.array([0., 0.]), m
         for i in darr:
             del tmp[i]
     
-    pos = np.array([[c.pos[0]+center[0], c.pos[1]+center[1]] for c in tmp])
+    pos = np.array([[p[0]+center[0], p[1]+center[1]] for p in tmp])
     
     return pos
 
@@ -379,7 +387,7 @@ def random_box_hex_vol_frac(Lx, Ly, r, rho, minspace=0, center=np.array([0., 0.]
         Nxprev = Nx
         spc = (2*Lx - 2*r)/(Nxprev-1)
         #dummy circles for position setting
-        tmp = random_box_hex(Lx, Ly, bc, r, spc, minspace, sum_num, impedance, center, measurement_points, remove_center, Lxin=Lxin, Lyin=Lyin)
+        tmp = random_box_hex(Lx, Ly, r, spc, minspace, center, measurement_points, remove_center, Lxin=Lxin, Lyin=Lyin)
         ncurr = len(tmp)
     
     if ncurr > n_act:
@@ -392,7 +400,7 @@ def random_box_hex_vol_frac(Lx, Ly, r, rho, minspace=0, center=np.array([0., 0.]
         for i in darr:
             del tmp[i]
     
-    pos = np.array([[c.pos[0] + center[0], c.pos[1]+cetner[1]] for c in tmp])
+    pos = np.array([[c.pos[0] + center[0], c.pos[1]+center[1]] for c in tmp])
     return pos
 
 def random_circ_hex_vol_frac_legacy(R, r, rho, center=np.array([0., 0.]), measurement_points=None):

@@ -35,7 +35,8 @@ gp = (xvec,t,nvec)->amp*2*modulate*retning(xvec,t)*exp(-modulate*(retning(xvec,t
 
 # Example of obs points
 n_obs = 4; h_obs=pi/n_obs;
-points1=[[-6.0,0.0],[-5.0,0.0],[-5.0,1.5],[-5.0,-1.5],[-1.5,0.0],[1.5,0.0],[5.0,0.0],[5.0,1.5],[5.0,-1.5],[6.0,0.0]];
+points1=[[6.0, 0.0], [0.0, 6.0], [-6.0, 0.0], [0.0, -6.0]];
+#points1=[[-6.0,0.0],[-5.0,0.0],[-5.0,1.5],[-5.0,-1.5],[-1.5,0.0],[1.5,0.0],[5.0,0.0],[5.0,1.5],[5.0,-1.5],[6.0,0.0]];
 #points1=[0*[cos(i*h_obs),sin(i*h_obs)] for i=0:n_obs];
 #points2=[2.5*[cos(i*h_obs),sin(i*h_obs)] for i=0:n_obs];
 #points3=[10*[cos(i*h_obs),sin(i*h_obs)] for i=0:n_obs];

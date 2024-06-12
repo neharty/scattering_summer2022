@@ -279,7 +279,6 @@ class freq_domain_scattering:
         return -(Rmat*Tmat) @ S
 
     def make_scattering_blocks_blockform(self):
-        self.make_all_data()
         scat_mat = [[None for i in self.labels] for j in self.labels]
         for i in self.labels:
             for j in self.labels:
@@ -475,12 +474,12 @@ class freq_domain_scattering:
             return outp
     
     def scattering_coeffs_explicit(self):
+        self.make_all_data()
         #check if rhs is zero-ish
         if np.max(np.abs(self.rhs)) < self.rhs_tol:
             return np.zeros(len(self.rhs_cyls))
         
         if self.scat_mat is None:
-            self.make_all_data()
             self.scat_mat = self.make_scattering_blocks()
         
         try:
@@ -492,7 +491,6 @@ class freq_domain_scattering:
         return soln
     
     def scattering_coeffs(self):
-        self.make_all_data()
         if self.method == 'gmres':
             return self.scattering_coeffs_gmres()
             

@@ -11,26 +11,27 @@ from utils.plot_cyls import plot_cyls
 from scatterers import cyl, starfish, leaf, bean, fat_starfish
 from utils.plot_scatterers import plot_scatterers
 #initialize problem
-wv = gaussian_norm_width(width = 1.2, lag = 1, inc_angle=np.pi)
+wv = gaussian_norm_width(width = 1.2, lag = 1)
 
 T = 40
 Nt = 15
-cyls = example_setups.uniform_grid_NxN(3, 'd', 1, 3)
-pos = [c.pos for c in cyls]
+pos = [[-3.0,-3.0], [0.0,-3.0], [3.0,-3.0], [-3.0,0.0], [0.0,0.0], [3.0,0.0], [-3.0,3.0], [0.0,3.0], [3.0,3.0]]
 
-np.random.seed(1234)
-rangs = np.random.uniform(0, np.pi, len(cyls))
-rangs = [3.36807,
-         0.637887,
-         2.26154,
-         0.404326,
-         0.685049,
-         6.02829,
-         2.46758,
-         5.59026,
-         0.00585577]
+# np.random.seed(1234)
+# rangs = np.random.uniform(0, np.pi, len(cyls))
+# rangs = [3.36807,
+#          0.637887,
+#          2.26154,
+#          0.404326,
+#          0.685049,
+#          6.02829,
+#          2.46758,
+#          5.59026,
+#          0.00585577]
 
-scrs = [fat_starfish('d', pos[i], 1, rangs[i]) for i in range(len(cyls))]
+rangs = -np.pi/np.array([7, 5, 3, 9, 4, 6, 8, 10, 12])
+
+scrs = [fat_starfish('d', pos[i], 1, rangs[i]) for i in range(len(pos))]
 from scatterers import cyl
 fig, ax = plot_scatterers(scrs, npts = 500)
 plt.show()
@@ -41,7 +42,7 @@ tds = time_domain_scattering(
                              wv,
                              T,
                              sampnum=2**Nt,
-                             modes=12,
+                             modes=15,
                              timeint=tint,
                              use_cython=False,
                              use_par=False,
