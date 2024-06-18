@@ -13,7 +13,7 @@ from utils.plot_scatterers import plot_scatterers
 #initialize problem
 wv = gaussian_norm_width(width = 1.2, lag = 1)
 
-T = 40
+T = 80
 Nt = 15
 pos = [[-3.0,-3.0], [0.0,-3.0], [3.0,-3.0], [-3.0,0.0], [0.0,0.0], [3.0,0.0], [-3.0,3.0], [0.0,3.0], [3.0,3.0]]
 
@@ -29,13 +29,13 @@ pos = [[-3.0,-3.0], [0.0,-3.0], [3.0,-3.0], [-3.0,0.0], [0.0,0.0], [3.0,0.0], [-
 #          5.59026,
 #          0.00585577]
 
-rangs = np.pi/np.array([7, 5, 3, 9, 4, 6, 8, 10, 12]) + np.pi
+rangs = np.pi/np.array([7 for p in pos]) + np.pi
 
 scrs = [fat_starfish('n', pos[i], 1, rangs[i]) for i in range(len(pos))]
 from scatterers import cyl
 fig, ax = plot_scatterers(scrs, npts = 500)
 plt.show()
-tint = None
+tint = IRK5()
 
 tds = time_domain_scattering(
                              scrs,
@@ -71,4 +71,4 @@ arr = np.zeros((len(tds.times), len(x)+1))
 for i in range(len(tds.times)):
     arr[i, 0] = tds.times[i] 
     arr[i, 1:] = U[:, i]
-np.savetxt('/home/nick/scattering/tests/tmatrix_tests/neumann/starfish_scattering_3x3_neumann_rotations.dat', arr)
+np.savetxt('/home/nick/scattering/tests/tmatrix_tests/neumann/starfish_scattering_3x3_neumann_rotations_T80_irk5.dat', arr)

@@ -125,7 +125,7 @@ condnum1rku = []
 condnum2rku = []
 arrrku = []
 
-kall = 1j*tds.evals[:, :]/tds.dt
+kall = 1j*tds.evals[:300, :]/tds.dt
 print(kall.shape)
 
 for i in range(3):
