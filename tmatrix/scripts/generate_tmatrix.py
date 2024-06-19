@@ -19,6 +19,7 @@ class Tmatrix:
     Npoints: int
     Nmodes: int
     rotation: float = 0.0
+    impedance: object = None
     
     def __post_init__(self):    
         self.bie = None
@@ -35,15 +36,15 @@ class Tmatrix:
         self.h = 2*np.pi/self.Npoints
         
         if self.geometry == 'cyl':
-            self.scgeom = cyl(self.bc, [0,0], self.radius)
+            self.scgeom = cyl(self.bc, [0,0], self.radius, impedance=self.impedance)
         elif self.geometry == 'starfish':
-            self.scgeom = starfish(self.bc, [0,0], self.radius, self.rotation)
+            self.scgeom = starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
         elif self.geometry == 'bean':
-            self.scgeom = bean(self.bc, [0, 0], self.radius, self.rotation)
+            self.scgeom = bean(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
         elif self.geometry == 'leaf':
-            self.scgeom = leaf(self.bc, [0, 0], self.radius, self.rotation)
+            self.scgeom = leaf(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
         elif self.geometry == 'fat_starfish':
-            self.scgeom = fat_starfish(self.bc, [0,0], self.radius, self.rotation)
+            self.scgeom = fat_starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
     
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -181,6 +182,12 @@ class Tmatrix:
             B = self.make_b_neumann(xfn, dxfn)
             C = self.make_c_neumann(xfn, dxfn)
             return -np.eye(*B.shape)/2 + B + C
+        if self.bc == 'i':
+            Bd = self.make_b_dirichlet(xfn, dxfn)
+            Cd = self.make_c_dirichlet(xfn, dxfn)
+            Bn = self.make_b_neumann(xfn, dxfn)
+            Cn = self.make_c_neumann(xfn, dxfn)
+            return -np.eye(*Bn.shape)/2 + Bn + Cn - 1j*self.k*self.impedance(self.k)*(Bd + Cd)
   
     def Tnm(self, n, mu):
         #trapezoidal rule
@@ -214,11 +221,12 @@ class Tmatrix:
                 rhs = -np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
             elif self.bc == 'n':
                 rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
-            
-            if np.isnan(np.abs(A)).any():
-                mumat += [np.zeros(self.Npoints, dtype=np.complex128)]
-            else:
-                mumat += [np.linalg.solve(A, rhs)]
+            elif self.bc == 'i':
+                dirpart = np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
+                neumpart = np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+                rhs = -(neumpart - 1j*self.k*self.scgeom.impedance(self.k)*dirpart)
+                
+            mumat += [np.linalg.solve(A, rhs)]
             
         for n in range(M):
             for m in range(M):

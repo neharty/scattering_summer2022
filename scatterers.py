@@ -5,10 +5,11 @@ class scatterer(ABC):
     '''
         abstract scatterer class
     '''
-    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None, uid = None, maxidx = np.inf):
+    def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, uid = None, maxidx = np.inf, rad_scale=1):
         self.label = 0
         self.pos = np.array(pos) # center position of the scatterer
-        self.radius = float(radius) #radius of the circle enclosing the scatterer
+        self.sc_scale = sc_scale
+        self.radius = float(rad_scale*sc_scale) #radius of the circle enclosing the scatterer
         self.rotation = rotation #rotation angle of the scatterer
         self.bc = bc #boundary condition
         self.impedance = impedance #impedance is a function handle for \eta
@@ -30,21 +31,21 @@ class scatterer(ABC):
         pass
     
     def bdy(self, t):
-        return self.radius*self.r(t)*np.array([np.cos(t), np.sin(t)])
+        return self.sc_scale*self.r(t)*np.array([np.cos(t), np.sin(t)])
     
     def dbdy(self, t):
-        return self.radius*(self.r(t)*np.array([-np.sin(t), np.cos(t)])+self.dr(t)*np.array([np.cos(t), np.sin(t)]))
+        return self.sc_scale*(self.r(t)*np.array([-np.sin(t), np.cos(t)])+self.dr(t)*np.array([np.cos(t), np.sin(t)]))
 
 class cyl(scatterer):
     '''
         cylinder, or circle, in the plane
     '''
-    def __init__(self, bc, pos, radius, rotation=0., sum_index = None, impedance = None):
+    def __init__(self, bc, pos, sc_scale, rotation=0., sum_index = None, impedance = None, rad_scale=1):
         self.label = 0
         self.name = 'cyl'
         self.uid = None
         self.maxidx = np.inf
-        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
+        super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
     
     def r(self, t):
         return 1.0
@@ -53,40 +54,82 @@ class cyl(scatterer):
         return 0.0
  
 class fat_starfish(scatterer):
-    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None):
+    def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
         self.label = 0
         self.name = 'fat_starfish'
         self.uid = None
         self.maxidx = np.inf
-        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
+        super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
     
     def r(self, t):
-        return 9/10 - (1/10)*np.cos(5*(t-self.rotation)) #has a max distance of 1
+        return 9/10 - (1/10)*np.cos(5*(t-self.rotation)) 
     
     def dr(self, t):
         return np.sin(5*(t-self.rotation))/2
  
+class striad(scatterer):
+    def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
+        self.label = 0
+        self.name = 'triad'
+        self.uid = None
+        self.maxidx = np.inf
+        super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
+        
+    def r(self, t):
+        return 4/5 - (1/5)*np.cos(3*(t-self.rotation)) 
+    
+    def dr(self, t):
+        return 3*np.sin(3*(t-self.rotation))/5
+    
 class starfish(scatterer):
-    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None):
+    def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
         self.label = 0
         self.name = 'starfish'
         self.uid = None
         self.maxidx = np.inf
-        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
+        super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
         
     def r(self, t):
-        return 4/5 - (1/5)*np.cos(5*(t-self.rotation)) #has a max distance of 1
+        return 4/5 - (1/5)*np.cos(5*(t-self.rotation)) 
+    
+    def dr(self, t):
+        return np.sin(5*(t-self.rotation)) 
+    
+class smooth_hexagon(scatterer):
+    def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
+        self.label = 0
+        self.name = 'smooth_hexagon'
+        self.uid = None
+        self.maxidx = np.inf
+        super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
+        
+    def r(self, t):
+        return 4/5 - (1/5)*np.cos(6*(t-self.rotation)) 
+    
+    def dr(self, t):
+        return 6*np.sin(6*(t-self.rotation))/5
+
+class starfish(scatterer):
+    def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
+        self.label = 0
+        self.name = 'starfish'
+        self.uid = None
+        self.maxidx = np.inf
+        super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
+        
+    def r(self, t):
+        return 4/5 - (1/5)*np.cos(5*(t-self.rotation)) 
     
     def dr(self, t):
         return np.sin(5*(t-self.rotation)) 
 
 class bean(scatterer):
-    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None):
+    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None, rad_scale=1):
         self.label = 0
         self.name = 'bean'
         self.uid = None
         self.maxidx = np.inf
-        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
+        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
         
     def r(self, t):
         #might change these coefficients to 4/5 and 1/5
@@ -106,12 +149,12 @@ class bean(scatterer):
         return self.radius*(self.r(t)*np.array([-np.sin(t), np.cos(t)]))+tmp2.T
     
 class leaf(scatterer):
-    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None):
+    def __init__(self, bc, pos, radius, rotation, sum_index = None, impedance=None, rad_scale=1):
         self.label = 0
         self.name = 'leaf'
         self.uid = None
         self.maxidx = np.inf
-        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx)
+        super().__init__(bc, pos, radius, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
         
     def r(self, t):
         #might change these coefficients to 4/5 and 1/5

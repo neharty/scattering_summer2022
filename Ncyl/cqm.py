@@ -1337,7 +1337,7 @@ class time_domain_scattering(scattering):
             pool.close()
             pool.join()
             for i in range(len(tmp)):
-                self.u_sc[:, :, i] = tmp[i]
+                self.u_sc[..., i] = tmp[i]
             del tmp
         else:
             #serial algorithm

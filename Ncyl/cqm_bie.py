@@ -13,6 +13,7 @@ import uuid
 from Ncyl.scython.wrapper import PyScat
 from dataclasses import dataclass, field
 import os
+import hashlib
 #from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
 
 @dataclass
@@ -39,12 +40,11 @@ class freq_domain_scattering:
     use_foldy_lax: bool = False
     save_coeffs: bool = False
     use_cpp: bool = False
-    use_cython: bool=False
-    
-    # ----- Tmatrix args ------- #
+    use_cython: bool = False
     tmatrix_path: str = '/home/nick/scattering/tmatrix/data/'
     alpertorder: int = 6 #use 6th order by default
-    Npoints: int = 500
+    Npoints: int = 256
+    Nmode_tmat: int = 20
     save_Tmat = True
             
     def __post_init__(self):
@@ -71,34 +71,9 @@ class freq_domain_scattering:
         
         self.labels = np.array([c.label for c  in self.scats])
         
-        # set the sum index for each cylinder, depending 
-        # on whether there's a global index or not
-        # if self.sum_index == None:
-        #     for l in self.labels:
-        #         if self.cyls[l].sum_index == None:
-        #             ka = self.k*self.cyls[l].radius
-        #             if self.use_2cyl_modes:
-        #                 self.cyls[l].sum_index = self.mode_select()
-        #             else:
-        #                 try:
-        #                     self.cyls[l].sum_index = self.modes(
-        #                         self.k, 
-        #                         self.cyls[l].radius
-        #                         )
-        #                     if ka < 1e-2:
-        #                         if not self.force_method:
-        #                             self.method = 'explicit'
-        #                 except Exception as e:
-        #                     print(e)
-        #                     print('ka = ', ka)
-        #                     self.cyls[l].sum_index = 0
-        #         else:
-        #             continue
-        # else:
         for l in self.labels:
             self.scats[l].sum_index = self.sum_index
-        #self.sum_index = self.sum_index
-                
+        
         # make lengths of coefficient vector blocks for MVP algorithm
         self.lengths = np.zeros(len(self.scats) + 1, dtype=int)
         for i in self.labels:
@@ -153,17 +128,7 @@ class freq_domain_scattering:
     def jmode(self, scr, m):
         bc = scr.bc
         radius = scr.radius
-        
-        if bc == 'd':
-            st = jv(m, self.k*radius)
-        elif bc == 'n':
-            st = self.k*jvp(m, self.k*radius)
-        elif bc == 'i':
-            imp = scr.impedance(self.k)
-            st = self.k*(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))
-        else:
-            print('invalid bc')  
-        return st
+        return jv(m, self.k*radius)
 
     def directscat_term(self, cyl, m):
         return np.eye(2*cyl.sum_index + 1)
@@ -228,35 +193,41 @@ class freq_domain_scattering:
     
     def load_tmatrix_data(self):
         # search through folder for matching file names
+        
+        def get_hash(s, key):
+            # hash function for T-matrices
+            m = hashlib.md5()
+            m.update(str(key).encode('utf-8'))
+            new_uuid = uuid.UUID(m.hexdigest())
+            return new_uuid
+        
         self.tdict = {}
         
         idxa = np.arange(-self.sum_index, self.sum_index+1)
         self.rotmats = {}
         for s in self.scats:
             geometry = s.name
-            radius = s.radius
-            key = (geometry, radius)
+            key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)
             try:
                 self.tdict[key]
             except KeyError:
                 #if not already loaded, then load the tmatrix file
-                kr = self.k.real
-                ki = self.k.imag
-                fstr = f'tmatrix_{geometry}_bc-{s.bc}_radius{s.radius}_alpert{self.alpertorder}_kr{kr}_ki{ki}_Npoints{self.Npoints}_Nmodes20.dat' 
+                fstr = f'{get_hash(s, key)}.dat' 
                 #t matrices are defined by their scatterer type and radius
                 
                 try:
                     tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
-                except FileNotFoundError:
+                except FileNotFoundError as e:
+                    print(e)
                     #if the file doesn't exist, then generate it and save it
                     from tmatrix.scripts.generate_tmatrix import Tmatrix
-                    tmx = Tmatrix(self.k, self.alpertorder, geometry, s.bc, radius, self.Npoints, 20)
+                    tmx = Tmatrix(self.k, self.alpertorder, geometry, s.bc, s.sc_scale, self.Npoints, self.Nmode_tmat, impedance=s.impedance)
                     T = tmx.make_tmatrix()
                     if self.save_Tmat:
                         np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
                     tmattmp = T
                 
-                self.tdict[key] = tmattmp[20-self.sum_index:20-self.sum_index + 2*self.sum_index+1, 20-self.sum_index:20-self.sum_index + 2*self.sum_index+1]
+                self.tdict[key] = tmattmp[self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1, self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1]
             self.rotmats[s] = np.array([[np.exp(1j*(n-m)*s.rotation) for n in idxa] for m in idxa])
     
     def make_rhs_data(self):
@@ -268,7 +239,7 @@ class freq_domain_scattering:
             for j in range(2*self.scats[l].sum_index + 1):
                 idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
                 self.rhs[self.lengths[l] + j] = self.rhs_cyls[self.lengths[l] + j]/self.jmode(self.scats[l], idxa[j])
-            Tmat = self.tdict[(s.name, s.radius)]
+            Tmat = self.tdict[(s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
             Rmat = self.rotmats[s]
             self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1] = -(Rmat*Tmat) @ self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1]
     
@@ -298,7 +269,7 @@ class freq_domain_scattering:
                 m, n = idxa_i[i], idxa_sc[j]
                 scm[i,j] = self.S(n, m, b)
                 
-        Tmat = self.tdict[(sc_i.name, sc_i.radius)]
+        Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ scm
     
@@ -310,12 +281,11 @@ class freq_domain_scattering:
         row = rv[2*Nq:]
 
         S = toeplitz(row, col)
-        Tmat = self.tdict[(sc_i.name, sc_i.radius)]
+        Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ S
 
     def make_scattering_blocks_blockform(self):
-        self.make_all_data()
         scat_mat = [[None for i in self.labels] for j in self.labels]
         for i in self.labels:
             for j in self.labels:
@@ -511,12 +481,12 @@ class freq_domain_scattering:
             return outp
     
     def scattering_coeffs_explicit(self):
+        self.make_all_data()
         #check if rhs is zero-ish
         if np.max(np.abs(self.rhs)) < self.rhs_tol:
             return np.zeros(len(self.rhs_cyls))
         
         if self.scat_mat is None:
-            self.make_all_data()
             self.scat_mat = self.make_scattering_blocks()
         
         try:
@@ -528,7 +498,6 @@ class freq_domain_scattering:
         return soln
     
     def scattering_coeffs(self):
-        self.make_all_data()
         if self.method == 'gmres':
             return self.scattering_coeffs_gmres()
             
@@ -760,30 +729,17 @@ class time_domain_scattering:
         
         #initialize arrays
         #use only for plane waves
-        if bc == 'i':
-            ng = np.zeros((n, N))
-            dg = np.zeros((n, N))
-        else:
-            g = np.zeros((n, N))
+        # if bc == 'i':
+        #     ng = np.zeros((n, N))
+        #     dg = np.zeros((n, N))
+        # else:
+        g = np.zeros((n, N))
         
         for i in range(N):
             t = self.times[i]
-            if bc == 'd':
-                g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
-            elif bc == 'n':
-                dirvect = (pts[:] - p)/r
-                g[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
-            elif bc == 'i':
-                #neumann part
-                dirvect = (pts[:] - p)/r
-                ng[:, i] = self.waveform.td_deriv(pts[:, 0], pts[:, 1], t+c*self.dt, dirvect)
-                #dirichlet part
-                dg[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
-                   
-        if bc == 'i':
-            return ng, dg
-        else:
-            return g
+            g[:, i] = self.waveform.td_wave(pts[:, 0], pts[:, 1], t+c*self.dt)
+            
+        return g
         
     def ptsrc_init(self, c):
         #initialize the time profile for the point source
@@ -811,11 +767,11 @@ class time_domain_scattering:
         
         #initialize arrays
         #use only for pointsource waves
-        if bc == 'i':
-            ng = 1j*np.zeros((n, N))
-            dg = 1j*np.zeros((n, N))
-        else:
-            g = 1j*np.zeros((n, N))
+        # if bc == 'i':
+        #     ng = 1j*np.zeros((n, N))
+        #     dg = 1j*np.zeros((n, N))
+        # else:
+        g = 1j*np.zeros((n, N))
         
         #z transform the time signal
         r0 = self.waveform.r0
@@ -824,30 +780,8 @@ class time_domain_scattering:
         dgrnmodes = lambda x, y, i: coeffs[i]*1j*h1vp(0, self.ks[i]*dist(x, y))*self.ks[i]/(4*dist(x,y))
         
         for i in range(N):
-            if bc == 'd':
-                g[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
-            elif bc == 'n':
-                dirvect = (pts[:] - p)/r
-                dotpdct = np.zeros(len(pts))
-                for j in range(len(pts)):
-                    ptmp = np.array([pts[j, 0]-r0[0], pts[j, 1]-r0[1]])
-                    dotpdct[j] = ptmp.dot(dirvect[j])                    
-                g[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
-            elif bc == 'i':
-                #neumann part
-                dirvect = (pts[:] - p)/r
-                dotpdct = np.zeros(len(pts))
-                for j in range(len(pts)):
-                    ptmp = np.array([pts[j, 0] - r0[0], pts[j, 1]-r0[1]])
-                    dotpdct[j] = ptmp.dot(dirvect[j])  
-                ng[:, i] = dgrnmodes(pts[:, 0], pts[:, 1], i)*dotpdct
-                
-                #dirichlet part
-                dg[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
-        if bc == 'i':
-            return dg, ng
-        else:
-            return g
+            g[:, i] = grnmodes(pts[:, 0], pts[:, 1], i)
+        return g
     
     def ztrans(self, x):
         #z-transform of a time sequence
@@ -856,26 +790,26 @@ class time_domain_scattering:
     def ztrans_bdy_pw(self, cyl, c=0):
         # z transform the boundary data for a planewave
         # z-transform the boundary condition
-        if cyl.bc == 'i':
-            ng, dg = self.td_bdy(cyl, c) #discretize bdy
-            rhs_d = self.ztrans(dg)
-            rhs_n = self.ztrans(ng)
-            return (rhs_d, rhs_n)
-        else:
-            g = self.td_bdy(cyl, c) #discretize bdy
-            rhs = self.ztrans(g)   
+        # if cyl.bc == 'i':
+        #     ng, dg = self.td_bdy(cyl, c) #discretize bdy
+        #     rhs_d = self.ztrans(dg)
+        #     rhs_n = self.ztrans(ng)
+        #     return (rhs_d, rhs_n)
+        # else:
+        g = self.td_bdy(cyl, c) #discretize bdy
+        rhs = self.ztrans(g)   
         return rhs
     
     def make_zbc(self, cyl, zdat):
         #form the z-domain, perhaps coupled, boundary conditions
         bc = cyl.bc
         imp = cyl.impedance
-        if bc == 'i':
-            z_d, z_n = zdat
-            z_d *= self.sl*imp(self.ks)
-            return -z_n - z_d 
-        else:
-            return -zdat
+        # if bc == 'i':
+        #     z_d, z_n = zdat
+        #     z_d *= self.sl*imp(self.ks)
+        #     return -z_n - z_d 
+        # else:
+        return -zdat
     
     def fourier_coeffs_bdy(self, v):
         #project the vector onto the fourier basis using ffts
@@ -910,7 +844,7 @@ class time_domain_scattering:
                 if np.max(tmp) < self.fft_tol:
                     g[:, i] = np.zeros(n)
                     if self.use_conj:
-                        g = g[:, :i+1]
+                        g = g[:, :i+1] 
                         return g 
         return g
     
@@ -929,21 +863,21 @@ class time_domain_scattering:
         bc = cyl.bc
         
         gret = [None for c in self.timeint.c]
-        if bc == 'i':
-            v_d = [None for c in self.timeint.c]
-            v_n = [None for c in self.timeint.c]
-            for i in range(len(self.timeint.c)):
-                v_d[i] = v_coup[i][0]
-                v_n[i] = v_coup[i][1]
-            gdtmp = self.diag_loop(v_d)
-            gntmp = self.diag_loop(v_n)
-            for i in range(len(self.timeint.c)):
-                self.sl = self.evals[:, i]/self.dt
-                self.ks = 1j*self.sl
-                gret[i] = self.make_zbc(cyl, (gdtmp[i], gntmp[i]))
-        else:
-            for i in range(len(self.timeint.c)):
-                gret[i] = self.make_zbc(cyl, self.diag_loop(v_coup)[i])
+        # if bc == 'i':
+        #     v_d = [None for c in self.timeint.c]
+        #     v_n = [None for c in self.timeint.c]
+        #     for i in range(len(self.timeint.c)):
+        #         v_d[i] = v_coup[i][0]
+        #         v_n[i] = v_coup[i][1]
+        #     gdtmp = self.diag_loop(v_d)
+        #     gntmp = self.diag_loop(v_n)
+        #     for i in range(len(self.timeint.c)):
+        #         self.sl = self.evals[:, i]/self.dt
+        #         self.ks = 1j*self.sl
+        #         gret[i] = self.make_zbc(cyl, (gdtmp[i], gntmp[i]))
+        # else:
+        for i in range(len(self.timeint.c)):
+            gret[i] = self.make_zbc(cyl, self.diag_loop(v_coup)[i])
         
         return gret
     
@@ -955,8 +889,8 @@ class time_domain_scattering:
         return g
     
     def fzt_boundary_1cyl(self, cyl):
-        #generates the fourier coefficients for 1 circle
-        #depending on the timestepping method used
+        # generates the fourier coefficients for 1 circle
+        # depending on the timestepping method used
         
         if self.waveform.src_type == 'planewave':
             if self.timeint == None:
@@ -1005,7 +939,6 @@ class time_domain_scattering:
                 
                 #make freq-domain bcs
                 zbc = self.make_zbc(cyl, fds)
-                
                 
                 #make fourier coefficients
                 fcs = self.fourier_coeffs_bdy(zbc)
@@ -1179,17 +1112,23 @@ class time_domain_scattering:
                 pool.join()
             else:
                 rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+                
             for c in self.cyls:
                 c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
+                
             self.rhs_maxidx_matrix = [c.maxidx for c in self.cyls]
             self.rhs_maxidx = np.amax(self.rhs_maxidx_matrix)
+            
             for j in range(len(self.timeint.c)):
                 for c in range(len(self.cyls)):
                     rhstmp[c][j] = self.zeropad_rhs(rhstmp[c][j])
+                    
             self.rhsmat = [[None for n in range(self.rhs_maxidx)] for c in range(len(self.timeint.c))]
+            
             for j in range(len(self.timeint.c)):
                 for i in range(self.rhs_maxidx):
                     self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
+                    
             if self.save_coeffs and self.coeff_mat is None:
                 self.coeff_mat = [1j*np.zeros(self.rhsmat[j].shape) for j in range(len(self.timeint.c))]
     

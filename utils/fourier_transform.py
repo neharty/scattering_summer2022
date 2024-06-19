@@ -9,23 +9,23 @@ import pickle
 import argparse
 import os
 
-# parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
 
-# parser.add_argument('ttrace_path', help = 'path to time trace data file')
-# parser.add_argument('radius', help = 'cylinder radius', type=float)
-# parser.add_argument('sigma', help='gaussian width parameter', type=float)
-# parser.add_argument('wavetype', help='planewave or pointsrc')
-# parser.add_argument('fout', help='full data output path')
+parser.add_argument('ttrace_path', help = 'path to time trace data file')
+parser.add_argument('radius', help = 'cylinder radius', type=float)
+parser.add_argument('sigma', help='gaussian width parameter', type=float)
+parser.add_argument('wavetype', help='planewave or pointsrc')
+parser.add_argument('fout', help='full data output path')
 
-# args = parser.parse_args()
+args = parser.parse_args()
 
-class argclass:
-    def __init__(self):
-        self.ttrace_path = ''
-        self.radius = 0.25
-        self.sigma = 1
-        self.wavetype = 'pointsrc'
-        self.fout = '.'
+# class argclass:
+#     def __init__(self):
+#         self.ttrace_path = '/home/nick/scattering/data/time_domain_tests/average_fl_waveform/waveform_g/bc_d/samp_10/R_10/vf_0.01/rc_0.05/seed_900/ 2.500_ 0.000.dat'
+#         self.radius = 0.25
+#         self.sigma = 1
+#         self.wavetype = 'pointsrc'
+#         self.fout = '.'
     
 args = argclass()
 
@@ -46,11 +46,11 @@ elif args.wavetype == 'pointsrc':
     #U_inc computed from i
     cyls = [cyl('d', [-100, 0], 1, sum_index=2)]
     wv = gaussian(sigma=args.sigma, time_shift=times[-1]//4, r0=[-times[-1]//4, 0], src_type='pointsrc')
-    tds = time_domain_scattering(cyls, wv, times[-1], sampnum=len(U))
-    wave = tds.make_U([0], [0])
-    import matplotlib.pyplot as plt
-    plt(times, wave[0, :])
-    pw = np.abs(rfft(wave[0, :-1]))
+    tds = time_domain_scattering(cyls, wv, times[-1], sampnum=len(U), modes=2)
+    wave = tds.make_U_inc(np.array([0]), np.array([0]))
+    # import matplotlib.pyplot as plt
+    # plt.plot(times, wave[:-1])
+    pw = np.abs(rfft(wave[:-1]))
 freqerr = 1e-5
 pwmask = (pw > freqerr) #
 ka = ka[pwmask]

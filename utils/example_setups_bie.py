@@ -7,7 +7,7 @@ import os
 from scatterers import cyl, starfish, fat_starfish
 from collections import deque
 
-def set_scats(pos, radius, bc, bcmode, rotation, rotmode, scatterer_type, scrmode, sum_num=None, impedance=None):
+def set_scats(pos, sc_scale, bc, bcmode, rotation, rotmode, scatterer_type, scrmode, sum_num=None, impedance=None, rad_scale=1):
     modes=['uniform', 'repeated', 'permuted', 'random']
     
     l = len(pos)
@@ -15,7 +15,7 @@ def set_scats(pos, radius, bc, bcmode, rotation, rotmode, scatterer_type, scrmod
     
     if type(bc) is str:
         bc = [bc]
-    
+        
     #set the boundary conditions
     if bcmode=='uniform':
         bcs = [bc[0] for i in range(l)]
@@ -60,27 +60,29 @@ def set_scats(pos, radius, bc, bcmode, rotation, rotmode, scatterer_type, scrmod
         rotation += list(d)[:l%len(bc)]
         rots = rotation
     elif rotmode=='random':
-        rots = np.random.uniform(0, 2*np.pi, l)
+        rots = np.random.uniform(0, 2, l)*np.pi
+    elif rotmode=='array':
+        rots = rotation
     
     #set scatterers
     if scrmode == 'uniform':
         if scatterer_type=='cyl':
-            scrs=[cyl(bcs[i], pos[i], radius, sum_num, impedance) for i in range(l)]
+            scrs=[cyl(bcs[i], pos[i], sc_scale, 0, sum_num, impedance, rad_scale) for i in range(l)]
         elif scatterer_type == 'starfish':
-            scrs =[starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance) for i in range(l)]
+            scrs =[starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale) for i in range(l)]
         elif scatterer_type == 'fat_starfish':
-            scrs = [fat_starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance) for i in range(l)]
+            scrs = [fat_starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale) for i in range(l)]
     elif bcmode=='random':
         scrsname = np.random.choice(scatterer_type, size=l)
         scrsname = [scrsname[i].item() for i in range(l)]
         scrs = []
         for i in range(l):
             if scrsname[i] == 'cyl':
-                tmp = [cyl(bcs[i], pos[i], radius, sum_num, impedance)]
+                tmp = [cyl(bcs[i], pos[i], sc_scale, sum_num, impedance, rad_scale)]
             elif scrsname[i] == 'starfish':
-                tmp = [starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance)]
+                tmp = [starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
             elif scrsname[i] == 'fat_starfish':
-                tmp = [fat_starfish(bcs[i], pos[i], radius, rots[i], sum_num, impedance)]
+                tmp = [fat_starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
             scrs += tmp
         
     return scrs
