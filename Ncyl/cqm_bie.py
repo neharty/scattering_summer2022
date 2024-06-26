@@ -207,7 +207,10 @@ class freq_domain_scattering:
         self.rotmats = {}
         for s in self.scats:
             geometry = s.name
-            key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)
+            if s.impedance is not None:
+                key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, s.impedance.__name__)
+            else:
+                key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)
             try:
                 self.tdict[key]
             except KeyError:
@@ -219,6 +222,7 @@ class freq_domain_scattering:
                     tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
                 except FileNotFoundError as e:
                     print(e)
+                    print(key)
                     #if the file doesn't exist, then generate it and save it
                     from tmatrix.scripts.generate_tmatrix import Tmatrix
                     tmx = Tmatrix(self.k, self.alpertorder, geometry, s.bc, s.sc_scale, self.Npoints, self.Nmode_tmat, impedance=s.impedance)
@@ -239,7 +243,12 @@ class freq_domain_scattering:
             for j in range(2*self.scats[l].sum_index + 1):
                 idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
                 self.rhs[self.lengths[l] + j] = self.rhs_cyls[self.lengths[l] + j]/self.jmode(self.scats[l], idxa[j])
-            Tmat = self.tdict[(s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
+            
+            if s.impedance is not None:
+                Tmat = self.tdict[(s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, s.impedance.__name__)]
+            else:
+                Tmat = self.tdict[(s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
+            
             Rmat = self.rotmats[s]
             self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1] = -(Rmat*Tmat) @ self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1]
     
@@ -268,8 +277,10 @@ class freq_domain_scattering:
             for j in range(len(idxa_sc)):
                 m, n = idxa_i[i], idxa_sc[j]
                 scm[i,j] = self.S(n, m, b)
-                
-        Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
+        if sc_i.impedance is not None:
+            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, sc_i.impedance.__name__)]
+        else:
+            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ scm
     
@@ -281,7 +292,10 @@ class freq_domain_scattering:
         row = rv[2*Nq:]
 
         S = toeplitz(row, col)
-        Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
+        if sc_i.impedance is not None:
+            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, sc_i.impedance.__name__)]
+        else:
+            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ S
 
@@ -689,10 +703,12 @@ class time_domain_scattering:
                                      )
         Uscprev = tdsc.make_U_sc(x, y)
         
-        #solve the problem with increasing mode numbers
+        #solve the problem with increasing mode numbers  
         err = np.inf
+        errprev = np.inf
         while err > self.mode_tol:
             print(Nmodeprev, err)
+            errprev = err
             auxcyls[0].sum_index = None
             auxcyls[1].sum_index = None
             Nmodecurr = Nmodeprev + 1
@@ -710,9 +726,12 @@ class time_domain_scattering:
                                          )
             Usccurr = tdsc.make_U_sc(x, y)
             err = np.amax(np.abs(Usccurr - Uscprev))
+            if err > errprev:
+                print(f'error tolerance not achieved, using {Nmodecurr-1} modes')
+                return Nmodeprev
             Uscprev = Usccurr
             Nmodeprev = Nmodecurr
-        
+            
         return Nmodecurr
     
     def td_bdy(self, cyl, c=0):
@@ -727,12 +746,8 @@ class time_domain_scattering:
         ang = np.linspace(0, 2*np.pi, num=n, endpoint=False)
         pts = np.array([[p[0] + r*np.cos(a), p[1] + r*np.sin(a)] for a in ang])
         
-        #initialize arrays
-        #use only for plane waves
-        # if bc == 'i':
-        #     ng = np.zeros((n, N))
-        #     dg = np.zeros((n, N))
-        # else:
+        # initialize arrays
+        # use only for plane waves
         g = np.zeros((n, N))
         
         for i in range(N):
@@ -1215,7 +1230,7 @@ class time_domain_scattering:
         self.set_timeshift()
         
         #select Nmodes
-        if self.modes is None:
+        if self.modes < 0:
             self.modes=self.mode_select(x, y)
         
         if self.timeint is None:

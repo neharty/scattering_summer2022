@@ -442,6 +442,8 @@ class scattering(cyl):
                         self.scat_mat[i][j] = self.mulscat_term(self.cyls[j], 0, 0, b)
         else:
             self.scat_mat = np.block(self.make_scattering_blocks_blockform())
+        
+        self.scat_mat = np.nan_to_num(self.scat_mat)
             
         # if not np.isfinite(self.scat_mat).all():
         #     self.fast_matrix_build = False
@@ -670,6 +672,9 @@ class scattering(cyl):
     
     def scattering_coeffs_explicit(self):
         #check if rhs is zero-ish
+        if not np.isfinite(self.rhs).all():
+            return np.zeros(len(self.rhs))
+        
         if np.max(np.abs(self.rhs)) < self.rhs_tol:
             return np.zeros(len(self.rhs))
         

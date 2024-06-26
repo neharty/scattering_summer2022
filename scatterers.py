@@ -8,7 +8,7 @@ class scatterer(ABC):
     def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, uid = None, maxidx = np.inf, rad_scale=1):
         self.label = 0
         self.pos = np.array(pos) # center position of the scatterer
-        self.sc_scale = sc_scale
+        self.sc_scale = float(sc_scale)
         self.radius = float(rad_scale*sc_scale) #radius of the circle enclosing the scatterer
         self.rotation = rotation #rotation angle of the scatterer
         self.bc = bc #boundary condition
