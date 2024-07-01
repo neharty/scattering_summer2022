@@ -742,6 +742,7 @@ class scattering(cyl):
                             u_sc += cs[self.lengths[l] + j]*self.phi(idxa[j], R)
 
         self.u_sc = u_sc*self.mask(x,y)
+        self.u_sc = np.nan_to_num(self.u_sc)
         if self.save_coeffs:
             return (self.u_sc, cs)
         else:

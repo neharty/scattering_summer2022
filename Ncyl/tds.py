@@ -394,26 +394,6 @@ class scattering(cyl):
         return st
     
     def jh(self, cyl, m):
-        #cyl = incident circle
-        # bc = cyl.bc
-        # radius = cyl.radius
-        # if bc == 'd':
-        #     try:
-        #         return jv(m, self.k*radius)/hankel1(m, self.k*radius)
-        #     except:
-        #         print(m)  
-        #         print(self.k*radius) 
-        #         print(jv(m, self.k*radius))
-        #         print(hankel1(m, self.k*radius))
-        #         return jv(m, self.k*radius)/hankel1(m, self.k*radius)
-        # elif bc == 'n':
-        #     return jvp(m, self.k*radius)/h1vp(m, self.k*radius)
-        # elif bc == 'i':
-        #     imp = cyl.impedance(self.k)
-        #     return(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))/\
-        #         (h1vp(m, self.k*radius) - 1j*imp*hankel1(m, self.k*radius))
-        # else:
-        #     print('invalid bc')
         return self.jmode(cyl, m)/self.hmode(cyl, m)
     
     def mulscat_term(self, cyl_p, n, m, b, cyl_q=None):
