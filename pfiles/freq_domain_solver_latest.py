@@ -45,7 +45,7 @@ for i in range(len(ks)):
         
     sc = scattering(cyls, 
                     freq = k/(2*np.pi), 
-                    inc_angle=0, #NOTE: this uses the nonstandard (i.e. Martin's) definition of incident angle
+                    inc_angle=np.pi, #NOTE: this uses the nonstandard (i.e. Martin's) definition of incident angle
                     method='explicit',
                     sum_tol=1e-8)
     if args.Nmodes > cyls[0].sum_index:

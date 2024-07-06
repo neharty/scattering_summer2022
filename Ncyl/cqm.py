@@ -199,7 +199,6 @@ class scattering(cyl):
                         self.rhs[self.lengths[l] + j] = self.rhs[self.lengths[l] + j]/self.hmode(self.cyls[l], idxa[j])
             self.rhs = np.nan_to_num(self.rhs, copy=False)
             
-
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
 

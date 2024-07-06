@@ -7,7 +7,7 @@ import os
 from scatterers import cyl, starfish, fat_starfish
 from collections import deque
 
-def set_scats(pos, sc_scale, bc, bcmode, rotation, rotmode, scatterer_type, scrmode, sum_num=None, impedance=None, rad_scale=1):
+def set_scats(pos, sc_scale, bc, bcmode, scatterer_type, scrmode, rotation=0., rotmode=None, sum_num=None, impedance=None, rad_scale=1):
     modes=['uniform', 'repeated', 'permuted', 'random']
     
     l = len(pos)

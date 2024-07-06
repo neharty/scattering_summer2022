@@ -31,7 +31,6 @@ class freq_domain_scattering:
     scats: object
     rhs_cyls: np.ndarray
     k: complex
-    k_type = 'cq' #either cq or real-k
     sum_index: object = None
     sum_tol: float = 1e-10
     gmres_tol: float = 1e-10
@@ -46,7 +45,10 @@ class freq_domain_scattering:
     gmres_restart: object = None
     gmres_maxiter: object = None
     fast_matrix_build: bool = True
-    use_2cyl_modes: bool = False
+    real_k_scattering: bool = False
+    real_k_rhs: str = 'planewave'
+    real_k_inc_angle: float=np.pi
+    real_k_r0: np.ndarray = np.array([0, 0])
     use_foldy_lax: bool = False
     save_coeffs: bool = False
     use_cpp: bool = False
@@ -80,10 +82,25 @@ class freq_domain_scattering:
         if self.wavespeed != 1:
             self.k = self.k/self.wavespeed
         
-        self.labels = np.array([c.label for c  in self.scats])
+        if self.real_k_scattering:
+            i = 0
+            for c in self.scats:
+                c.label = i
+                i+=1
+
+        self.labels = np.array([c.label for c in self.scats])
         
-        for l in self.labels:
-            self.scats[l].sum_index = self.sum_index
+        if self.sum_index is not None:
+            for s in self.scats:
+                s.sum_index = self.sum_index
+        
+        if self.real_k_scattering:
+            self.k = self.k.real
+            if self.sum_index is None:
+                self.mode_select()
+                for s in self.scats:
+                    s.sum_index = self.sum_index
+            self.make_rhs_data()
         
         # make lengths of coefficient vector blocks for MVP algorithm
         self.lengths = np.zeros(len(self.scats) + 1, dtype=int)
@@ -137,9 +154,21 @@ class freq_domain_scattering:
         return self.psihat(m-n, v)
     
     def jmode(self, scr, m):
-        bc = scr.bc
         radius = scr.radius
-        return jv(m, self.k*radius)
+        if self.use_tmatrix:
+            return jv(m, self.k*radius)
+        else:
+            bc = scr.bc
+            if bc == 'd':
+                st = jv(m, self.k*radius)
+            elif bc == 'n':
+                st = self.k*jvp(m, self.k*radius)
+            elif bc == 'i':
+                imp = cyl.impedance(self.k)
+                st = self.k*(jvp(m, self.k*radius) - 1j*imp*jv(m, self.k*radius))
+            else:
+                print('invalid bc')
+            return st
     
     def hmode(self, cyl, m):
         bc = cyl.bc
@@ -180,8 +209,19 @@ class freq_domain_scattering:
         interp = lambda x : 0.5 + 0.5*np.tanh((x - 0.1)/alpha)
         return int((1-interp(ka))*self.lowfreq_modes(k, a) + interp(ka)*self.highfreq_modes(k, a))
     
+    def make_dist_matrix(self):
+        self.dist_matrix = np.zeros((len(self.scats), len(self.scats)))
+        for i in self.labels:
+            for j in self.labels:
+                if i == j: 
+                    self.dist_matrix[i, j] = np.inf
+                else:
+                    self.dist_matrix[i, j] = np.linalg.norm(self.scats[i].pos - self.scats[j].pos)
+        return self.dist_matrix
+    
     def mode_select(self):
         #find the min distance
+        self.make_dist_matrix()
         minidx = np.unravel_index(
             self.dist_matrix.argmin(), 
             self.dist_matrix.shape
@@ -194,29 +234,50 @@ class freq_domain_scattering:
             copy.deepcopy(self.scats[minidx[0]]), 
             copy.deepcopy(self.scats[minidx[1]])
             ]
+        
+        auxcyls[0].label = 0
+        auxcyls[1].label = 1
+        
+        def rescale_coeffs(cs):
+            if not self.use_tmatrix:           
+                itr = 0
+                for c in auxcyls:
+                    idxa = np.arange(-c.sum_index, c.sum_index + 1)
+                    cs[itr*(2*c.sum_index + 1):(itr+1)*(2*c.sum_index + 1)] /= self.hmode(c, idxa)
+                    itr += 1
+            return cs
+        
         currmodes = self.modes(
             self.k, 
             np.max((auxcyls[0].radius, auxcyls[1].radius))
             )
+        
         csc = freq_domain_scattering(
             auxcyls, 
-            freq=self.freq, 
+            self.rhs_cyls,
+            self.k,
+            use_tmatrix=self.use_tmatrix,
+            real_k_scattering=True,
+            real_k_r0=self.real_k_r0,
+            real_k_rhs=self.real_k_rhs,
             method='explicit', 
             sum_index=currmodes
             )
+        carr = rescale_coeffs(csc.scattering_coeffs())
+        
         nsc = freq_domain_scattering(
             auxcyls, 
-            freq=self.freq, 
+            self.rhs_cyls,
+            self.k,
+            use_tmatrix=self.use_tmatrix,
+            real_k_scattering=True,
+            real_k_r0=self.real_k_r0,
+            real_k_rhs=self.real_k_rhs,
             method='explicit', 
             sum_index=currmodes+1
             )
 
-        #compute the coefficint vectors
-        csc.get_scattering_coeffs()
-        carr = csc.scattering_coeff_vect
-        
-        nsc.get_scattering_coeffs()
-        narr = nsc.scattering_coeff_vect
+        narr = rescale_coeffs(nsc.scattering_coeffs())
         
         while np.abs(carr[0]) >= self.sum_tol or np.abs(narr[0]) >= self.sum_tol:
             print('modes, error:', currmodes, np.abs(narr[0]))
@@ -224,27 +285,22 @@ class freq_domain_scattering:
             currmodes += 1
             nsc = freq_domain_scattering(
                 auxcyls,
-                self.rhs,
-                self.k, 
+                self.rhs_cyls,
+                self.k,
+                real_k_scattering=True,
+                real_k_r0=self.real_k_r0,
+                real_k_rhs=self.real_k_rhs,
                 method='explicit', 
                 sum_index=currmodes+1
                 )
-            nsc.scattering_coeffs()
-            narr = nsc.scattering_coeff_vect
-        return currmodes
+            narr = rescale_coeffs(nsc.scattering_coeffs())
+            
+        self.sum_index = currmodes
     
     def directscat_term(self, cyl, m):
         return np.eye(2*cyl.sum_index + 1)
 
-    def make_dist_matrix(self):
-        self.dist_matrix = np.zeros((len(self.scats), len(self.scats)))
-        for i in self.labels:
-            for j in self.labels:
-                if i == j: 
-                    self.dist_matrix[i, j] = np.inf
-                else:
-                    self.dist_matrix[i, j] = np.linalg.norm(self.scats[i].pos - self.scats[j].pos)
-        return self.dist_matrix
+    
 
     def make_root_vect_1cyl(self, i, sc):
         # i = incident circle label
@@ -350,46 +406,72 @@ class freq_domain_scattering:
             for j in range(2*self.scats[l].sum_index + 1):
                 idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
                 self.rhs[self.lengths[l] + j] = self.rhs_cyls[self.lengths[l] + j]/self.jmode(self.scats[l], idxa[j])
-            
-            if s.impedance is not None:
-                Tmat = self.tdict[(s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, s.impedance.__name__)]
-            else:
-                Tmat = self.tdict[(s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
-            
+            Tmat = self.tdict[self.get_scr_key(s)]          
             Rmat = self.rotmats[s]
             self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1] = -(Rmat*Tmat) @ self.rhs[self.lengths[l]:self.lengths[l]+2*self.sum_index + 1]
     
-    def make_rhs_data_cyl(self):
-        self.rhs = np.zeros(len(self.rhs_cyls), dtype = np.complex128)
-        #divide the rhs blocks by hankel functions, depending on the boundary conditions
-        for l in self.labels:
-            for j in range(2*self.scats[l].sum_index + 1):
-                idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
-                self.rhs[self.lengths[l] + j] = self.rhs_cyls[self.lengths[l] + j]/self.hmode(self.scats[l], idxa[j])
-        #self.rhs = np.nan_to_num(self.rhs, copy=False)
+    def make_d_coeffs_1cyl(self, cyl):
+        b, theta = self.cart_to_polar(cyl.pos)
+        sum_index = cyl.sum_index
+        if self.real_k_rhs == 'planewave':
+            return np.array([1j**n*np.exp(-1j*n*self.real_k_inc_angle)*np.exp(1j*self.k*b*np.cos(theta-self.real_k_inc_angle)) for n in np.arange(-sum_index, sum_index + 1)])
+        elif self.real_k_rhs == 'pointsource':
+            return np.array([self.psi(n, self.cyl.pos - self.real_k_r0)*np.exp(-2*1j*n*theta) for n in np.arange(-sum_index, sum_index + 1)])
+            
+    def make_rhs_vector_real_k_1cyl(self, cyl):
+        idxa = np.arange(-cyl.sum_index, cyl.sum_index + 1)
+        jvect = self.jmode(cyl, idxa)
+        return -np.multiply(jvect, self.make_d_coeffs_1cyl(cyl))
+
+    def make_rhs_vector_real_k_cyl(self):
+        self.rhs = np.hstack([self.make_rhs_vector_real_k_1cyl(c) for c in self.scats])
+        return self.rhs
     
-    def make_all_data(self):
+    def make_rhs_vector_real_k_tmatrix_1cyl(self, s):
+        Tmat = self.tdict[self.get_scr_key(s)]          
+        Rmat = self.rotmats[s]
+        return -(Rmat*Tmat) @ self.make_d_coeffs_1cyl(s)
+        
+    def make_rhs_vector_real_k_tmatrix(self):
+        self.rhs = -np.hstack([self.make_rhs_vector_real_k_tmatrix_1cyl(c) for c in self.scats])
+        return self.rhs
+    
+    def make_rhs_data_cyl(self):
+        self.rhs = self.rhs_cyls
+    
+    def make_rhs_data(self):
         if self.use_tmatrix:
             self.load_tmatrix_data()
-            self.make_rhs_data_tmatrix()
+            if self.real_k_scattering:
+                self.make_rhs_vector_real_k_tmatrix()
+            else:
+                self.make_rhs_data_tmatrix()
+        else:
+            if self.real_k_scattering:
+                self.make_rhs_vector_real_k_cyl()
+            else:
+                self.make_rhs_data_cyl()
+    
+    def make_matrix_data(self):
+        if self.use_tmatrix:
+            self.load_tmatrix_data()
         else:
             self.make_jm()
             self.make_hm()
-            self.make_rhs_data_cyl()
         
         if self.method=='explicit':
             self.make_root_matrix()
         if self.method=='gmres':
             self.make_circulant_root_allcyls()
     
+    def make_all_data(self):
+        self.make_rhs_data()
+        self.make_matrix_data()
+    
     def make_direct_scattering_block(self, cyl):
         return np.eye(2*cyl.sum_index + 1)
 
     def make_mul_scattering_block_tmatrix(self, sc_i, sc_sc):
-        # makes 1 off-diagonal block, 
-        # cyl_i = incident cylinder, 
-        # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
-      
         b = sc_i.pos - sc_sc.pos
         scm = 1j*np.zeros((2*sc_i.sum_index + 1, 2*sc_sc.sum_index + 1))
         idxa_i = np.arange(-sc_i.sum_index, sc_i.sum_index+1)
@@ -399,35 +481,20 @@ class freq_domain_scattering:
             for j in range(len(idxa_sc)):
                 m, n = idxa_i[i], idxa_sc[j]
                 scm[i,j] = self.S(n, m, b)
-        if sc_i.impedance is not None:
-            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, sc_i.impedance.__name__)]
-        else:
-            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
+        Tmat = self.tdict[self.get_scr_key(sc_i)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ scm
     
     def make_mul_scattering_block_cyl(self, sc_i, sc_sc):
-        # makes 1 off-diagonal block, 
-        # cyl_i = incident cylinder, 
-        # cyl_sc = emitting cylinder (scattering from this incident on cyl_i)
-      
         b = sc_i.pos - sc_sc.pos
-        if self.balanced_system:
-            scm = 1j*np.zeros((2*sc_i.sum_index + 1, 2*sc_sc.sum_index + 1))
-            idxa_i = np.arange(-sc_i.sum_index, sc_i.sum_index+1)
-            idxa_sc = np.arange(-sc_sc.sum_index, sc_sc.sum_index+1)
-        else:
-            scm = 1j*np.zeros((2*sc_i.sum_index, 2*sc_sc.sum_index))
-            idxa_i = np.arange(-sc_i.sum_index, sc_i.sum_index)
-            idxa_sc = np.arange(-sc_sc.sum_index, sc_sc.sum_index)
+        scm = 1j*np.zeros((2*sc_i.sum_index + 1, 2*sc_sc.sum_index + 1))
+        idxa_i = np.arange(-sc_i.sum_index, sc_i.sum_index+1)
+        idxa_sc = np.arange(-sc_sc.sum_index, sc_sc.sum_index+1)
 
         for i in range(len(idxa_i)):
             for j in range(len(idxa_sc)):
                 m, n = idxa_i[i], idxa_sc[j]
-                if self.use_reduced_system:
-                    scm[i,j] = self.mulscat_term_cyl(sc_i, n, m, b, sc_sc)
-                else:
-                    scm[i,j] = self.mulscat_term_cyl(sc_i, n, m, b)
+                scm[i,j] = self.mulscat_term_cyl(sc_i, n, m, b, sc_sc)
         return scm
     
     def make_mul_scattering_block_root_tmatrix(self, sc_i, sc_sc):
@@ -438,10 +505,7 @@ class freq_domain_scattering:
         row = rv[2*Nq:]
 
         S = toeplitz(row, col)
-        if sc_i.impedance is not None:
-            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, sc_i.impedance.__name__)]
-        else:
-            Tmat = self.tdict[(sc_i.name, sc_i.bc, sc_i.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)]
+        Tmat = self.tdict[self.get_scr_key(sc_i)]
         Rmat = self.rotmats[sc_i]
         return -(Rmat*Tmat) @ S
 
@@ -472,14 +536,78 @@ class freq_domain_scattering:
         self.scat_mat = np.block(self.make_scattering_blocks_blockform_tmatrix())
         return self.scat_mat
     
-    def make_mul_scattering_block_root_cyl(self, sc_i, sc_sc):
-        pass
-    
+    def make_mul_scattering_block_root_cyl(self, cyl_i, cyl_sc):
+        rv = self.make_root_vect_1cyl(cyl_i.label, cyl_sc.label)
+        Nq = cyl_sc.sum_index
+        col = np.flip(rv[:2*Nq+1])
+        row = rv[2*Nq:]
+        S = toeplitz(row, col)
+        J = np.diag(self.jm[cyl_i.label])
+        Hinv = np.diag(1/self.hm[cyl_sc.label])
+        return J @ S @ Hinv
+ 
     def make_scattering_blocks_blockform_cyl(self):
-        pass
+        scat_mat = [[None for i in self.labels] for j in self.labels]
+        for i in self.labels:
+            for j in self.labels:
+                if i == j:
+                    scat_mat[i][j] = self.make_direct_scattering_block(self.scats[i])
+                else:
+                    if self.fast_matrix_build:
+                        scat_mat[i][j] = self.make_mul_scattering_block_root_cyl(self.scats[i], self.scats[j])
+                    else:
+                        scat_mat[i][j] = self.make_mul_scattering_block_cyl(self.scats[i], self.scats[j])
+        return scat_mat
         
     def make_scattering_blocks_cyl(self):
-        pass
+        if self.fl:
+            self.scat_mat = 1j*np.zeros((len(self.scats), len(self.scats)))
+            for i in self.labels:
+                for j in self.labels:
+                    if i == j:
+                        self.scat_mat[i][j] = self.directscat_term_cyl(self.scats[i], 0)
+                    else:
+                        b = b = self.scats[i].pos - self.scats[j].pos
+                        self.scat_mat[i][j] = self.mulscat_term_cyl(self.scats[j], 0, 0, b)
+        else:
+            self.scat_mat = np.block(self.make_scattering_blocks_blockform_cyl())
+
+        return self.scat_mat
+    
+    def make_jhm(self):
+        if self.jhm is None:
+            self.jhm = [None for p in self.labels]
+            for p in self.labels:
+                idxa_p = np.arange(
+                    -self.scats[p].sum_index, 
+                    self.scats[p].sum_index+1
+                    )
+                self.jhm[p] = self.jh(self.scats[p], idxa_p)
+        return self.jhm
+    
+    def make_jm(self):
+        if self.jm is None:
+            self.jm = [None for p in self.labels]
+            for p in self.labels:
+                idxa_p = np.arange(
+                    -self.scats[p].sum_index, 
+                    self.scats[p].sum_index+1
+                    )
+
+                self.jm[p] = self.jmode(self.scats[p], idxa_p)
+        return self.jm
+    
+    def make_hm(self):
+        if self.hm is None:
+            self.hm = [None for p in self.labels]
+            for p in self.labels:
+                idxa_p = np.arange(
+                    -self.scats[p].sum_index, 
+                    self.scats[p].sum_index+1
+                    )
+                self.hm[p] = self.hmode(self.scats[p], idxa_p)
+        return self.hm
+    
     
     def circulant_mvp(self, r, x):
         #r = root matrix
@@ -507,7 +635,7 @@ class freq_domain_scattering:
         res = self.circulant_mvp(rnew, xnew)
         return res[:len(x)]
     
-    def mvp(self, x):
+    def mvp_tmatrix(self, x):
         x = np.array(x, dtype=np.complex128)
         xs = np.reshape(x, (len(self.scats), 2*self.scats[0].sum_index+1))
         mulscat = [1j*np.zeros(len(xn)) for xn in xs]
@@ -527,13 +655,44 @@ class freq_domain_scattering:
                     if self.CT is not None:
                         row = np.array(self.CT[p][q], dtype=np.complex128)
                         col = None
-                    if self.use_reduced_system:
-                        tmparr = self.toeplitz_mvp(row, np.array(xs[q]/self.hm[q]), col)
-                        tmparr *= self.jm[p]
-                    else:
-                        tmparr = self.toeplitz_mvp(row, np.array(xs[q]), col)
-                        tmparr *= self.jm[p]
-                        tmparr /= self.hm[p]
+                    tmparr = self.toeplitz_mvp(row, np.array(xs[q]), col)
+                    tmparr = -(self.rotmats[self.scats[p]] * self.tdict[self.get_scr_key(self.scats[p])]) @ tmparr
+                    tmp += [tmparr]
+                else:
+                    # diagonal matrix multiplication (identity)
+                    tmp += [xs[p]]
+                    
+            SCmvp += [tmp]
+
+        for p in self.labels:
+            for q in self.labels:
+                mulscat[p] += SCmvp[p][q]
+        #print(mulscat)
+        self.mvp_counter += 1
+        return np.hstack(mulscat)
+    
+    def mvp_cyl(self, x):
+        x = np.array(x, dtype=np.complex128)
+        xs = np.reshape(x, (len(self.scats), 2*self.scats[0].sum_index+1))
+        mulscat = [1j*np.zeros(len(xn)) for xn in xs]
+        
+        SCmvp = []
+        
+        for p in self.labels: # incident label 
+            tmp = []
+            for q in self.labels: # scattered label
+                if p != q:
+                    # off-diagonal matrix multiplication
+                    if self.ST is not None:
+                        Nq = self.scats[q].sum_index
+                        rv = self.ST[p][q]
+                        col = np.array(np.flip(rv[:2*Nq+1]), dtype=np.complex128)
+                        row = np.array(rv[2*Nq:], dtype=np.complex128)
+                    if self.CT is not None:
+                        row = np.array(self.CT[p][q], dtype=np.complex128)
+                        col = None
+                    tmparr = self.toeplitz_mvp(row, np.array(xs[q]/self.hm[q]), col)
+                    tmparr *= self.jm[p]
                     tmp += [tmparr]
                 else:
                     # diagonal matrix multiplication (identity)
@@ -553,7 +712,9 @@ class freq_domain_scattering:
         self.iter += 1
         
     def scattering_coeffs_gmres(self):
-                     
+        #make the rhs
+        self.make_rhs_data()
+        
         #check if rhs is zero-ish
         if np.all(np.abs(self.rhs) < self.rhs_tol):
             return (np.zeros(len(self.rhs)), 0)
@@ -562,6 +723,7 @@ class freq_domain_scattering:
             ps = PyScat(self.scats, self.k, self.sum_index, self.use_reduced_system)
             ps.make_all_data()
             ps.use_fft_mvp = False
+            
             #check wether to use fft mvp or not
             # if len(self.scats) > 1:
             #     ps.use_fft_mvp = True
@@ -581,7 +743,7 @@ class freq_domain_scattering:
                 self.method='explicit'
                 return (self.scattering_coeffs(), 0)
         elif self.use_cpp:
-            #NOTE: this is unable to be used, since the C++ solver is not implemented
+            #NOTE: this cannot be used, since the C++ solver is not implemented
             ps = PyScatC(self.scats, self.k, self.sum_index)
             ps.mvp_init()
             ps.gmres_setup(self.gmres_restart, 2*self.gmres_restart, self.gmres_tol)
@@ -593,27 +755,29 @@ class freq_domain_scattering:
                 self.method='explicit'
                 return (self.scattering_coeffs(), 0)
         else:
-            self.make_all_data()
+            self.make_matrix_data()
             #check wether to use fft mvp or not
-            if len(self.scats) > 1:
-                self.use_fft_mvp = True
-                test0 = self.mvp(self.rhs) # test mvp with fft
-                self.use_fft_mvp = False
-                test1 = self.mvp(self.rhs)
-                if np.max(np.abs(test0 - test1)) < self.fft_mvp_tol:
-                    self.use_fft_mvp = True
-                else:
-                    self.use_fft_mvp = False
+            # if len(self.scats) > 1:
+            #     self.use_fft_mvp = True
+            #     test0 = self.mvp_cyl(self.rhs) # test mvp with fft
+            #     self.use_fft_mvp = False
+            #     test1 = self.mvp(self.rhs)
+            #     if np.max(np.abs(test0 - test1)) < self.fft_mvp_tol:
+            #         self.use_fft_mvp = True
+            #     else:
+            #         self.use_fft_mvp = False
                 
             #set the vectors for fast matrix multiplication
-            #self.ST = self.make_root_matrix()
             self.gmres_iter = 0
             self.mvp_counter = 0
             dim = self.scat_matrix_dim
             if self.use_mat:
                 linearop = self.make_scattering_blocks()
             else:
-                linearop = LinearOperator((dim, dim), matvec = self.mvp)
+                if self.use_tmatrix:
+                    linearop = LinearOperator((dim, dim), matvec = self.mvp_tmatrix)
+                else:
+                    linearop = LinearOperator((dim, dim), matvec = self.mvp_cyl)
 
             rhs = self.rhs
             #counter = self.gmres_counter()
@@ -630,17 +794,17 @@ class freq_domain_scattering:
             self.iter = 0
 
             #set the preconditioner, if any
-            if self.precond is not None:
-                precond_mat = self.precond(self, **self.pargs).inv_mat
-            else:
-                precond_mat = None
+            # if self.precond is not None:
+            #     precond_mat = self.precond(self, **self.pargs).inv_mat
+            # else:
+            #     precond_mat = None
 
             #NOTE: outp will contain the solution vector AND an error code
             outp = gmres(
                         linearop,
                         self.rhs,
                         rtol = self.gmres_tol,
-                        M = precond_mat,
+                        #M = precond_mat,
                         restart = self.gmres_restart,
                         callback = self.gmres_callback,
                         callback_type = 'pr_norm',
@@ -656,20 +820,22 @@ class freq_domain_scattering:
             return np.zeros(len(self.rhs_cyls))
         
         if self.scat_mat is None:
-            self.scat_mat = self.make_scattering_blocks()
+            if self.use_tmatrix:
+                self.scat_mat = self.make_scattering_blocks_tmatrix()
+            else:
+                self.scat_mat = self.make_scattering_blocks_cyl()
         
         try:
             soln = np.linalg.solve(self.scat_mat, self.rhs)
         except:
             print('singular matrix', np.linalg.norm(self.rhs))
-            return np.zeros(len(self.rhs))
+            return np.zeros(len(self.rhs), dtype = np.complex128)
         print('k done:', self.k)
         return soln
     
     def scattering_coeffs(self):
         if self.method == 'gmres':
-            return self.scattering_coeffs_gmres()
-            
+            return self.scattering_coeffs_gmres()            
         elif self.method == 'explicit':
             return self.scattering_coeffs_explicit()
     
@@ -700,16 +866,16 @@ class freq_domain_scattering:
             else:
                 for j in range(2*self.scats[l].sum_index + 1):
                     idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
-                    u_sc += cs[self.lengths[l] + j]*self.psi(idxa[j], R)
+                    if self.use_tmatrix:
+                        u_sc += cs[self.lengths[l] + j]*self.psi(idxa[j], R)
+                    else:
+                        u_sc += cs[self.lengths[l] + j]*self.psi(idxa[j], R)/self.hmode(self.scats[l], idxa[j])
 
         self.u_sc = u_sc*self.mask(x,y)
         if self.save_coeffs:
             return (self.u_sc, cs)
         else:
             return self.u_sc
-
-    def make_u_sc_parallel(self, x, y, queue):
-        queue.put(self.make_u_sc(x, y))
     
     def mask(self, x, y):
         Oi = self.scats[0].pos
@@ -720,28 +886,28 @@ class freq_domain_scattering:
             radius = self.scats[i].radius
             mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         return mask
-    def get_scattering_coeffs(self):
-        if self.scattering_coeff_vect == None:
-            print(self.method, self.freq)
-            if self.method == 'gmres':
-                cs, ecode = self.scattering_coeffs()
-                if ecode != 0:
-                    print('GMRES failed, switching to explicit')
-                    self.method = 'explicit'
-                    cs = self.scattering_coeffs()
-            elif self.method == 'explicit':
-                cs = self.scattering_coeffs()
+    
+    # def get_scattering_coeffs(self):
+    #     if self.scattering_coeff_vect == None:
+    #         print(self.method, self.freq)
+    #         if self.method == 'gmres':
+    #             cs, ecode = self.scattering_coeffs()
+    #             if ecode != 0:
+    #                 print('GMRES failed, switching to explicit')
+    #                 self.method = 'explicit'
+    #                 cs = self.scattering_coeffs()
+    #         elif self.method == 'explicit':
+    #             cs = self.scattering_coeffs()
                 
-            if self.use_reduced_system:
-                for l in self.labels:
-                    for j in range(2*self.cyls[l].sum_index + 1):
-                        idxa = np.arange(-self.cyls[l].sum_index, self.cyls[l].sum_index + 1)
-                        cs /= self.hmode(self.cyls[l], idxa[j])
+    #         for l in self.labels:
+    #             for j in range(2*self.scats[l].sum_index + 1):
+    #                 idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index + 1)
+    #                 cs /= self.hmode(self.scats[l], idxa[j])
             
-            self.scattering_coeff_vect = cs
-            return cs
-        else:
-            return self.scattering_coeff_vect
+    #         self.scattering_coeff_vect = cs
+    #         return cs
+    #     else:
+    #         return self.scattering_coeff_vect
 
     def set_u(self, x, y, recompute=False):
         if self.u == None:

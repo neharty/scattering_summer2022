@@ -180,10 +180,8 @@ class time_domain_scattering:
     
     def td_bdy(self, cyl, c=0):
         bc = cyl.bc
-        if self.balanced_system:
-            n = 2*self.modes + 1
-        else:
-            n = 2*self.modes
+        n = 2*self.modes + 1
+
         N = len(self.times)
         r = cyl.radius
         p = np.array(cyl.pos)
@@ -313,7 +311,7 @@ class time_domain_scattering:
     
     def make_zbc(self, cyl, zdat):
         #form the z-domain, perhaps coupled, boundary conditions
-        if self.uset_tmatrix:
+        if self.use_tmatrix:
             return -zdat
         else:
             bc = cyl.bc
@@ -569,6 +567,7 @@ class time_domain_scattering:
                 copy.deepcopy(self.cyls), 
                 rhs, 
                 self.ks[idx],
+                use_tmatrix=self.use_tmatrix,
                 sum_index=self.modes,
                 save_coeffs = self.save_coeffs,
                 **self.scargs
@@ -665,6 +664,7 @@ class time_domain_scattering:
                         copy.deepcopy(self.cyls), 
                         rhs, 
                         ks[i],
+                        use_tmatrix=self.use_tmatrix,
                         sum_index=self.modes,
                         save_coeffs = self.save_coeffs,
                         **self.scargs
