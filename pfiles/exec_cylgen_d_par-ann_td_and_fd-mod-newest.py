@@ -104,7 +104,7 @@ tds = time_domain_scattering(
                         timeint=tint,
                         balanced_system=True,
                         use_par=True,
-			cpus=12,
+			            cpus=12,
                         use_disk=usedisk,
                         scargs={'method':'explicit'}
                         )
@@ -137,7 +137,7 @@ tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
-                             sampnum=2**args.Nt,
+                             sampnum=2**args.Nt-1,
                              modes=args.Nmodes,
                              timeint=tint,
                              balanced_system=True,
@@ -151,11 +151,11 @@ U = tds.make_U_sc(X, Y)
 if not os.path.exists(args.fout):
     os.makedirs(args.fout)
 
-freqs = rfftfreq(U.shape[-1]-1, d=tds.dt)
+freqs = rfftfreq(U.shape[-1], d=tds.dt)
 ka = 2*np.pi*freqs*args.radius
 
 #find the incident planewave amplitude
-pw = np.abs(rfft(wv.profile(np.linspace(0, T, 2**args.Nt)-T//2)))
+pw = np.abs(rfft(wv.profile(np.linspace(0, T, 2**args.Nt, False)-T//2)))
 pwarr = [[ka[i], pw[i]] for i in range(len(pw))]
 np.savetxt(os.path.join(args.fout, 'incwave_ft.dat'), pwarr)
 pw = pw[1:] # get rid of 0-freq
@@ -164,7 +164,7 @@ ka = ka[1:] # discard 0-freq soln
 ka = ka[pwmask]
 
 #transform the time domain data
-freqdat = np.abs(rfft(U[..., :-1]))
+freqdat = np.abs(rfft(U[..., :]))
 freqdat = freqdat[:, 1:] #discard ka=0 solution
 freqdat = freqdat[:, pwmask]
 print(len(ka), freqdat.shape)

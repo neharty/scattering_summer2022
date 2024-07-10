@@ -4,7 +4,8 @@ import os
 #from Ncyl.Ncyl_gmres import scattering, cyl
 #from Ncyl.tds import scattering, cyl
 #from Ncyl.cqm import cyl
-from scatterers import cyl, starfish, fat_starfish
+#from scatterers import cyl, starfish, fat_starfish, bean, strip
+from scatterers import scat_select
 from collections import deque
 
 def set_scats(pos, sc_scale, bc, bcmode, scatterer_type, scrmode, rotation=0., rotmode=None, sum_num=None, impedance=None, rad_scale=1):
@@ -66,23 +67,13 @@ def set_scats(pos, sc_scale, bc, bcmode, scatterer_type, scrmode, rotation=0., r
     
     #set scatterers
     if scrmode == 'uniform':
-        if scatterer_type=='cyl':
-            scrs=[cyl(bcs[i], pos[i], sc_scale, 0, sum_num, impedance, rad_scale) for i in range(l)]
-        elif scatterer_type == 'starfish':
-            scrs =[starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale) for i in range(l)]
-        elif scatterer_type == 'fat_starfish':
-            scrs = [fat_starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale) for i in range(l)]
-    elif bcmode=='random':
+        scrs = [scat_select(scatterer_type, bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale) for i in range(l)]
+    elif scrmode=='random':
         scrsname = np.random.choice(scatterer_type, size=l)
         scrsname = [scrsname[i].item() for i in range(l)]
         scrs = []
         for i in range(l):
-            if scrsname[i] == 'cyl':
-                tmp = [cyl(bcs[i], pos[i], sc_scale, sum_num, impedance, rad_scale)]
-            elif scrsname[i] == 'starfish':
-                tmp = [starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
-            elif scrsname[i] == 'fat_starfish':
-                tmp = [fat_starfish(bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
+            tmp = [scat_select(scrsname[i], bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
             scrs += tmp
         
     return scrs

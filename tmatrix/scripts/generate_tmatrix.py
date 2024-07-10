@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz
 from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
 from integrators.alpert import alpert2, alpert6, alpert10, alpert16
-from scatterers import cyl, starfish, bean, leaf, fat_starfish
+from scatterers import scat_select
 import argparse
 import os
 from dataclasses import dataclass
@@ -31,21 +31,25 @@ class Tmatrix:
             self.bie = alpert10()
         if self.alpertorder == 16:
             self.bie = alpert16()
-    
-        self.t = np.linspace(0, 2*np.pi, self.Npoints, False)
-        self.h = 2*np.pi/self.Npoints
         
-        if self.geometry == 'cyl':
-            self.scgeom = cyl(self.bc, [0,0], self.radius, impedance=self.impedance)
-        elif self.geometry == 'starfish':
-            self.scgeom = starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
-        elif self.geometry == 'bean':
-            self.scgeom = bean(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
-        elif self.geometry == 'leaf':
-            self.scgeom = leaf(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
-        elif self.geometry == 'fat_starfish':
-            self.scgeom = fat_starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
-    
+        # if self.geometry == 'cyl':
+        #     self.scgeom = cyl(self.bc, [0,0], self.radius, impedance=self.impedance)
+        # elif self.geometry == 'starfish':
+        #     self.scgeom = starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
+        # elif self.geometry == 'bean':
+        #     self.scgeom = bean(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
+        # elif self.geometry == 'leaf':
+        #     self.scgeom = leaf(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
+        # elif self.geometry == 'fat_starfish':
+        #     self.scgeom = fat_starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
+            
+        self.scgeom = scat_select(self.geometry, self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
+        
+        self.t = np.linspace(0, 2*np.pi, self.Npoints, False)    
+        self.h = 2*np.pi/self.Npoints        
+        if self.scgeom.offset_t:
+            self.t = self.t - self.h/2
+
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
     

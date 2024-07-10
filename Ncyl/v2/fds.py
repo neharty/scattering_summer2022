@@ -58,8 +58,9 @@ class freq_domain_scattering:
     alpertorder: int = 6 #use 6th order by default
     Npoints: int = 256
     Nmode_tmat: int = 20
-    save_Tmat = True
-            
+    save_Tmat: bool = True
+    remake_Tmat: bool = False 
+           
     def __post_init__(self):
         self.fl = self.use_foldy_lax
         self.ST = None
@@ -365,33 +366,40 @@ class freq_domain_scattering:
         new_uuid = uuid.UUID(m.hexdigest())
         return new_uuid
     
+    def make_tmatrix(self, s):
+        from tmatrix.scripts.generate_tmatrix import Tmatrix
+        tmx = Tmatrix(self.k, self.alpertorder, s.name, s.bc, s.sc_scale, self.Npoints, self.Nmode_tmat, impedance=s.impedance)
+        return tmx.make_tmatrix()      
+    
     def load_tmatrix_data(self):
         # search through folder for matching file names
         self.tdict = {}
-        
         idxa = np.arange(-self.sum_index, self.sum_index+1)
         self.rotmats = {}
         for s in self.scats:
             key = self.get_scr_key(s)
-            geometry = s.name
             try:
                 self.tdict[key]
             except KeyError:
                 #if not already loaded, then load the tmatrix file
                 fstr = f'{self.get_hash(s)}.dat' 
                 #t matrices are defined by their scatterer type and radius
-                
                 try:
                     tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
                 except FileNotFoundError as e:
                     print(e)
                     print(key)
                     #if the file doesn't exist, then generate it and save it
-                    from tmatrix.scripts.generate_tmatrix import Tmatrix
-                    tmx = Tmatrix(self.k, self.alpertorder, geometry, s.bc, s.sc_scale, self.Npoints, self.Nmode_tmat, impedance=s.impedance)
-                    T = tmx.make_tmatrix()
+                    T = self.make_tmatrix(s)
                     if self.save_Tmat:
                         np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
+                    tmattmp = T
+                
+                if self.remake_Tmat:
+                    print('remaking T-matrix')
+                    print(key)
+                    T = self.make_tmatrix(s)
+                    np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
                     tmattmp = T
                 
                 self.tdict[key] = tmattmp[self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1, self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1]
