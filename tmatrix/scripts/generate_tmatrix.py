@@ -31,24 +31,16 @@ class Tmatrix:
             self.bie = alpert10()
         if self.alpertorder == 16:
             self.bie = alpert16()
-        
-        # if self.geometry == 'cyl':
-        #     self.scgeom = cyl(self.bc, [0,0], self.radius, impedance=self.impedance)
-        # elif self.geometry == 'starfish':
-        #     self.scgeom = starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
-        # elif self.geometry == 'bean':
-        #     self.scgeom = bean(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
-        # elif self.geometry == 'leaf':
-        #     self.scgeom = leaf(self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
-        # elif self.geometry == 'fat_starfish':
-        #     self.scgeom = fat_starfish(self.bc, [0,0], self.radius, self.rotation, impedance=self.impedance)
             
         self.scgeom = scat_select(self.geometry, self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
+        self.use_weighted = self.scgeom.weighted_density
+            
+        self.h = 2*np.pi/self.Npoints     
         
-        self.t = np.linspace(0, 2*np.pi, self.Npoints, False)    
-        self.h = 2*np.pi/self.Npoints        
         if self.scgeom.offset_t:
-            self.t = self.t - self.h/2
+            self.t = (np.arange(1, self.Npoints+1) - 0.5)*self.h
+        else:
+            self.t = np.linspace(0, 2*np.pi, self.Npoints, False)
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -101,7 +93,9 @@ class Tmatrix:
                 if np.abs(self.ll(i, j)) < self.bie.dist:
                     B[i, j] = 0
         
-        B = B @ np.diag(np.linalg.norm(dx, axis=1))
+        if not self.use_weighted:
+            B = B @ np.diag(np.linalg.norm(dx, axis=1))
+        
         B *= self.h
         return B
     
@@ -124,9 +118,12 @@ class Tmatrix:
                     if idx >= self.Npoints:
                         idx = idx - self.Npoints
                     idx = int(idx)
-                    ds = np.linalg.norm(dxalp[p][i])
                     kervaltmp = self.G(x[i], xalp[p][i])
-                    kerval = kervaltmp*ds*self.h
+                    if self.use_weighted:
+                        kerval = kervaltmp*self.h
+                    else:
+                        ds = np.linalg.norm(dxalp[p][i])
+                        kerval = kervaltmp*ds*self.h
                     lidx = np.where(Op == dist)[0][0]
                     C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
         return C
@@ -135,8 +132,9 @@ class Tmatrix:
         x = np.array([xfn(ti) for ti in self.t])
         dx = np.array([dxfn(ti) for ti  in self.t], dtype=np.complex128)
         nv = np.array([[xp[1], -xp[0]] for xp in dx])
-        nv = nv.T/np.array([np.linalg.norm(n) for n in nv])#normalize vectors
-        nv = nv.T
+        if not self.use_weighted:
+            nv = nv.T/np.array([np.linalg.norm(n) for n in nv]) # normalize vectors
+            nv = nv.T
         B = np.array([[self.dGdn(xp, yp, n) for yp in x] for (xp, n) in zip(x, nv)])
     
         # construct B matrix
@@ -144,8 +142,10 @@ class Tmatrix:
             for j in range(self.Npoints):
                 if np.abs(self.ll(i, j)) < self.bie.dist:
                     B[i, j] = 0
-        
-        B = B @ np.diag(np.linalg.norm(dx, axis=1))
+                    
+        if not self.use_weighted:
+            B = B @ np.diag(np.linalg.norm(dx, axis=1))
+            
         B *= self.h
         return B
     
@@ -153,8 +153,9 @@ class Tmatrix:
         x = np.array([xfn(ti) for ti in self.t])
         dx = np.array([dxfn(ti) for ti in self.t])
         nv = np.array([[xp[1], -xp[0]] for xp in dx])
-        nv = nv.T/np.array([np.linalg.norm(n) for n in nv])#normalize vectors
-        nv = nv.T
+        if not self.use_weighted:
+            nv = nv.T/np.array([np.linalg.norm(n) for n in nv]) # normalize vectors
+            nv = nv.T
         C = np.zeros((self.Npoints, self.Npoints), dtype=np.complex128)
         
         m = len(self.bie.nodemat)
@@ -170,9 +171,12 @@ class Tmatrix:
                     if idx >= self.Npoints:
                         idx = idx - self.Npoints
                     idx = int(idx)
-                    ds = np.linalg.norm(dxalp[p][i])
                     kervaltmp = self.dGdn(x[i], xalp[p][i], nv[i])
-                    kerval = kervaltmp*ds*self.h
+                    if self.use_weighted:
+                        kerval = kervaltmp*self.h
+                    else:
+                        ds = np.linalg.norm(dxalp[p][i])
+                        kerval = kervaltmp*ds*self.h
                     lidx = np.where(Op == dist)[0][0]
                     C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
         return C
@@ -195,7 +199,10 @@ class Tmatrix:
   
     def Tnm(self, n, mu):
         #trapezoidal rule
-        yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+        if self.use_weighted:
+            yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i] for i in range(self.Npoints)])
+        else:
+            yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
         tmp = 0j
         for i in range(self.Npoints):
             tmp += yfn[i]
@@ -221,10 +228,13 @@ class Tmatrix:
         
         for n in idxarr:
             # find the density for 1 mode
-            if self.bc == 'd':    
+            if self.bc == 'd':
                 rhs = -np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
             elif self.bc == 'n':
-                rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+                if self.use_weighted:
+                    rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i]))*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+                else:
+                    rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
             elif self.bc == 'i':
                 dirpart = np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
                 neumpart = np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])

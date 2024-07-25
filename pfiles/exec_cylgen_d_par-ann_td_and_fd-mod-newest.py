@@ -164,7 +164,7 @@ ka = ka[1:] # discard 0-freq soln
 ka = ka[pwmask]
 
 #transform the time domain data
-freqdat = np.abs(rfft(U[..., :]))
+freqdat = np.abs(rfft(U[..., :-1]))
 freqdat = freqdat[:, 1:] #discard ka=0 solution
 freqdat = freqdat[:, pwmask]
 print(len(ka), freqdat.shape)

@@ -4,7 +4,7 @@ from utils import example_setups
 import matplotlib.pyplot as plt
 from scatterers import cyl, starfish
 
-def plot_scatterers(scats, npts=100):
+def plot_scatterers(scats, npts=100, bdypltargs={}):
     fig, ax = plt.subplots()
     nscats = len(scats)
     pos = np.array([scats[i].pos for i in range(nscats)])
@@ -20,7 +20,7 @@ def plot_scatterers(scats, npts=100):
         elif bc =='i':
             c = 'g'
         ax.plot(*(pos[n, 0] + r*np.sin(angs), pos[n, 1] + r*np.cos(angs)), c, label = 'bc='+bc, linestyle='--') #plot the circle surrounding the scatterer
-        ax.plot(*(pos[n, 0] + scats[n].bdy(angs)[0,:], pos[n, 1] + scats[n].bdy(angs)[1,:]), c, label = 'bc='+bc) #plot the scatterer boundary
+        ax.plot(*(pos[n, 0] + scats[n].bdy(angs)[0,:], pos[n, 1] + scats[n].bdy(angs)[1,:]), c, label = 'bc='+bc, **bdypltargs) #plot the scatterer boundary
         
     handles, labels = ax.get_legend_handles_labels()
     handle_list, label_list = [], []

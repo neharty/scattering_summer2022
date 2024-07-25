@@ -14,46 +14,52 @@ np.random.seed(123)
 
 tint = IRK5()
 
-T = 80
-Nt = 14
+T = 40
+Nt = 12
 
-bc = 'n'
+bc = ['n', 'd']
 imp = None
 
 measurepts = np.array([[-6.0,0.0], [0.0, 6.0],  [0.0, -6.0], [6.0,0.0]])
 x, y = measurepts[:, 0], measurepts[:, 1]
 
-np.random.seed(123)
+np.random.seed(1234)
 rangs = np.random.uniform(0, 2, 4**2)*np.pi
 rangs = rangs.tolist()
 
 #%%
 from Ncyl.v2.cqm_v2 import time_domain_scattering
 from utils import example_setups_bie
-# run the larger circle problem
 scrspos = example_setups_bie.uniform_grid_NxN(3, 1, 3)
-scrs = example_setups_bie.set_scats([[0, 0]], 1, bc, 'uniform',  ['boomerang'], 'random', [0], 'array', rad_scale=1, impedance=imp)
+scrs = example_setups_bie.set_scats(scrspos, 1, bc, 'random',  ['strip', 'teardrop', 'boomerang'], 'random', rangs, 'array', rad_scale=1, impedance=imp)
+#scrs = example_setups_bie.set_scats([[0, 0]], 1, bc, 'uniform',  ['triad'], 'random', rangs, 'array', rad_scale=1.2, impedance=imp)
+scrs
 fig, ax = plot_scatterers(scrs, npts = 500)
+plt.savefig('/home/nick/scattering/tests/bie_tests/scattering/shapestest_shapes.pdf')
 plt.show()
+
 #%%
 tds = time_domain_scattering(
                              scrs,
                              wv,
                              T,
                              sampnum=2**Nt,
-                             modes=14,
+                             modes=8,
                              timeint=tint,
                              use_par=False,
                              scargs={'method':'explicit', 
-                                     'Npoints': 64,
+                                     'Npoints': 128,
+                                     'alpertorder': 2,
                                      'remake_Tmat': False}
                              )
 U = tds.make_U_sc(x, y)
 
 #%%
 #plt.plot(tds.times, Uref[0, :], label='old')
-plt.plot(tds.times, U[-1, :])
+plt.plot(tds.times[:], U[-1, :])
+plt.title('(6, 0)')
 plt.xlabel('t')
 plt.ylabel('u_sc')
 plt.tight_layout()
+plt.savefig('/home/nick/scattering/tests/bie_tests/scattering/shapestest.pdf')
 plt.show()

@@ -64,6 +64,8 @@ def set_scats(pos, sc_scale, bc, bcmode, scatterer_type, scrmode, rotation=0., r
         rots = np.random.uniform(0, 2, l)*np.pi
     elif rotmode=='array':
         rots = rotation
+    elif rotmode == None:
+        rots = np.zeros(l)
     
     #set scatterers
     if scrmode == 'uniform':

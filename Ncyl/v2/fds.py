@@ -372,6 +372,7 @@ class freq_domain_scattering:
         return tmx.make_tmatrix()      
     
     def load_tmatrix_data(self):
+        os.makedirs(self.tmatrix_path, exist_ok=True)
         # search through folder for matching file names
         self.tdict = {}
         idxa = np.arange(-self.sum_index, self.sum_index+1)
@@ -385,6 +386,13 @@ class freq_domain_scattering:
                 fstr = f'{self.get_hash(s)}.dat' 
                 #t matrices are defined by their scatterer type and radius
                 try:
+                    if self.remake_Tmat:
+                        print('remaking T-matrix')
+                        print(key)
+                        T = self.make_tmatrix(s)
+                        np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
+                        tmattmp = T
+                    
                     tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
                 except FileNotFoundError as e:
                     print(e)
@@ -394,14 +402,7 @@ class freq_domain_scattering:
                     if self.save_Tmat:
                         np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
                     tmattmp = T
-                
-                if self.remake_Tmat:
-                    print('remaking T-matrix')
-                    print(key)
-                    T = self.make_tmatrix(s)
-                    np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
-                    tmattmp = T
-                
+                         
                 self.tdict[key] = tmattmp[self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1, self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1]
             self.rotmats[s] = np.array([[np.exp(1j*(n-m)*s.rotation) for n in idxa] for m in idxa])
     

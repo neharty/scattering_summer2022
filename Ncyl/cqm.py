@@ -1392,7 +1392,7 @@ class time_domain_scattering(scattering):
                 for i in range(self.rhs_maxidx):
                     self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
             if self.save_coeffs and self.coeff_mat is None:
-                self.coeff_mat = [1j*np.zeros(self.rhsmat[j].shape) for j in range(len(self.timeint.c))]
+                self.coeff_mat = [1j*np.zeros(np.array(self.rhsmat[j]).shape) for j in range(len(self.timeint.c))]
     
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt

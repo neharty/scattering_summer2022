@@ -35,6 +35,7 @@ class scatterer(ABC):
         self.bc = bc #boundary condition
         self.impedance = impedance #impedance is a function handle for \eta
         self.offset_t = False
+        self.weighted_density = False #used for computing tmatrices
         self.Rmat = np.array([[np.cos(self.rotation), -np.sin(self.rotation)], 
                               [np.sin(self.rotation), np.cos(self.rotation)]])
         
@@ -58,11 +59,11 @@ class scatterer(ABC):
         return (tii*self.v(s, ti, tii)**self.sigma + ti*(1 - self.v(s, ti, tii))**self.sigma)/(self.v(s, ti, tii)**self.sigma + (1-self.v(s, ti, tii))**self.sigma) 
     
     def dw(self, s, ti, tii):
-        return ((self.v(s, ti, tii)**self.sigma + (1-self.v(s, ti, tii))**self.sigma) \
-                *(tii*self.sigma*self.v(s, ti, tii)**(self.sigma-1)*self.dv(s, ti, tii) - ti*self.sigma*(1-self.v(s, ti, tii))**(self.sigma-1)*self.dv(s, ti, tii)) \
-                    + (self.sigma*self.v(s, ti, tii)**(self.sigma-1)*self.dv(s, ti, tii) - self.sigma*(1 - self.v(s, ti, tii))**(self.sigma-1)*self.dv(s, ti, tii)) \
-                        *(tii*self.v(s, ti, tii)**self.sigma + ti*(1 - self.v(s, ti, tii))**self.sigma)) \
-            /(self.v(s, ti, tii)**self.sigma + (1-self.v(s, ti, tii))**self.sigma)**2
+        lo = self.v(s, ti, tii)**self.sigma + (1-self.v(s, ti, tii))**self.sigma
+        hi = tii*self.v(s, ti, tii)**self.sigma + ti*(1 - self.v(s, ti, tii))**self.sigma
+        dhi = self.sigma*self.dv(s, ti, tii)*(tii*self.v(s, ti, tii)**(self.sigma-1) - ti*(1-self.v(s, ti, tii))**(self.sigma-1))
+        dlo = self.sigma*self.dv(s, ti, tii)*(self.v(s, ti, tii)**(self.sigma-1) - (1-self.v(s, ti, tii))**(self.sigma-1))
+        return (lo*dhi - hi*dlo)/(lo**2)
     
     @abstractmethod
     def r(self, t):
@@ -161,6 +162,7 @@ class teardrop(scatterer):
         a = 0.5
         self.b = np.tan(a*np.pi/2)/2
         self.offset_t = True
+        self.weighted_density = True
 
     def r(self, t):
         return 0
@@ -172,7 +174,7 @@ class teardrop(scatterer):
         return self.sc_scale*self.Rmat @ np.array([np.sin(self.w(t, 0, 2*np.pi)/2), -self.b*np.sin(self.w(t, 0, 2*np.pi))])
         
     def dbdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([np.cos(self.w(t, 0, 2*np.pi)/2)/2, -self.b*np.cos((self.w(t, 0, 2*np.pi)))])
+        return self.dw(t, 0, 2*np.pi)*self.sc_scale*self.Rmat @ np.array([np.cos(self.w(t, 0, 2*np.pi)/2)/2, -self.b*np.cos((self.w(t, 0, 2*np.pi)))])
         
 class boomerang(scatterer):
     def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
@@ -182,6 +184,7 @@ class boomerang(scatterer):
         self.maxidx = np.inf
         super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
         self.offset_t = True
+        self.weighted_density = True
         
     def r(self, t):
         return 0
@@ -193,7 +196,7 @@ class boomerang(scatterer):
         return self.sc_scale*self.Rmat @ np.array([-(2/3)*np.sin(3*(self.w(t, 0, 2*np.pi))/2), -np.sin(self.w(t, 0, 2*np.pi))])/(np.sqrt(21)/4)
         
     def dbdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([-np.cos(3*(self.w(t, 0, 2*np.pi))/2), -np.cos((self.w(t, 0, 2*np.pi)))])/(np.sqrt(21)/4)
+        return self.dw(t, 0, 2*np.pi)*self.sc_scale*self.Rmat @ np.array([-np.cos(3*(self.w(t, 0, 2*np.pi))/2), -np.cos((self.w(t, 0, 2*np.pi)))])/(np.sqrt(21)/4)
 
 class strip(scatterer):
     def __init__(self, bc, pos, sc_scale, rotation, sum_index = None, impedance=None, rad_scale=1):
@@ -203,6 +206,7 @@ class strip(scatterer):
         self.maxidx = np.inf
         super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
         self.offset_t = True
+        self.weighted_density = True
         
     def r(self, t):
         return 0
@@ -214,7 +218,7 @@ class strip(scatterer):
         return self.sc_scale*self.Rmat @ np.array([self.w(t, 0, 2*np.pi)/np.pi - 1, 0*t])
         
     def dbdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([1/np.pi, 0*t])
+        return self.sc_scale*self.Rmat @ np.array([self.dw(t, 0, 2*np.pi)/np.pi, 0*t])
 
 class vstrip(scatterer):
     pass
