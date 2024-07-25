@@ -237,7 +237,10 @@ class Tmatrix:
                     rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
             elif self.bc == 'i':
                 dirpart = np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
-                neumpart = np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+                if self.use_weighted:
+                    neumpart = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i]))*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+                else:
+                    neumpart = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
                 rhs = -(neumpart - 1j*self.k*self.scgeom.impedance(self.k)*dirpart)
                 
             mumat += [np.linalg.solve(A, rhs)]

@@ -861,7 +861,7 @@ class freq_domain_scattering:
             if self.method == 'gmres':
                 cs, ecode = self.scattering_coeffs()
                 if ecode != 0:
-                    print('GMRES failed, switching to explicit')
+                    print(f'GMRES failed with exit code {ecode}, switching to explicit')
                     self.method = 'explicit'
                     cs = self.scattering_coeffs()
 

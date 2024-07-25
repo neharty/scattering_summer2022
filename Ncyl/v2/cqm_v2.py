@@ -8,7 +8,7 @@ from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
 from multiprocess import Process, Pool, cpu_count
 import copy
-import gc
+import os
 import uuid
 from Ncyl.scython.wrapper import PyScat
 from dataclasses import dataclass, field
@@ -362,22 +362,24 @@ class time_domain_scattering:
     
     def diag_loop(self, v):
         #diagonalization loop
-        gret = [None for c in self.timeint.c]
+        #gret = [None for c in self.timeint.c]
+        gret = []
         for i in range(len(self.timeint.c)):
             gtmp = 1j*np.zeros(v[i].shape)
             for j in range(len(self.timeint.c)):
                 gtmp += self.pinvmats[:, i, j]*v[j]
-            gret[i] = gtmp
+            gret += [gtmp]
         return gret
     
     def diag_bc(self, cyl, v_coup):
         #uncouple the BCs, given the coupled data
         bc = cyl.bc
         
-        gret = [None for c in self.timeint.c]
+        #gret = [None for c in self.timeint.c]
+        gret = []
         if self.use_tmatrix:
             for i in range(len(self.timeint.c)):
-                gret[i] = self.make_zbc(cyl, self.diag_loop(v_coup)[i])
+                gret += [self.make_zbc(cyl, self.diag_loop(v_coup)[i])]
         else:
             if bc == 'i':
                 v_d = [None for c in self.timeint.c]
@@ -390,10 +392,10 @@ class time_domain_scattering:
                 for i in range(len(self.timeint.c)):
                     self.sl = self.evals[:, i]/self.dt
                     self.ks = 1j*self.sl
-                    gret[i] = self.make_zbc(cyl, (gdtmp[i], gntmp[i]))
+                    gret += [self.make_zbc(cyl, (gdtmp[i], gntmp[i]))]
             else:
                 for i in range(len(self.timeint.c)):
-                    gret[i] = self.make_zbc(cyl, self.diag_loop(v_coup)[i])
+                    gret += [self.make_zbc(cyl, self.diag_loop(v_coup)[i])]
         
         return gret
     
@@ -426,11 +428,12 @@ class time_domain_scattering:
                 return fcs 
             else:
                 #IRK methods
-                zbc = [None for c in self.timeint.c]
+                #zbc = [None for c in self.timeint.c]
+                zbc = []
                 for i in range(len(self.timeint.c)):
                     #z-transform the time-domain boundary data
                     c = self.timeint.c[i]
-                    zbc[i]= self.ztrans_bdy_pw(cyl, c)
+                    zbc += [self.ztrans_bdy_pw(cyl, c)]
                 
                 #make diagonalized bcs
                 dbc = self.diag_bc(cyl, zbc)
@@ -467,21 +470,23 @@ class time_domain_scattering:
             else:
                 #IRK methods
                 #z transform incident td data
-                zdat = [None for c in self.timeint.c]
+                #zdat = [None for c in self.timeint.c]
+                zdat = []
                 for i in range(len(self.timeint.c)):
                     #z-transform the time-domain boundary data
                     c = self.timeint.c[i]
-                    zdat[i] = self.ptsrc_init(c)
+                    zdat += [self.ptsrc_init(c)]
                 
                 #diagonalize z-domain incident data
                 diag_zdat = self.diag_loop(zdat)
                 
                 #form freq-domain bcs with hankel fns
-                zdat = [None for c in self.timeint.c]
+                #zdat = [None for c in self.timeint.c]
+                zdat = []
                 for i in range(len(self.timeint.c)):
                     self.sl = self.evals[:, i]/self.dt
                     self.ks = 1j*self.sl
-                    zdat[i] = self.make_zbc(cyl, self.fd_bdy(cyl, diag_zdat[i]))
+                    zdat += [self.make_zbc(cyl, self.fd_bdy(cyl, diag_zdat[i]))]
                 
                 #return  fourier coeffs
                 fcs = self.fourier_coeffs_bdy_ms(zdat)
@@ -501,43 +506,82 @@ class time_domain_scattering:
         else:
             return mat
     
+    # def fzt_boundary_allcyls(self):
+    #     #only works for BDF2
+    #     def writeout(c):
+    #         tmp = self.fzt_boundary_1cyl(c)
+    #         outstr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
+    #         np.savetxt(outstr, tmp)
+            
+    #     if self.use_disk:
+    #         if self.use_par:
+    #             pool = Pool(processes=self.cpus)
+    #             pool.map(writeout, [c for c in self.cyls])
+    #             pool.close()
+    #             pool.join()
+    #         else:
+    #             for c in self.cyls:
+    #                 writeout(c)
+    #     else:
+    #         if self.use_par:
+    #             pool = Pool(processes=self.cpus)
+    #             rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
+    #             pool.close()
+    #             pool.join()
+    #             for c in self.cyls:
+    #                 c.maxidx = rhstmp[c.label].shape[1]
+    #         else:
+    #             rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+    #         self.rhs_maxidx = max([c.maxidx for c in self.cyls])
+    #         rhstmp = [self.zeropad_rhs(m) for m in rhstmp]
+    #         #self.rhsmat = [None for n in range(self.rhs_maxidx)]
+    #         self.rhsmat = []
+    #         for i in range(self.rhs_maxidx):
+    #             if self.fl:
+    #                 self.rhsmat += [np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])]
+    #             else:
+    #                 self.rhsmat += [np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])]
+    #         self.rhsmat = np.array(self.rhsmat) #NOTE: this may be an array of arrays, not one nd array
+    #         if self.save_coeffs and self.coeff_mat is None:
+    #             self.coeff_mat = 1j*np.zeros(self.rhsmat.shape)
+   
     def fzt_boundary_allcyls(self):
         #only works for BDF2
-        def writeout(c):
-            tmp = self.fzt_boundary_1cyl(c)
-            outstr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
-            np.savetxt(outstr, tmp)
-            
-        if self.use_disk:
-            if self.use_par:
-                pool = Pool(processes=self.cpus)
-                pool.map(writeout, [c for c in self.cyls])
-                pool.close()
-                pool.join()
-            else:
-                for c in self.cyls:
-                    writeout(c)
+        if self.use_par:
+            pool = Pool(processes=self.cpus)
+            rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
+            pool.close()
+            pool.join()
+            for c in self.cyls:
+                c.maxidx = rhstmp[c.label].shape[1]
         else:
-            if self.use_par:
-                pool = Pool(processes=self.cpus)
-                rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
-                pool.close()
-                pool.join()
-                for c in self.cyls:
-                    c.maxidx = rhstmp[c.label].shape[1]
+            rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+        self.rhs_maxidx = max([c.maxidx for c in self.cyls])
+        rhstmp = [self.zeropad_rhs(m) for m in rhstmp]
+        #self.rhsmat = [None for n in range(self.rhs_maxidx)]
+        
+        self.rhsmat = []
+        for i in range(self.rhs_maxidx):
+            if self.fl:
+                self.rhsmat += [np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])]
             else:
-                rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-            self.rhs_maxidx = max([c.maxidx for c in self.cyls])
-            rhstmp = [self.zeropad_rhs(m) for m in rhstmp]
-            self.rhsmat = [None for n in range(self.rhs_maxidx)]
-            for i in range(self.rhs_maxidx):
-                if self.fl:
-                    self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
-                else:
-                    self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
-            self.rhsmat = np.array(self.rhsmat)
-            if self.save_coeffs and self.coeff_mat is None:
-                self.coeff_mat = 1j*np.zeros(self.rhsmat.shape)
+                self.rhsmat += [np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])]
+        self.rhsmat = np.array(self.rhsmat) #NOTE: this may be an array of arrays, not one nd array
+        
+        if self.use_disk:
+            mmaptmp = np.memmap(os.path.join(self.outpath, self.uid+'.dat'), 
+                                dtype='complex128', 
+                                mode='w+',
+                                shape=self.rhsmat.shape)
+            mmaptmp[:] = self.rhsmat[:]
+            mmaptmp.flush()
+            self.rhsmat = np.memmap(os.path.join(self.outpath, self.uid+'.dat'), 
+                                    dtype='complex128', 
+                                    mode='r', 
+                                    shape=self.rhsmat.shape)
+        
+        if self.save_coeffs and self.coeff_mat is None:
+            self.coeff_mat = 1j*np.zeros(self.rhsmat.shape) 
    
     def make_time_harmonic_soln(self, x, y):
         if not self.use_coeffs:
@@ -550,15 +594,15 @@ class time_domain_scattering:
             self.ks = self.ks[:self.rhs_maxidx]
         
         def comp(idx):
-            if self.use_disk:
-                rhs = []
-                for c in self.cyls:
-                    instr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
-                    tmp = np.loadtxt(instr, dtype=np.complex128)
-                    rhs += [tmp[:, idx]]
-                rhs = np.hstack(rhs)
-            else:
-                rhs = self.rhsmat[idx]
+            # if self.use_disk:
+            #     rhs = []
+            #     for c in self.cyls:
+            #         instr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
+            #         tmp = np.loadtxt(instr, dtype=np.complex128)
+            #         rhs += [tmp[:, idx]]
+            #     rhs = np.hstack(rhs)
+            # else:
+            rhs = self.rhsmat[idx]
             
             if np.linalg.norm(rhs) < self.fft_tol:
                 return 1j*np.zeros(x.shape)
@@ -603,62 +647,80 @@ class time_domain_scattering:
         return self.u_sc
     
     def fzt_boundary_allcyls_highorder(self):
-        def writeout(c):
-            tmp = self.fzt_boundary_1cyl(c)
-            for j in range(len(self.timeint.c)):
-                outstr = self.outpath+str(c.label)+'_'+str(j)+'_'+self.uid+'.rhs'
-                np.savetxt(outstr, tmp[j])
+        # def writeout(c):
+        #     tmp = self.fzt_boundary_1cyl(c)
+        #     for j in range(len(self.timeint.c)):
+        #         outstr = self.outpath+str(c.label)+'_'+str(j)+'_'+self.uid+'.rhs'
+        #         np.savetxt(outstr, tmp[j])
             
-        if self.use_disk:
-            if self.use_par:
-                pool = Pool(processes=self.cpus)
-                pool.map(writeout, [c for c in self.cyls])
-                pool.close()
-                pool.join()
-            else:
-                for c in self.cyls:
-                    writeout(c)
+        # if self.use_disk:
+        #     if self.use_par:
+        #         pool = Pool(processes=self.cpus)
+        #         pool.map(writeout, [c for c in self.cyls])
+        #         pool.close()
+        #         pool.join()
+        #     else:
+        #         for c in self.cyls:
+        #             writeout(c)
+        # else:
+        if self.use_par:
+            pool = Pool(processes=self.cpus)
+            rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
+            pool.close()
+            pool.join()
         else:
-            if self.use_par:
-                pool = Pool(processes=self.cpus)
-                rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
-                pool.close()
-                pool.join()
-            else:
-                rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-            for c in self.cyls:
-                c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
-            self.rhs_maxidx_matrix = [c.maxidx for c in self.cyls]
-            self.rhs_maxidx = np.amax(self.rhs_maxidx_matrix)
+            rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
+        for c in self.cyls:
+            c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
+        self.rhs_maxidx_matrix = [c.maxidx for c in self.cyls]
+        self.rhs_maxidx = np.amax(self.rhs_maxidx_matrix)
+        for j in range(len(self.timeint.c)):
+            for c in range(len(self.cyls)):
+                rhstmp[c][j] = self.zeropad_rhs(rhstmp[c][j])
+        #self.rhsmat = [[None for n in range(self.rhs_maxidx)] for c in range(len(self.timeint.c))]
+        self.rhsmat = [[] for c in range(len(self.timeint.c))]
+        for j in range(len(self.timeint.c)):
+            for i in range(self.rhs_maxidx):
+                self.rhsmat[j] += [np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])]
+        
+        if self.use_disk:
             for j in range(len(self.timeint.c)):
-                for c in range(len(self.cyls)):
-                    rhstmp[c][j] = self.zeropad_rhs(rhstmp[c][j])
-            self.rhsmat = [[None for n in range(self.rhs_maxidx)] for c in range(len(self.timeint.c))]
-            for j in range(len(self.timeint.c)):
-                for i in range(self.rhs_maxidx):
-                    self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
-            if self.save_coeffs and self.coeff_mat is None:
-                self.coeff_mat = [1j*np.zeros(self.rhsmat[j].shape) for j in range(len(self.timeint.c))]
+                self.rhsmat[j] = np.vstack(self.rhsmat[j]) #change to a big block matrix
+                fname = os.path.join(self.outpath, self.uid+'_'+str(j)+'.dat')
+                mmaptmp = np.memmap(fname, 
+                                    dtype='complex128', 
+                                    mode='w+',
+                                    shape=self.rhsmat[j].shape)
+                mmaptmp[:] = self.rhsmat[j][:]
+                mmaptmp.flush()
+                self.rhsmat[j] = np.memmap(fname, 
+                                           dtype='complex128', 
+                                           mode='r', 
+                                           shape=self.rhsmat[j].shape)
+                    
+        if self.save_coeffs and self.coeff_mat is None:
+            self.coeff_mat = [1j*np.zeros(self.rhsmat[j].shape) for j in range(len(self.timeint.c))]
     
     def highorder_solve(self, idx, x, y):
         ks = 1j*self.evals[idx]/self.dt
-        wmat = [None for k in ks]
+        #wmat = [None for k in ks]
+        wmat = []
         
         for i in range(len(ks)):
             wvidx = len(self.timeint.c)*idx + i
-            print('wavenumber index ' + str(wvidx) + ' / ' + str((self.rhs_maxidx)*len(self.timeint.c) - 1))
-            if self.use_disk:
-                rhs = []
-                for c in self.cyls:
-                    instr = self.outpath+str(c.label)+'_'+str(i)+'_'+self.uid+'.rhs'
-                    tmp = np.loadtxt(instr, dtype=np.complex128)
-                    rhs += [tmp[:, idx]]
-                rhs = np.hstack(rhs)
-            else:
-                rhs = self.rhsmat[i][idx]
+            print(f'wavenumber index {wvidx} / {(self.rhs_maxidx)*len(self.timeint.c) - 1}')
+            # if self.use_disk:
+            #     rhs = []
+            #     for c in self.cyls:
+            #         instr = self.outpath+str(c.label)+'_'+str(i)+'_'+self.uid+'.rhs'
+            #         tmp = np.loadtxt(instr, dtype=np.complex128)
+            #         rhs += [tmp[:, idx]]
+            #     rhs = np.hstack(rhs)
+            # else:
+            rhs = self.rhsmat[i][idx]
 
             if np.linalg.norm(rhs) < self.fft_tol:
-                wmat[i] = 1j*np.zeros(x.shape)
+                wmat += [1j*np.zeros(x.shape)]
             else:
                 sc = freq_domain_scattering(
                         copy.deepcopy(self.cyls), 
@@ -670,11 +732,15 @@ class time_domain_scattering:
                         **self.scargs
                     )
                 if self.save_coeffs and not self.use_coeffs:
-                    wmat[i], self.coeff_mat[i][idx] = sc.make_u_sc(x, y)
+                    #wmat[i], self.coeff_mat[i][idx] = sc.make_u_sc(x, y)
+                    tmp, self.coeff_mat[i][idx] = sc.make_u_sc(x, y)
+                    wmat += [tmp]
                 elif self.save_coeffs and self.use_coeffs:
-                    wmat[i], self.coeff_mat[i][idx] = sc.make_u_sc(x, y, self.coeff_mat[i][idx])
+                    #wmat[i], self.coeff_mat[i][idx] = sc.make_u_sc(x, y, self.coeff_mat[i][idx])
+                    tmp, self.coeff_mat[i][idx] = sc.make_u_sc(x, y, self.coeff_mat[i][idx])
+                    wmat += [tmp]
                 else:
-                    wmat[i] = sc.make_u_sc(x, y)
+                    wmat += [sc.make_u_sc(x, y)]
 
         rmat = 1j*np.zeros(wmat[0].shape)
         for i in range(len(wmat)):
@@ -759,13 +825,14 @@ class time_domain_scattering:
             w = self.fd_inc_wave(x, y, coeffs)
             self.U_inc = (1/self.lammat)*ifft(w)
         else:
-            wmat = [None for c in self.timeint.c]
-            
-            zdat = [None for c in self.timeint.c]
+            #wmat = [None for c in self.timeint.c]
+            wmat = []
+            #zdat = [None for c in self.timeint.c]
+            zdat = []
             for i in range(len(self.timeint.c)):
                 #z-transform the time-domain boundary data
                 c = self.timeint.c[i]
-                zdat[i] = self.ptsrc_init(c)
+                zdat += [self.ptsrc_init(c)]
             
             #diagonalize z-domain incident data
             diag_zdat = self.diag_loop(zdat)
@@ -773,7 +840,7 @@ class time_domain_scattering:
             for i in range(len(self.timeint.c)):
                 self.ks = 1j*self.evals[:, i]/self.dt
                 c = self.timeint.c[i]
-                wmat[i] = self.fd_inc_wave(x, y, diag_zdat[i])
+                wmat += [self.fd_inc_wave(x, y, diag_zdat[i])]
 
             rmat = 1j*np.zeros(wmat[0].shape)
             for i in range(len(self.timeint.c)):
