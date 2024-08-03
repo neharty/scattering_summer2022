@@ -45,8 +45,7 @@ tds = time_domain_scattering(
                              modes=10,
                              timeint=tint,
                              use_tmatrix=False,
-                             use_par=False,
-                             use_disk=True,
+                             use_par_solve=False,
                              scargs={'method':'explicit'}
                              )
 
@@ -62,7 +61,7 @@ tdsgmres = time_domain_scattering(
                               modes=10,
                               timeint=tint,
                               use_tmatrix=False,
-                              use_par=False,
+                              use_par_solve=False,
                               scargs={'method':'gmres'}
                               )
 

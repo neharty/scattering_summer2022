@@ -27,7 +27,8 @@ class time_domain_scattering:
     modes: int = -1
     mode_start: int = 1
     mode_tol: float = 1e-10
-    use_par: bool = True
+    use_par_rhs: bool = False
+    use_par_solve: bool = True
     cpus: int = -1
     use_conj: bool = True
     use_foldy_lax: bool= False
@@ -145,7 +146,8 @@ class time_domain_scattering:
                                      modes=Nmodeprev,
                                      sampnum=self.sampnum,
                                      timeint=self.timeint,
-                                     use_par=self.use_par,
+                                     use_par_solve=self.use_par_solve,
+                                     use_par_rhs=self.use_par_rhs,
                                      scargs=self.scargs,
                                      use_cython = self.use_cython,
                                      use_cpp=self.use_cpp
@@ -166,7 +168,8 @@ class time_domain_scattering:
                                          modes=Nmodecurr,
                                          sampnum=self.sampnum,
                                          timeint=self.timeint,
-                                         use_par=self.use_par,
+                                         use_par_solve=self.use_par_solve,
+                                         use_par_rhs=self.use_par_rhs,
                                          scargs=self.scargs,
                                          use_cpp=self.use_cpp,
                                          use_cython=self.use_cython
@@ -505,49 +508,10 @@ class time_domain_scattering:
             return newmat
         else:
             return mat
-    
-    # def fzt_boundary_allcyls(self):
-    #     #only works for BDF2
-    #     def writeout(c):
-    #         tmp = self.fzt_boundary_1cyl(c)
-    #         outstr = self.outpath+str(c.label)+'_'+self.uid+'.rhs'
-    #         np.savetxt(outstr, tmp)
-            
-    #     if self.use_disk:
-    #         if self.use_par:
-    #             pool = Pool(processes=self.cpus)
-    #             pool.map(writeout, [c for c in self.cyls])
-    #             pool.close()
-    #             pool.join()
-    #         else:
-    #             for c in self.cyls:
-    #                 writeout(c)
-    #     else:
-    #         if self.use_par:
-    #             pool = Pool(processes=self.cpus)
-    #             rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
-    #             pool.close()
-    #             pool.join()
-    #             for c in self.cyls:
-    #                 c.maxidx = rhstmp[c.label].shape[1]
-    #         else:
-    #             rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
-    #         self.rhs_maxidx = max([c.maxidx for c in self.cyls])
-    #         rhstmp = [self.zeropad_rhs(m) for m in rhstmp]
-    #         #self.rhsmat = [None for n in range(self.rhs_maxidx)]
-    #         self.rhsmat = []
-    #         for i in range(self.rhs_maxidx):
-    #             if self.fl:
-    #                 self.rhsmat += [np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])]
-    #             else:
-    #                 self.rhsmat += [np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])]
-    #         self.rhsmat = np.array(self.rhsmat) #NOTE: this may be an array of arrays, not one nd array
-    #         if self.save_coeffs and self.coeff_mat is None:
-    #             self.coeff_mat = 1j*np.zeros(self.rhsmat.shape)
    
     def fzt_boundary_allcyls(self):
         #only works for BDF2
-        if self.use_par:
+        if self.use_par_rhs:
             pool = Pool(processes=self.cpus)
             rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
             pool.close()
@@ -625,7 +589,7 @@ class time_domain_scattering:
                 utmp = sc.make_u_sc(x, y)
             return utmp
         
-        if self.use_par:
+        if self.use_par_solve:
             #compute using the pool
             pool = Pool(processes=cpus)
             tmp = pool.map(comp, range(len(self.ks)))
@@ -647,23 +611,7 @@ class time_domain_scattering:
         return self.u_sc
     
     def fzt_boundary_allcyls_highorder(self):
-        # def writeout(c):
-        #     tmp = self.fzt_boundary_1cyl(c)
-        #     for j in range(len(self.timeint.c)):
-        #         outstr = self.outpath+str(c.label)+'_'+str(j)+'_'+self.uid+'.rhs'
-        #         np.savetxt(outstr, tmp[j])
-            
-        # if self.use_disk:
-        #     if self.use_par:
-        #         pool = Pool(processes=self.cpus)
-        #         pool.map(writeout, [c for c in self.cyls])
-        #         pool.close()
-        #         pool.join()
-        #     else:
-        #         for c in self.cyls:
-        #             writeout(c)
-        # else:
-        if self.use_par:
+        if self.use_par_rhs:
             pool = Pool(processes=self.cpus)
             rhstmp = pool.map(self.fzt_boundary_1cyl, [c for c in self.cyls])
             pool.close()
@@ -761,7 +709,7 @@ class time_domain_scattering:
         def comp(idx):
             return self.highorder_solve(idx, x, y)
         
-        if self.use_par:
+        if self.use_par_solve:
             #spawn process pool
             pool = Pool(processes = cpus)
             #compute using the pool

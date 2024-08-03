@@ -37,6 +37,7 @@ if ctype == 'circ':
         cylstr = 'filled_circ'
 
 dataout = args.fout
+os.makedirs(dataout, exist_ok=True)
 
 #debug output file
 log = logging.getLogger(__name__)

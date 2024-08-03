@@ -4,16 +4,15 @@ using LaTeXStrings
 using PyCall
 using LinearAlgebra
 using FFTW
-using JLD
+#using JLD
 using Formatting
 using IterativeSolvers
 using SparseArrays
-using PyPlot
 using DelimitedFiles
 using Printf
+using PyPlot
 
 Base.show(io::IO, f::Float64) = @printf(io, "%.18f", f)
-
 
 ##these will need to be updated. 
 include("geo_DIR.jl")
@@ -24,7 +23,7 @@ include("helm_MIX.jl")
 include("bdry_points.jl")
 include("mix_kernals.jl")
 include("CQ_MIX.jl")
-
+include("engine_start.jl")
 
 PASS = ARGS;
 
@@ -75,7 +74,7 @@ LAYER = let expr = Meta.parse(PASS[14])
     String.(expr.args)
 end
 
-BBC = let expr = Meta.parse(PASS[15])
+BC = let expr = Meta.parse(PASS[15])
     @assert expr.head == :vect
     Int64.(expr.args)
 end
@@ -83,15 +82,21 @@ end
 
 OPENING = parse(Int64,PASS[16]);
 
+if(OPENING==1)
+    β=pi/4; prepre="medium" ;
+elseif(OPENING==2)
+    β=pi/8; prepre = "small";
+elseif(OPENING==3)
+    β=pi/3; prepre = "large";
+end
 
-include("engine_start.jl")
 
 
 print(layer_rep," layer rep\n")
 print(center," center\n")
 print(specimen, "these are the types of scatteres \n")
 
-
+## Wavespeed 
 w_s=1.0;
 
 
@@ -106,7 +111,7 @@ elseif(ret==2)
 elseif(ret==3)
     inny = [1,0];  dir = "LEFTRIGHT";
 elseif(ret==4)
-    θ= -pi/4;
+    θ= -pi/6;
     inny=[cos(θ),sin(θ)]; dir="REGA"
 elseif(ret==5)
     θ= -pi/2; dir="ANGLE"
@@ -115,6 +120,7 @@ elseif(ret==6)
     θ= 0; dir="LEFTRIGHTA"
     inny=[cos(θ),sin(θ)];
 end
+
 
 
 
@@ -133,6 +139,7 @@ print(inny,"direction of the plane wave \n")
 
 
 
+
 K_rep=Function[];
 KK=Function[];
 
@@ -144,11 +151,6 @@ elseif(layer_rep==2);
     KK= push!(KK,D,D)
 end
 
-
-
-
-print(BC," these are the boundary conditions \n\n");
-print(specimen," these are the types of scatterers \n\n")
 Ψ = SET_KERNEL(BC,layer_rep);
 
 #################################################################
@@ -161,32 +163,30 @@ print(specimen," these are the types of scatterers \n\n")
 
 
 
-##########################################
-
 ###### Aux setup for the geometry ##########
-pari,arc_l,normv,co,dx1,dx2,dx3 = Set_boundary_mix(specimen,BC,σ);
+blocks =length(center);
+pari,arc_l,normv,co,dx1,dx2,dx3 = Set_boundary_mix(specimen,BC,β);
 blocks =length(center);
 
-#if(BC[1]==1)
-#    if(vvinkel[1]==1)
-#        vinkel =[pi/2 for i=1:blocks]; pre="UP"
-#    elseif(vvinkel[1]==2)
-#        vinkel =[-pi/2 for i=1:blocks]; pre="DOWN"
-#    else
-#        vinkel =[0.0 for i=1:blocks]; pre="PLEASE"
-#    end
-#elseif(BC[1]==2)
-#    if(vvinkel[1]==1)
-#        vinkel =[-pi/2 for i=1:blocks]; pre="UP"
-#    elseif(vvinkel[1]==2)
-#        vinkel =[pi/2 for i=1:blocks]; pre="DOWN"
-#    end
-#end
+if(BC[1]==1)
+    if(vvinkel[1]==1)
+        vinkel =[pi/2 for i=1:blocks]; pre="UP"
+    elseif(vvinkel[1]==2)
+        vinkel =[-pi/2 for i=1:blocks]; pre="DOWN"
+    else
+        vinkel =[0.0 for i=1:blocks]; pre="PLEASE"
+    end
+elseif(BC[1]==2)
+    if(vvinkel[1]==1)
+        vinkel =[-pi/2 for i=1:blocks]; pre="UP"
+    elseif(vvinkel[1]==2)
+        vinkel =[pi/2 for i=1:blocks]; pre="DOWN"
+    else
+        vinkel =[0.0 for i=1:blocks]; pre="PLEASE"
+    end
+end
 
 
-
-
-print(BC, " what is going on? \n")
 
 
 #--------------------DRIVER---------------------
@@ -242,6 +242,7 @@ print(BC, " what is going on? \n")
 
     if(MOVIE==0)
         
+        
         obs = zeros( NN+1,length(z) );
         inc_f=zeros(NN+1,length(z));
        
@@ -262,17 +263,15 @@ print(BC, " what is going on? \n")
         end
         
         print(norm(obs), "   the norm of the field      \n")
-        #save(prepre*LAYER[1]*"amp"*string(amp)*"_start_"*string(Ω)*"_ws_"*string(w_s)*"_pp"*string(pp)*"_ord"*string(order)*"_over"*string(over)*"_fact"*string(Int(fact))*"_"*string(Int(T))*"mult_"*string(order)*"_"*string(layer_rep)*"_nn"*string(nn)*"_NN"*string(NN)*"_"*dir*".jld","data",obs)
+        
+	#The two lines below do the same thing. Only difference is which format the data is stored as. 
         save_field_txt(T,NN,z,inc_f,obs)
+        #save(prepre*LAYER[1]*"amp"*string(amp)*"_start_"*string(Ω)*"_ws_"*string(w_s)*"_pp"*string(pp)*"_ord"*string(order)*"_over"*string(over)*"_fact"*string(Int(fact))*"_"*string(Int(T))*"mult_"*string(order)*"_"*string(layer_rep)*"_nn"*string(nn)*"_NN"*string(NN)*"_"*dir*".jld","data",obs)
 
     elseif(MOVIE==1)
         ##outputs the entire thing as a JLD file so it can be made into an MP4 movie
-        y = range(y_len_left,length=Ngridlen, stop=y_len_right);
-        x = range(x_len_left,length=Ngridlen, stop=x_len_right);
-        
-#        y = range(-0.8,length=Ngridlen, stop=0.8);
-#        x = range(-lenny+1,length=Ngridlen, stop=lenny-3);
-
+        y = range(y_lenny_left, length=Ngridlen, stop=y_lenny_right);
+        x = range(x_lenny_left, length=Ngridlen, stop=x_lenny_right);
         X = repeat(reshape(x, 1, :), length(y), 1)
         Y = repeat(y, 1, length(x))
         obs = complex(zeros( NN+1, Ngridlen,Ngridlen));
@@ -280,7 +279,7 @@ print(BC, " what is going on? \n")
         if(order==2)
             for ii in(1:Ngridlen)
                 for jj in(1:Ngridlen)
-                    z=[X[ii,jj],Y[ii,jj]];
+                    local z=[X[ii,jj],Y[ii,jj]];
                     temp = [  g( z , Δt*j ) for j=0: NN];
                     obs[:,ii,jj]= MIX_time_freq_sol_BDFM2(hx,NN,nn , λ,z , wave_ns ,phi_hat ,PAR,NOR,DPR , KK,blocks,specimen,layer_rep)+temp; 
                 end
@@ -288,15 +287,21 @@ print(BC, " what is going on? \n")
         elseif(order==3||order==5)
             for ii in(1:Ngridlen)
                 for jj in(1:Ngridlen)
-                    z=[X[ii,jj],Y[ii,jj]];
+                    local z=[X[ii,jj],Y[ii,jj]];
                     temp = [  g( z , Δt*j ) for j=0: NN];
                     obs[:,ii,jj] = MIX_time_freq_sol(hx,N,nn , λ, Δt ,z ,phi_hat,wave_ns,P,Pinv,PAR,NOR,DPR, KK,blocks,w_s,specimen,layer_rep)[1:NN+1] +temp ;  
                 end
             end
         end
 
-        save("MOVamp"*string(amp)*"_start_"*string(Ω)*"_ws_"*string(w_s)*"_pp"*string(pp)*"_ord"*string(ord)*"_over"*string(over)*"_fact"*string(Int(fact))*"_"*string(Int(T))*"mult_"*string(specimen)*string(order)*"_"*string(layer_rep)*"_nn"*string(nn)*"_NN"*string(NN)*"_"*dir*".jld","data",obs);
+        
 
+        ##Saves the output as jld file. Just because its a good backup. ###
+        ###################################################################
+        save(prepre*LAYER[1]*"MOVamp"*string(amp)*"_start_"*string(Ω)*"_ws_"*string(w_s)*"_pp"*string(pp)*"_ord"*string(ord)*"_over"*string(over)*"_fact"*string(Int(fact))*"_"*string(Int(T))*"mult_"*string(specimen)*string(order)*"_"*string(layer_rep)*"_nn"*string(nn)*"_NN"*string(NN)*"_"*dir*".jld","data",obs);
+
+        ## This block makes the png images ##############################  
+        ################################################################
         levels = range(zmin,stop=zmax,length=35) 
         
         
@@ -330,11 +335,10 @@ print(BC, " what is going on? \n")
                 end
             end
             contourf(X,Y,abs.(obs[i,:,:]),levels=levels,cmap="jet")
-            ##uncomment the below for to get a colorbar.
-            # colorbar();
+            # colorbar(); ##uncomment this line if a colorbar is desired. 
 
             for j in(1:blocks)
-                xx = [PAR[j][i][1] for i=1:length(PAR[j])]; yy = [PAR[j][i][2] for i=1:length(PAR[j])];
+                xx = [PAR[j][i][1] for i=1:nn]; yy = [PAR[j][i][2] for i=1:nn];
                 plot(xx,yy,"w")
                 if(specimen[j]>=4)
                     fill(xx,yy,"gray")
@@ -343,7 +347,7 @@ print(BC, " what is going on? \n")
 
 
             axis("scaled")
-            savefig(""*string(i)*".png")
+            savefig(""*string(i)*".png", dpi=600)
             close();
             print(i," ")
 
@@ -353,11 +357,12 @@ print(BC, " what is going on? \n")
 #            savefig(string(i)*".png",transparent="True",dpi=600,bbox_inches="tight")
 
 
-        end
-        run(`ffmpeg -framerate 24 -i %00d.png -s:v 1280x720 -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p -y movie.mp4`)
-    end
-    ## this is a terminal command that converts the png to mp4. With this particular codec the movie should be playable on macs. 
 
+        end
+	## this is a terminal command that converts the png to mp4. With this particular codec the movie should be playable on macs. 
+    	run(`ffmpeg -framerate 24 -i %00d.png -s:v 1280x720 -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p movie.mp4`)
+    end
+    
 end
 ####----------------Driver END-----------------
 

@@ -353,9 +353,9 @@ class freq_domain_scattering:
     
     def get_scr_key(self, s):
         if s.impedance is not None:
-            key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, s.impedance.__name__)
+            key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, s.weighted_density, s.impedance.__name__)
         else:
-            key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat)
+            key = (s.name, s.bc, s.sc_scale, self.k, self.alpertorder, self.Npoints, self.Nmode_tmat, s.weighted_density)
         return key
     
     def get_hash(self, s):
