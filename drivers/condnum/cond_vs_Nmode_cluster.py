@@ -90,7 +90,8 @@ tds = time_domain_scattering(
                         T, 
                         sampnum = 2**int(config['TDS']['Nt']), 
                         timeint=tint,
-                        modes = args.Nmode
+                        modes = args.Nmode,
+                        use_par=False
                         )
 tds.set_timeshift()
 tds.fzt_boundary_allcyls_highorder() # reduce the number of right hand sides
@@ -109,9 +110,11 @@ arrrks = []
 condnum1rku = []
 arrrku = []
 
+N = args.Nmode
+
 for i in range(len(ks)):
     k = ks[i]
-    print(N, k)
+    print(i, k)
     #cq, scaled
     if args.mat_type == 'cqs':
         sc = scattering(cyls, np.zeros(len(cyls)*(2*N+1)), k=k, use_2cyl_modes=False, sum_index=N)
@@ -131,8 +134,8 @@ for i in range(len(ks)):
             condnum1cqu += [np.linalg.cond(A)]
         else:
             condnum1cqu += [0]
-        arrcqu += [[np.abs(ks[i]), condnum1cqs[i]]]
-        np.savetxt(os.path.join(dataout, f'cq_unscaled_{N}_'+fname), arrcqs)
+        arrcqu += [[np.abs(ks[i]), condnum1cqu[i]]]
+        np.savetxt(os.path.join(dataout, f'cq_unscaled_{N}_'+fname), arrcqu)
     
     #real-k scaled
     if args.mat_type == 'rks':
@@ -142,8 +145,8 @@ for i in range(len(ks)):
             condnum1rks += [np.linalg.cond(A)]
         else:
             condnum1rks += [0]
-        arrrks += [[np.abs(ks[i]), condnum1cqs[i]]]
-        np.savetxt(os.path.join(dataout, f'real_k_scaled_{N}_'+fname), arrcqs)
+        arrrks += [[np.abs(ks[i]), condnum1rks[i]]]
+        np.savetxt(os.path.join(dataout, f'real_k_scaled_{N}_'+fname), arrrks)
 
     #real-k unscaled
     if args.mat_type == 'rku':
@@ -153,8 +156,8 @@ for i in range(len(ks)):
             condnum1rku += [np.linalg.cond(A)]
         else:
             condnum1rku += [0]
-        arrrku += [[np.abs(ks[i]), condnum1cqs[i]]]
-        np.savetxt(os.path.join(dataout, f'real_k_unscaled_{N}_'+fname), arrcqs)
+        arrrku += [[np.abs(ks[i]), condnum1rku[i]]]
+        np.savetxt(os.path.join(dataout, f'real_k_unscaled_{N}_'+fname), arrrku)
 
 # if args.mat_type = 'cqs':
 #     tmp = np.max(condnum1cqs)
