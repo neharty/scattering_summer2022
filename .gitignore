@@ -175,4 +175,4 @@ cython_debug/
 *.rhs
 *.tar
 *.tar.gz
-*.cfg
+#*.cfg
