@@ -35,16 +35,17 @@ class Tmatrix:
         self.scgeom = scat_select(self.geometry, self.bc, [0, 0], self.radius, self.rotation, impedance=self.impedance)
         self.use_weighted = self.scgeom.weighted_density
             
-        self.h = 2*np.pi/self.Npoints     
+
         
-        if self.scgeom.open_arc:
-            if self.bc == 'n' or self.bc =='i':
-                self.t = np.linspace(0, np.pi, self.Npoints)
+        if self.scgeom.open_arc and self.bc == 'n':
+                self.t = np.linspace(0, np.pi, self.Npoints, False) #solve on 0 to pi, then use odd extension
+                self.h = np.pi/self.Npoints     
         else:
-            if self.scgeom.offset_t and self.bc!='n' and self.bc!='i':
+            if self.scgeom.offset_t:
                 self.t = (np.arange(1, self.Npoints+1) - 0.5)*self.h
             else:
                 self.t = np.linspace(0, 2*np.pi, self.Npoints, False)
+            self.h = 2*np.pi/self.Npoints     
 
     def cart_to_polar(self, v):
         return (np.sqrt((v[0]**2 + v[1]**2)), np.arctan2(v[1], v[0]))
@@ -233,7 +234,7 @@ class Tmatrix:
                 if np.abs(self.ll(i, j)) < self.bie.dist:
                     B[i, j] = 0
         B *= self.h
-        return B
+        return B/(2*np.pi)
     
     def make_c_neumann_open_arc(self):
         C = np.zeros((self.Npoints, self.Npoints), dtype=np.complex128)
@@ -255,7 +256,7 @@ class Tmatrix:
                     kerval = kervaltmp*self.h
                     lidx = np.where(Op == dist)[0][0]
                     C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
-        return C
+        return C/(2*np.pi)
     
     def make_d_neumann_open_arc(self):
         tmp = np.zeros((self.Npoints, self.Npoints), dtype=np.complex128)
@@ -268,7 +269,7 @@ class Tmatrix:
                 tmp[i, :] = 0
         return tmp
         
-    def coeff_matrix(self, xfn, dxfn):
+    def coeff_matrix(self):
         if self.bc == 'd':
             B = self.make_b_dirichlet()
             C = self.make_c_dirichlet()
@@ -282,24 +283,19 @@ class Tmatrix:
                 C = self.make_c_neumann()
                 return -np.eye(*B.shape)/2 + B + C
         if self.bc == 'i':
-            if self.scgeom.open_arc:
-                Bd = self.make_b_dirichlet()
-                Cd = self.make_c_dirichlet()
-                tmp = self.make_b_neumann_open_arc + self.make_c_neumann_open_arc() + self.make_d_neumann_open_arc()
-                return tmp - 1j*self.k*self.impedance(self.k)*(Bd + Cd)
-            else:
-                Bd = self.make_b_dirichlet()
-                Cd = self.make_c_dirichlet()
-                Bn = self.make_b_neumann()
-                Cn = self.make_c_neumann()
-                return -np.eye(*Bn.shape)/2 + Bn + Cn - 1j*self.k*self.impedance(self.k)*(Bd + Cd)
+            # open arc can't be implemented
+            Bd = self.make_b_dirichlet()
+            Cd = self.make_c_dirichlet()
+            Bn = self.make_b_neumann()
+            Cn = self.make_c_neumann()
+            return -np.eye(*Bn.shape)/2 + Bn + Cn - 1j*self.k*self.impedance(self.k)*(Bd + Cd)
   
     def Tnm(self, n, mu):
         #trapezoidal rule
         if self.use_weighted:
-            yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i] for i in range(self.Npoints)])
+            yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i] for i in range(len(mu))])
         else:
-            yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+            yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(len(mu))])
         tmp = 0j
         for i in range(self.Npoints):
             tmp += yfn[i]
@@ -319,37 +315,42 @@ class Tmatrix:
         dmodedn = nv.dot(np.array([-x[1], x[0]])*1j*n/(x[0]**2 + x[1]**2))
         return self.k*jvp(n, self.k*np.linalg.norm(x))*drdn*np.exp(1j*n*theta) + self.phihat(n, x)*dmodedn
     
-    def make_tmatrix(self):
-        M = 2*self.Nmodes+1
-        idxarr = np.arange(-self.Nmodes, self.Nmodes+1)
-        T = np.zeros((M, M), dtype=np.complex128)
-        mumat = []
-        
-        A = self.coeff_matrix(self.scgeom.bdy, self.scgeom.dbdy)
-        
-        for n in idxarr:
-            
-            # find the density for 1 mode
+    def make_rhs(self, n):
+        if self.scgeom.open_arc and self.bc == 'n':
+            return -np.array([self.neumann_rhs_open_arc(n, t) for t in self.t])
+        else:
             if self.bc == 'd':
-                rhs = -np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
+                 return -np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
             elif self.bc == 'n':
-                if self.scgeom.open_arc:
-                    rhs = -np.array([self.neumann_rhs_open_arc(n, t) for t in self.t])
+                if self.use_weighted:
+                    return -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i]))*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
                 else:
-                    if self.use_weighted:
-                        rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i]))*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
-                    else:
-                        rhs = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
+                    return -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
             elif self.bc == 'i':
                 dirpart = np.array([self.phihat(n, self.scgeom.bdy(self.t[i])) for i in range(self.Npoints)])
                 if self.use_weighted:
                     neumpart = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i]))*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
                 else:
                     neumpart = -np.array([self.neumann_rhs(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i])) for i in range(self.Npoints)])
-                rhs = -(neumpart - 1j*self.k*self.scgeom.impedance(self.k)*dirpart)
-                
-            mumat += [np.linalg.solve(A, rhs)]
-            
+                return -(neumpart - 1j*self.k*self.scgeom.impedance(self.k)*dirpart)
+    
+    def make_tmatrix(self):
+        M = 2*self.Nmodes+1
+        idxarr = np.arange(-self.Nmodes, self.Nmodes+1)
+        T = np.zeros((M, M), dtype=np.complex128)
+        mumat = []
+        
+        A = self.coeff_matrix()
+        
+        for n in idxarr:
+            tmp = np.linalg.solve(A, self.make_rhs(n))
+            if self.scgeom.open_arc and self.bc =='n':
+                tmp = np.concatenate((tmp, -tmp))
+            mumat += [tmp]
+        
+        if self.scgeom.open_arc and self.bc =='n':
+            self.t = np.linspace(0, 2*np.pi, 2*self.Npoints, False)
+        
         for n in range(M):
             for m in range(M):
                 # compute the T matrix entries using trapezoidal rule

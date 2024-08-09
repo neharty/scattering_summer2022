@@ -38,7 +38,7 @@ arr = [[tds_bie.times[i], U[0, i], U[1, i], U[2, i], U[3, i]] for i in range(len
 np.savetxt('/home/nick/scattering/validations/bie_form/neumann_strips/data.dat', arr)
 
 #%%
-plt.plot(tds_bie.times, U[3, :])
+plt.plot(tds_bie.times, U[1, :])
 plt.show()
 print(wv.time_shift)
 print(1/wv.sigma)

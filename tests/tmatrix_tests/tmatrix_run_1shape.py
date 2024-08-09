@@ -4,7 +4,7 @@ from utils.example_setups_bie import scat_select
 from utils.plot_scatterers import plot_scatterers
 import matplotlib.pyplot as plt
 
-k = (-3.66259243525257+0.450545746630018j)
+k = (-17.66259243525257+0.450545746630018j)
 #k = 0.450545746630018j
 alpertorder = 2
 geometry = 'strip'
