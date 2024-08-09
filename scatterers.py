@@ -38,6 +38,7 @@ class scatterer(ABC):
         self.weighted_density = False #used for computing tmatrices
         self.Rmat = np.array([[np.cos(self.rotation), -np.sin(self.rotation)], 
                               [np.sin(self.rotation), np.cos(self.rotation)]])
+        self.open_arc = False
         
         if self.bc == 'i' and impedance == None:
             print(impedance)
@@ -207,6 +208,7 @@ class strip(scatterer):
         super().__init__(bc, pos, sc_scale, rotation, sum_index, impedance, self.uid, self.maxidx, rad_scale)
         self.offset_t = True
         self.weighted_density = True
+        self.open_arc = True
         
     def r(self, t):
         return 0
@@ -215,10 +217,16 @@ class strip(scatterer):
         return 0
     
     def bdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([self.w(t, 0, 2*np.pi)/np.pi - 1, 0*t])
+        return self.sc_scale*self.Rmat @ np.array([t, 0*t])
         
     def dbdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([self.dw(t, 0, 2*np.pi)/np.pi, 0*t])
+        return self.sc_scale*self.Rmat @ np.array([1, 0*t])
+    
+    def ddbdy(self, t):
+        return self.sc_scale*self.Rmat @ np.array([0, 0])*t
+    
+    def dddbdy(self, t):
+        return self.ddbdy(t)
 
 class vstrip(scatterer):
     pass

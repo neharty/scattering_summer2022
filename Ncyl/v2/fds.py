@@ -59,7 +59,6 @@ class freq_domain_scattering:
     Npoints: int = 256
     Nmode_tmat: int = 20
     save_Tmat: bool = True
-    remake_Tmat: bool = False 
            
     def __post_init__(self):
         self.fl = self.use_foldy_lax
@@ -386,18 +385,19 @@ class freq_domain_scattering:
                 fstr = f'{self.get_hash(s)}.dat' 
                 #t matrices are defined by their scatterer type and radius
                 try:
-                    if self.remake_Tmat:
-                        print('remaking T-matrix')
-                        print(key)
-                        T = self.make_tmatrix(s)
-                        np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
-                        tmattmp = T
+                    # if self.remake_Tmat:
+                    #     print('remaking T-matrix')
+                    #     print(key)
+                    #     T = self.make_tmatrix(s)
+                    #     np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
+                    #     tmattmp = T
                     
                     tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
                 except FileNotFoundError as e:
                     print(e)
                     print(key)
                     #if the file doesn't exist, then generate it and save it
+                    print('computing tmatrix')
                     T = self.make_tmatrix(s)
                     if self.save_Tmat:
                         np.savetxt(os.path.join(self.tmatrix_path, fstr), T)

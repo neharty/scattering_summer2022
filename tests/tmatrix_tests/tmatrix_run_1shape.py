@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 k = (-3.66259243525257+0.450545746630018j)
 #k = 0.450545746630018j
 alpertorder = 2
-geometry = 'teardrop'
+geometry = 'strip'
 bc = 'n'
 sc_scale = 1
 Npoints = 128
@@ -21,13 +21,13 @@ plt.show()
 #%%
 tmx = Tmatrix(k, alpertorder, geometry, bc, sc_scale, Npoints, Nmode_tmat, impedance=impedance)
 tmx.use_weighted = False
-print(tmx.t)
+#print(tmx.t)
 T = tmx.make_tmatrix()
 
-tmx2 = Tmatrix(k, alpertorder, geometry, bc, sc_scale, Npoints, Nmode_tmat, impedance=impedance)
-tmx2.use_weighted = True
-print(tmx2.t)
-Tweight = tmx2.make_tmatrix()
+# tmx2 = Tmatrix(k, alpertorder, geometry, bc, sc_scale, Npoints, Nmode_tmat, impedance=impedance)
+# tmx2.use_weighted = True
+# print(tmx2.t)
+# Tweight = tmx2.make_tmatrix()
 
-#%%
-print(np.amax(np.abs(T - Tweight)))
+# #%%
+# print(np.amax(np.abs(T - Tweight)))
