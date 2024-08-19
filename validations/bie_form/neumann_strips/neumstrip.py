@@ -13,7 +13,7 @@ wv = gaussian_norm_width(width = 1, lag = 1, inc_angle=0)
 T = 40
 tint = IRK5()
 Nt = 12
-bc = 'd'
+bc = 'n'
 N = 2
 
 #unweigthed
@@ -33,7 +33,8 @@ tds_bie = time_domain_scattering(
                               timeint=tint,
                               modes = 10,
                               use_par_rhs=False,
-                              use_par_solve=True,
+                              use_par_solve=False,
+                              fft_tol=1e-6,
                               scargs={'method':'explicit', 
                                       'Npoints': 128,
                                       'save_Tmat':False}
@@ -43,7 +44,7 @@ arr = [[tds_bie.times[i], U[0, i], U[1, i], U[2, i], U[3, i]] for i in range(len
 np.savetxt('/home/nick/scattering/validations/bie_form/neumann_strips/data.dat', arr)
 
 #%%
-plt.plot(tds_bie.times, U[0, :])
+plt.plot(tds_bie.times[:2**11], U[0, :2**11])
 plt.show()
 print(wv.time_shift)
 print(1/wv.sigma)
