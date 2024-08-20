@@ -12,7 +12,7 @@ wv = gaussian_norm_width(width = 1, lag = 1)
 T = 40
 tint = IRK5()
 Nt = 15
-bc = 'd'
+bc = 'n'
 N = 4
 
 
