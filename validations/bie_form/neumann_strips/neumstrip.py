@@ -1,4 +1,3 @@
-# the most basic test one can run to check if a change in code is working
 import numpy as np
 import matplotlib.pyplot as plt
 from Ncyl.v2.cqm_v2 import time_domain_scattering
@@ -44,7 +43,7 @@ arr = [[tds_bie.times[i], U[0, i], U[1, i], U[2, i], U[3, i]] for i in range(len
 np.savetxt('/home/nick/scattering/validations/bie_form/neumann_strips/data.dat', arr)
 
 #%%
-plt.plot(tds_bie.times[:2**11], U[0, :2**11])
+plt.plot(tds_bie.times[:], U[0, :])
 plt.show()
 print(wv.time_shift)
 print(1/wv.sigma)

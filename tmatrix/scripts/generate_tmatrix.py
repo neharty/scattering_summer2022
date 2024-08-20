@@ -106,9 +106,9 @@ class Tmatrix:
         n1 = n1/np.linalg.norm(n1)
         n2 = np.array([dg2[1], -dg2[0]])
         n2 = n2/np.linalg.norm(n1)
-        return -1j*self.k**2*hankel1(0, self.k*np.linalg.norm(g1-g2))*((g1-g2).dot(n1)*(g1-g2).dot(n2))/np.linalg.norm(g1-g2)**2/4 \
-            +(1j*self.k*np.linalg.norm(g1-g2)*hankel1(1, self.k*np.linalg.norm(g1-g2))/4 - 1/(2*np.pi))\
-                *(((2*(g1-g2).dot(n1)*(g1-g2).dot(n2))/np.linalg.norm(g1-g2)**4) - n1.dot(n2)/np.linalg.norm(g1-g2)**2)
+        return -2*((-1j*self.k**2/4)*hankel1(0, self.k*np.linalg.norm(g1-g2))*((g1-g2).dot(n1)*(g1-g2).dot(n2))/np.linalg.norm(g1-g2)**2 \
+            +((1j*self.k/4)*np.linalg.norm(g1-g2)*hankel1(1, self.k*np.linalg.norm(g1-g2)) - 1/(2*np.pi))\
+                *(((2*(g1-g2).dot(n1)*(g1-g2).dot(n2))/np.linalg.norm(g1-g2)**4) - n1.dot(n2)/np.linalg.norm(g1-g2)**2))
     
     def K2(self, s1, s2):
         if abs(np.cos(s1) - np.cos(s2)) < 1e-12:
@@ -117,19 +117,25 @@ class Tmatrix:
             ddg = self.scgeom.ddbdy(s1)
             dddg = self.scgeom.dddbdy(s1)
             tmp = dg.dot(ddg)
-            return -dg.dot(ddg)/np.linalg.norm(dg)**2
+            return -0.5*(dg.dot(ddg))**2/np.linalg.norm(dg)**4 + 0.25*ddg.dot(ddg)/np.linalg.norm(dg)**2 + (1/6)*dg.dot(dddg)/np.linalg.norm(dg)**2
         else:
             g1 = self.scgeom.bdy(s1)
             g2 = self.scgeom.bdy(s2)
             dg1 = self.scgeom.dbdy(s1)
             dg2 = self.scgeom.dbdy(s2)
-            return (-dg1.dot(g1-g2))/np.linalg.norm(g1 - g2)**2 - 1/np.tan((s2 - s1)/2)
+            return -dg1.dot(dg2)/np.linalg.norm(g1-g2)**2 + 2*((g1-g2).dot(g1)*(g1-g2).dot(g2))/np.linalg.norm(g1-g2)**4 - 1/(s1-s2)**2
     
     def H1(self, s1, s2):
         return np.sin(s1)*np.sin(s2)*self.K1(s1, s2)
     
     def H2(self, s1, s2):
-        return np.sin(s1)*np.sin(s2)*self.K2(s1, s2)
+        tmp = self.K2(s1, s2)
+        tmp1 = np.sin(s1)
+        tmp2 = np.sin(s2)
+        if tmp1 < 1e-12 or tmp2 < 1e-12:
+            return 0
+        else:
+            return tmp*tmp1*tmp2
     
     def make_b_dirichlet(self):
         x = np.array([self.scgeom.bdy(ti) for ti in self.t])
@@ -231,7 +237,7 @@ class Tmatrix:
         return C
         
     def make_k1b_neumann_open_arc(self):
-        B = np.array([[self.H1(ti, tj) for ti in self.t] for tj in self.t])
+        B = np.array([[self.H1(ti, tj) for tj in self.t] for ti in self.t])
         # construct B matrix
         Bact = np.zeros((self.Npoints-1, self.Npoints-1), dtype=np.complex128)
         
@@ -242,7 +248,7 @@ class Tmatrix:
                     Bact[i-1, j-1] = 0         
                     
         Bact *= self.h
-        return Bact/(2*np.pi)
+        return Bact
     
     def make_k1c_neumann_open_arc(self):
         C = np.zeros((self.Npoints, self.Npoints), dtype=np.complex128)
@@ -264,23 +270,25 @@ class Tmatrix:
                     kerval = kervaltmp*self.h
                     lidx = np.where(Op == dist)[0][0]
                     C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
+                    
         C = 2*C[1:self.Npoints, 1:self.Npoints]
-        return C/(2*np.pi)
+        return C
     
     def make_k2_neumann_open_arc(self):
-        k2mat = np.array([[self.H2(ti, tj) for ti in self.t] for tj in self.t])
-        dmat = np.array([[(-1)**(i-j)/np.tan((i-j)*self.h/2)/2 for j in range(2*self.Npoints)] for i in range(2*self.Npoints)])
-        for i in range(2*self.Npoints):
-            dmat[i,i] = 0
+        k2mat = np.array([[self.H2(ti, tj) for tj in self.t] for ti in self.t])
+        #dmat = np.array([[(-1)**(i-j)/np.tan((i-j)*self.h/2)/2 for j in range(2*self.Npoints)] for i in range(2*self.Npoints)])
+        #for i in range(2*self.Npoints):
+        #    dmat[i,i] = 0
         
-        ttmp = (k2mat @ dmat)
+        #ttmp = (k2mat @ dmat)
+        ttmp = k2mat
         
         ddmat = np.zeros((self.Npoints-1, self.Npoints-1), dtype=np.complex128)
         for i in range(1, self.Npoints):
             for j in range(1, self.Npoints):
                 ddmat[i-1, j-1] = ttmp[i,j] - ttmp[i, -j]
         
-        return ddmat*self.h/(2*np.pi)
+        return -ddmat*self.h/(2*np.pi)
         
     def make_d_neumann_open_arc(self):
         def tent(i):

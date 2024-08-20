@@ -10,7 +10,7 @@ alpertorder = 2
 geometry = 'strip'
 bc = 'n'
 sc_scale = 1
-Npoints = 50
+Npoints = 20
 Nmode_tmat = 20
 impedance = None
 

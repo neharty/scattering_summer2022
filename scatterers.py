@@ -227,15 +227,15 @@ class strip(scatterer):
      
     def dbdy(self, t):
         if self.bc =='n':
-            return self.sc_scale*self.Rmat @ np.array([np.sin(t), 0*t])
+            return self.sc_scale*self.Rmat @ np.array([-np.sin(t), 0*t])
         else:
             return self.sc_scale*self.Rmat @ np.array([self.dw(t, 0, 2*np.pi), 0*t])/np.pi
     
     def ddbdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([0, 0])*t
+        return self.sc_scale*self.Rmat @ np.array([-np.cos(t), 0*t])
     
     def dddbdy(self, t):
-        return self.sc_scale*self.Rmat @ np.array([0, 0])*t
+        return self.sc_scale*self.Rmat @ np.array([np.sin(t), 0*t])
 
 class vstrip(scatterer):
     pass

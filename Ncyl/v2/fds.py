@@ -127,6 +127,9 @@ class freq_domain_scattering:
         else:
             self.scat_mat = None
         
+        self.tdict = {}
+        self.rotmats = {}
+        
         self.u_sc = None
 
     def cart_to_polar(self, v):
@@ -373,9 +376,7 @@ class freq_domain_scattering:
     def load_tmatrix_data(self):
         os.makedirs(self.tmatrix_path, exist_ok=True)
         # search through folder for matching file names
-        self.tdict = {}
         idxa = np.arange(-self.sum_index, self.sum_index+1)
-        self.rotmats = {}
         for s in self.scats:
             key = self.get_scr_key(s)
             try:
@@ -401,8 +402,7 @@ class freq_domain_scattering:
                     T = self.make_tmatrix(s)
                     if self.save_Tmat:
                         np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
-                    tmattmp = T
-                         
+                    tmattmp = T                      
                 self.tdict[key] = tmattmp[self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1, self.Nmode_tmat-self.sum_index:self.Nmode_tmat-self.sum_index + 2*self.sum_index+1]
             self.rotmats[s] = np.array([[np.exp(1j*(n-m)*s.rotation) for n in idxa] for m in idxa])
     
