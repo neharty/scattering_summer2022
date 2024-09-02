@@ -65,6 +65,8 @@ class scattering(cyl):
             force_method = False,
             gmres_restart = None,
             gmres_maxiter = None,
+            gmres_save_iters = False,
+            gmres_iters_path = '/home/nick/scattering/'
             fast_matrix_build = True,
             use_2cyl_modes = False,
             use_foldy_lax = False,
@@ -90,6 +92,8 @@ class scattering(cyl):
         self.rhs_tol = rhs_tol
         self.mat_tol = mat_tol
         self.gmres_maxiter = gmres_maxiter
+        self.gmres_save_iters = gmres_save_iters
+        self.gmres_iters_path = gmres_iters_path
         self.method = method
         self.force_method = force_method
         self.use_mat = use_mat
@@ -614,16 +618,17 @@ class scattering(cyl):
                 return (self.scattering_coeffs(), 0)
         else:
             self.make_all_data()
-            #check wether to use fft mvp or not
-            if len(self.cyls) > 1:
-                self.use_fft_mvp = True
-                test0 = self.mvp(self.rhs) # test mvp with fft
-                self.use_fft_mvp = False
-                test1 = self.mvp(self.rhs)
-                if np.max(np.abs(test0 - test1)) < self.fft_mvp_tol:
+            if not self.use_mat:
+                #check wether to use fft mvp or not
+                if len(self.cyls) > 1:
                     self.use_fft_mvp = True
-                else:
+                    test0 = self.mvp(self.rhs) # test mvp with fft
                     self.use_fft_mvp = False
+                    test1 = self.mvp(self.rhs)
+                    if np.max(np.abs(test0 - test1)) < self.fft_mvp_tol:
+                        self.use_fft_mvp = True
+                    else:
+                        self.use_fft_mvp = False
                 
             #set the vectors for fast matrix multiplication
             #self.ST = self.make_root_matrix()
@@ -666,6 +671,11 @@ class scattering(cyl):
                         callback_type = 'pr_norm',
                         maxiter = self.gmres_maxiter
                         )
+            
+            if self.gmres_save_iters:
+                with open(os.path.join(self.gmres_iters_path, 'gmres_iters.txt'), 'a') as tmpfile:
+                    tmpfile.write(self.k, self.iters)
+            
             print('k done:', self.k)
             return outp
     

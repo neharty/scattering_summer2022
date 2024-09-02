@@ -20,7 +20,7 @@ from Ncyl.v2.cqm_v2 import time_domain_scattering
 #test explicit, tmatrix form
 from utils import example_setups_bie
 scrspos = example_setups_bie.uniform_grid_NxN(N, 1, 3)
-scrs = example_setups_bie.set_scats(scrspos, 1, bc, 'uniform', 'teardrop', 'uniform')
+scrs = example_setups_bie.set_scats(scrspos, 1, bc, 'uniform', 'cyl', 'uniform')
 tds_bie = time_domain_scattering(
                              scrs,
                              wv,

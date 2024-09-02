@@ -164,7 +164,7 @@ function den_sol_MIX(choice::Int, nn::Integer,n_r::Integer, N::Integer, λ::Floa
             for j in(1:alt_N)
                 if maximum(abs.(g_hat[1,:,j]) ) >=6.5e-10    
                     ϕ_hat[1,:,j] = scatSYS(choice,hx,hx_r,nn,n_r,g_hat[1,:,j],gp_hat[1,:,j],k,K_rep,Gk,N__jordan,N__openArc,Sη_mat,Kη_mat,GkGη,Kk,G0,PAR,DX1,DX2,DX3,NOR,DPR,MP,DPAR,DNOR,DDPR,blocks,co,specimen,TT1,TT2,SIN,N_list,waveNS[j],UNO,layer_rep,BC); 
-
+                    matsaver(choice,hx,hx_r,nn,n_r,g_hat[1,:,j],gp_hat[1,:,j],k,K_rep,Gk,N__jordan,N__openArc,Sη_mat,Kη_mat,GkGη,Kk,G0,PAR,DX1,DX2,DX3,NOR,DPR,MP,DPAR,DNOR,DDPR,blocks,co,specimen,TT1,TT2,SIN,N_list,waveNS[j],UNO,layer_rep,BC);
                     print("2nd order D&C we are at iteration ",j, "\n");
                 end
             end

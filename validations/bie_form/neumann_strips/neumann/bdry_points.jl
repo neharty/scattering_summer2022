@@ -112,7 +112,8 @@ function set_bdry_points(n::Int64,specimen::Array{Int64},lenny::Array{Float64},v
                 N_list = push!(N_list,n_r);
 
                 MP=push!(MP,ones(n))
-
+                
+                # alpert points
                 Dtemp1=[]; Dtemp2=[];Dtemp3=[];Dtemp4=[]
                 for ii in(1:n_r)
                     Dtemp1 = vcat(Dtemp1, [experiment(TT_arc[ii+1] ,hx_r , n_r , pari[i],co[i],lenny[i],vinkel[i],center[i])] ) ;
@@ -121,9 +122,9 @@ function set_bdry_points(n::Int64,specimen::Array{Int64},lenny::Array{Float64},v
                     Dtemp4 = vcat(Dtemp4, [experiment(TT_arc[ii+1] ,hx_r , n_r , sin_shift,co[i],lenny[i],vinkel[i],center[i])] ) ;
                 end
 
-                DPAR=push!(DPAR,Dtemp1);
-                DDPR=push!(DDPR,Dtemp2);
-                DNOR=push!(DNOR,Dtemp3);
+                DPAR=push!(DPAR,Dtemp1); # (x,y) points
+                DDPR=push!(DDPR,Dtemp2); # arclength
+                DNOR=push!(DNOR,Dtemp3); # normal vectors
                 SIN=push!(SIN,Dtemp4);
             end
             

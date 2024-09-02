@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz
 from scipy.special import jv, jve, jvp, hankel1, h1vp, hankel1e
-from integrators.alpert import alpert2, alpert6, alpert10, alpert16
+from integrators.alpert import alpert2, alpert4, alpert3, alpert6, alpert10, alpert16
 from scatterers import scat_select
 import argparse
 import os
@@ -25,6 +25,10 @@ class Tmatrix:
         self.bie = None
         if self.alpertorder == 2:
             self.bie = alpert2()
+        if self.alpertorder == 3:
+            self.bie = alpert3()
+        if self.alpertorder == 4:
+            self.bie = alpert4()
         if self.alpertorder == 6:
             self.bie = alpert6()
         if self.alpertorder == 10:
@@ -64,18 +68,20 @@ class Tmatrix:
         nv /= np.linalg.norm(nv)
         xhat = x/np.linalg.norm(x)
         drdn = nv.dot(xhat)
-        dmodedn = -nv.dot(np.array([-x[1], x[0]])*1j*n/(x[0]**2 + x[1]**2))
+        dmodedn = nv.dot(np.array([-x[1], x[0]])*(-1j*n)/(x[0]**2 + x[1]**2))
         return self.k*jvp(n, self.k*np.linalg.norm(x))*drdn*np.exp(-1j*n*theta) + self.phihatstar(n, x)*dmodedn
         
-    def ll(self, i, j):
+    def ll(self, i, j, N=0):
+        if N == 0:
+            N = self.Npoints
         # from Erli's code
-        a = np.mod(i-j, self.Npoints)
-        b = np.mod(j-i, self.Npoints)
+        a = np.mod(i-j, N)
+        b = np.mod(j-i, N)
         if a<b:
             return -a
         else:
             return b
-    
+
     def L_np(self, Op, x):
         tmp = np.ones(len(Op))
         for i in range(len(Op)):
@@ -100,8 +106,8 @@ class Tmatrix:
     def K1(self, s1, s2):
         g1 = self.scgeom.bdy(s1)
         g2 = self.scgeom.bdy(s2)
-        dg1 = self.scgeom.bdy(s1)
-        dg2 = self.scgeom.bdy(s2)
+        dg1 = self.scgeom.dbdy_neum_rhs(s1)
+        dg2 = self.scgeom.dbdy_neum_rhs(s2)
         n1 = np.array([dg1[1], -dg1[0]])
         n1 = n1/np.linalg.norm(n1)
         n2 = np.array([dg2[1], -dg2[0]])
@@ -116,14 +122,13 @@ class Tmatrix:
             dg = self.scgeom.dbdy(s1)
             ddg = self.scgeom.ddbdy(s1)
             dddg = self.scgeom.dddbdy(s1)
-            tmp = dg.dot(ddg)
             return -0.5*(dg.dot(ddg))**2/np.linalg.norm(dg)**4 + 0.25*ddg.dot(ddg)/np.linalg.norm(dg)**2 + (1/6)*dg.dot(dddg)/np.linalg.norm(dg)**2
         else:
             g1 = self.scgeom.bdy(s1)
             g2 = self.scgeom.bdy(s2)
-            dg1 = self.scgeom.dbdy(s1)
-            dg2 = self.scgeom.dbdy(s2)
-            return -dg1.dot(dg2)/np.linalg.norm(g1-g2)**2 + 2*((g1-g2).dot(g1)*(g1-g2).dot(g2))/np.linalg.norm(g1-g2)**4 - 1/(s1-s2)**2
+            dg1 = self.scgeom.dbdy_neum_rhs(s1)
+            dg2 = self.scgeom.dbdy_neum_rhs(s2)
+            return -dg1.dot(dg2)/np.linalg.norm(g1-g2)**2 + 2*((g1-g2).dot(dg1)*(g1-g2).dot(dg2))/np.linalg.norm(g1-g2)**4 - 1/(np.cos(s1)-np.cos(s2))**2
     
     def H1(self, s1, s2):
         return np.sin(s1)*np.sin(s2)*self.K1(s1, s2)
@@ -132,10 +137,7 @@ class Tmatrix:
         tmp = self.K2(s1, s2)
         tmp1 = np.sin(s1)
         tmp2 = np.sin(s2)
-        if tmp1 < 1e-12 or tmp2 < 1e-12:
-            return 0
-        else:
-            return tmp*tmp1*tmp2
+        return tmp*tmp1*tmp2
     
     def make_b_dirichlet(self):
         x = np.array([self.scgeom.bdy(ti) for ti in self.t])
@@ -237,50 +239,38 @@ class Tmatrix:
         return C
         
     def make_k1b_neumann_open_arc(self):
-        B = np.array([[self.H1(ti, tj) for tj in self.t] for ti in self.t])
         # construct B matrix
         Bact = np.zeros((self.Npoints-1, self.Npoints-1), dtype=np.complex128)
-        
-        for i in range(1, self.Npoints):
-            for j in range(1, self.Npoints):
-                Bact[i-1, j-1] = B[i, j] - B[i, -j]
-                if np.abs(self.ll(i, j)) < self.bie.dist:
-                    Bact[i-1, j-1] = 0         
-                    
+        for i in range(self.Npoints-1):
+            for j in range(self.Npoints-1):
+                if np.abs(self.ll(i, j, self.Npoints-1)) >= self.bie.dist:
+                    Bact[i, j] = self.H1(self.t[i+1], self.t[j+1])
         Bact *= self.h
         return Bact
     
     def make_k1c_neumann_open_arc(self):
-        C = np.zeros((self.Npoints, self.Npoints), dtype=np.complex128)
-        
+        C = np.zeros((self.Npoints-1, self.Npoints-1), dtype=np.complex128)
         m = len(self.bie.nodemat)
         talp = np.array([[ti + self.bie.nodemat[p]*self.h for ti in self.t] for p in range(m)])
         kern = lambda s1, s2: self.H1(s1, s2)
         
         for p in range(m):
-            Op = np.floor(self.bie.nodemat[p] - self.bie.M/2 + 1) + np.arange(0, self.bie.M)
+            Op = np.floor(self.bie.nodemat[p] - self.bie.M/2 + 1) + np.arange(0, self.bie.M-1)
             Lmat = self.L_np(Op, self.bie.nodemat[p])
-            for i in range(self.Npoints):
+            for i in range(self.Npoints-1):
                 for dist in Op:
                     idx = i + dist
-                    if idx >= self.Npoints:
-                        idx = idx - self.Npoints
+                    if idx >= self.Npoints-1:
+                        idx = idx - (self.Npoints-1)
                     idx = int(idx)
-                    kervaltmp = kern(self.t[i], talp[p][i])
-                    kerval = kervaltmp*self.h
+                    kerval = kern(self.t[i+1], talp[p, i+1])
                     lidx = np.where(Op == dist)[0][0]
                     C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
-                    
-        C = 2*C[1:self.Npoints, 1:self.Npoints]
-        return C
+        
+        return C*self.h
     
     def make_k2_neumann_open_arc(self):
         k2mat = np.array([[self.H2(ti, tj) for tj in self.t] for ti in self.t])
-        #dmat = np.array([[(-1)**(i-j)/np.tan((i-j)*self.h/2)/2 for j in range(2*self.Npoints)] for i in range(2*self.Npoints)])
-        #for i in range(2*self.Npoints):
-        #    dmat[i,i] = 0
-        
-        #ttmp = (k2mat @ dmat)
         ttmp = k2mat
         
         ddmat = np.zeros((self.Npoints-1, self.Npoints-1), dtype=np.complex128)
@@ -340,15 +330,13 @@ class Tmatrix:
     def Tnm(self, n, mu):
         #trapezoidal rule
         if self.scgeom.open_arc and self.bc =='n':
-            yfn = np.array([self.dphihatstardn(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy(self.t[i]))*mu[i-1]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(1, self.Npoints)])
+            yfn = np.array([self.dphihatstardn(n, self.scgeom.bdy(self.t[i]), self.scgeom.dbdy_neum_rhs(self.t[i]))*mu[i-1]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(1, self.Npoints)])
         else:
             if self.use_weighted:
                 yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i] for i in range(len(mu))])
             else:
                 yfn = np.array([self.phihatstar(n, self.scgeom.bdy(self.t[i]))*mu[i]*np.linalg.norm(self.scgeom.dbdy(self.t[i])) for i in range(len(mu))])
         tmp = np.sum(yfn)
-        # for i in range(len(yfn)):
-        #     tmp += yfn[i]
         tmp *= self.h
         return tmp
     

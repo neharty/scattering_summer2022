@@ -1,3 +1,4 @@
+using DelimitedFiles;
 #############################################################################
 
 function Deriv_mat(h::Float64,N::Int64)
@@ -103,6 +104,48 @@ function ALPERT_jordan(h::Float64,N_r::Int64, k::Function,Γ::Array,nvec::Array,
     
 end
 
+function ALPERT_jordan_B(h::Float64,N_r::Int64, k::Function,Γ::Array,nvec::Array, dΓ::Array,MP::Array,DPAR::Array,DNOR::Array,DDPR::Array,UDPR::Array,WW::Complex)     
+    A = complex(zeros(N_r,N_r));
+    B = complex(zeros(N_r,N_r));
+    C = complex(zeros(N_r,N_r));
+    D = complex(zeros(N_r,N_r));
+    for i in(1:N_r)
+        for j in(1:N_r)
+            if( abs(ll(i,j,N_r))>=a )
+                xi = Γ[i];
+                xj = Γ[j];
+                B[i,j] = k(xi ,xj ,nvec[i],nvec[j],WW)*dΓ[j]*UDPR[i] ; 
+            end
+        end
+    end
+    A = h*B;
+    return  A;
+    
+end
+
+function ALPERT_jordan_C(h::Float64,N_r::Int64, k::Function,Γ::Array,nvec::Array, dΓ::Array,MP::Array,DPAR::Array,DNOR::Array,DDPR::Array,UDPR::Array,WW::Complex)     
+    A = complex(zeros(N_r,N_r));
+    B = complex(zeros(N_r,N_r));
+    C = complex(zeros(N_r,N_r));
+    D = complex(zeros(N_r,N_r));     
+    for i in(1:N_r) 
+        for p in(1:2*m)       
+            for j in(1:N_r)
+                if(any(x->x==ll(i,j,N_r),O[p,:]))   
+                    noo= np_a(p,ll(i,j,N_r)) 
+                    C[i,j] = C[i,j]+k(Γ[i], DPAR[i][p],nvec[i],DNOR[i][p],WW)*ws[p]*Lb11_aa(Int(noo),O[p,:],p)*UDPR[i]*DDPR[i][p]; 
+                end
+            end
+        end
+        writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/alpertmats/"*string(WW)*"_"*string(i)*"real_CC.txt",real(C))
+        writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/alpertmats/"*string(WW)*"_"*string(i)*"imag_CC.txt",imag(C))
+    end
+    
+    A = h*C;
+    return  A;
+    
+end
+
  function ALPERT_arc(h::Float64,N_r::Int64, k::Function,Γ::Array,nvec::Array, dΓ::Array,MP::Array,DPAR::Array,DNOR::Array,DDPR::Array,TT1::Array,TT2::Array,SIN::Array,WW::Complex)     
     A = complex(zeros(N_r,N_r));
     B = complex(zeros(N_r,N_r));
@@ -160,6 +203,7 @@ function trap_jordan(h,n,k::Function,pr::Array,prp::Array, prpp::Array)
     end 
     return h*Mat;
 end
+
 function NEU_reflections(h::Float64,N::Int64,G::Function,par1::Array,par2::Array,nor1::Array,nor2::Array,dΓ1::Array,dΓ2::Array,MP::Array,WW::Complex) 
     A = complex(zeros(N,N));
     for i in(1:N)
@@ -258,8 +302,11 @@ function scatSYS(choice::Int64,h::Float64,h_r::Float64,N::Int64,N_r::Int64,f1::A
                                 A[ leftx:rightx , lefty:righty] = hold;
                                 AS[ leftx:rightx , lefty:righty] = inv(hold);
                                 
-                            elseif(specimen[i+1]<4)                     
-                                AA = 2*ALPERT_jordan(h_r,N_r,G[i+1],par[i+1],nor[i+1],dpr[i+1],mp[i+1],DPAR[i+1],DNOR[i+1],DDPR[i+1],dpr[i+1],WW)/2 #This /2 bothers me 
+                            elseif(specimen[i+1]<4)     
+                                println("here")                
+                                BB = ALPERT_jordan_B(h_r,N_r,G[i+1],par[i+1],nor[i+1],dpr[i+1],mp[i+1],DPAR[i+1],DNOR[i+1],DDPR[i+1],dpr[i+1],WW)
+                                CC = ALPERT_jordan_C(h_r,N_r,G[i+1],par[i+1],nor[i+1],dpr[i+1],mp[i+1],DPAR[i+1],DNOR[i+1],DDPR[i+1],dpr[i+1],WW)
+                                AA = BB + CC;
                                 B=Hilbert(N,N_r);
                                 C= 2*trap_arc(h_r,N_r,N__arc,par[i+1],parp[i+1],parpp[i+1],parppp[i+1],TT1,TT2);
                                 hold = (B+C+AA);
@@ -330,4 +377,52 @@ function ker_eval_mix(h::Float64,ON::Int64,phi::Array,z::Array,κ::Complex, par:
     #print(norm(phi)," norm of this density\n")
     return hold;
 end
+
+function matsaver(choice::Int64,h::Float64,h_r::Float64,N::Int64,N_r::Int64,f1::Array,f2::Array,G::Array{Function},K_rep::Array{Function},Gk::Function,N__::Function,N__arc::Function,Sη::Array,Kη::Array,GkGη::Function,Kk::Function,G0::Function,par::Array,
+        parp::Array,parpp::Array,parppp::Array,nor::Array,dpr::Array,mp::Array,DPAR::Array,DNOR::Array,DDPR::Array,blocks::Int64,co::Array,specimen::Array,TT1::Array,TT2::Array,SIN::Array,Ns::Array,WW::Complex,UNO::Array,
+        layer_rep::Int64,BC::Array{Int64});
+    
+    result = complex(zeros(blocks*N)) 
+    
+    hol1 = complex(zeros(blocks*N,blocks*N)) ;
+    hol2 = complex(zeros(blocks*N));
+
+    for i in(0:blocks-1)
+        for j in(0:blocks-1)
+            leftx=i%blocks*N+1 ; rightx =(i%blocks+1)*N; 
+            lefty=j%blocks*N+1 ; righty =(j%blocks+1)*N; 
+            
+            
+            rleftx=i%blocks*N_r+1 ; rrightx =(i%blocks+1)*N_r; 
+            rlefty=j%blocks*N_r+1 ; rrighty =(j%blocks+1)*N_r;
+            
+            leftXX = (i%blocks)*N+1
+            rightXX = (i%blocks+1)*(N)-N_r-2
+            
+            leftYY = (j%blocks)*N+1
+            rightYY = (j%blocks+1)*(N)-N_r-2
+
+            if(i==j)
+                BB = ALPERT_jordan_B(h_r,N_r,G[i+1],par[i+1],nor[i+1],dpr[i+1],mp[i+1],DPAR[i+1],DNOR[i+1],DDPR[i+1],dpr[i+1],WW)
+                CC = ALPERT_jordan_C(h_r,N_r,G[i+1],par[i+1],nor[i+1],dpr[i+1],mp[i+1],DPAR[i+1],DNOR[i+1],DDPR[i+1],dpr[i+1],WW)
+                AA = BB + CC;
+                B=Hilbert(N,N_r);
+                C= 2*trap_arc(h_r,N_r,N__arc,par[i+1],parp[i+1],parpp[i+1],parppp[i+1],TT1,TT2);
+                hold = (B+C+AA);
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_real_BB.txt",real(BB))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_imag_BB.txt",imag(BB))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_real_CC.txt",real(CC))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_imag_CC.txt",imag(CC))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_real_AA.txt",real(AA))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_imag_AA.txt",imag(AA))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_real_Hilbert.txt",real(B))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_imag_Hilbert.txt",imag(B))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_real_traparc.txt",real(C))
+                writedlm("/home/nick/scattering/validations/bie_form/neumann_strips/neumann/mats/"*string(WW)*"_imag_traparc.txt",imag(C))
+                #AS[ leftXX:rightXX , leftYY:rightYY] = inv(hold);
+            end
+        end
+    end
+end
+    
 

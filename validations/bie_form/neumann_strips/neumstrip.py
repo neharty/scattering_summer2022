@@ -11,7 +11,7 @@ from utils.plot_scatterers import plot_scatterers
 wv = gaussian_norm_width(width = 1, lag = 1, inc_angle=0)
 T = 40
 tint = IRK5()
-Nt = 12
+Nt = 15
 bc = 'n'
 N = 2
 

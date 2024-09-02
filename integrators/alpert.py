@@ -20,7 +20,26 @@ class alpert2(alpert):
         nodes = [1.591549430918953e-01]
         weights = [0.5]
         super().__init__(nodes, weights, 1, 2)
+
+class alpert3(alpert):
+    def __init__(self):
+        nodes = [1.150395811972836e-01, 
+                 9.365464527949632e-01]
+        weights = [3.913373788753340e-01,
+                   1.108662621124666]
+        super().__init__(nodes, weights, 2, 3)
+
+class alpert4(alpert):
+    def __init__(self):
+        nodes = [2.379647284118974e-02, 
+                 2.935370741501914e-01, 
+                 1.023715124251890]        
         
+        weights = [8.795942675593887e-02, 
+                   4.989017152913699e-01, 
+                   9.131388579526912e-01]
+        super().__init__(nodes, weights, 2, 4)
+
 class alpert6(alpert):
     def __init__(self):
         nodes = [4.004884194926570e-03, 
