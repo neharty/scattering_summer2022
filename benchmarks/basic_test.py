@@ -15,8 +15,8 @@ from utils.plot_cyls import plot_cyls
 wv = gaussian_norm_width(width = 0.5, lag = 1)
 
 T = 40*np.pi
-tint = IRK5()
-#length units are in cm here
+tint = None
+
 cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
 
 tds = time_domain_scattering(
@@ -26,9 +26,10 @@ tds = time_domain_scattering(
                              sampnum=2**14,
                              modes=8,
                              timeint=tint,
-                             use_cython=True,
+                             use_cython=False,
                              use_par=False,
-                             scargs={'method':'gmres'}
+                             use_foldy_lax=True,
+                             scargs={'method':'explicit', 'use_mat':True}
                              )
 X, Y = np.meshgrid([6], [0])
 Ux = tds.make_U_sc(np.array([6, -6]), np.array([0, 0]))

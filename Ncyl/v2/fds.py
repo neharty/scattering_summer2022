@@ -44,6 +44,8 @@ class freq_domain_scattering:
     force_method: bool = False
     gmres_restart: object = None
     gmres_maxiter: object = None
+    gmres_save_iters: bool = False
+    gmres_iter_path: str = '/home/nick/scattering'
     fast_matrix_build: bool = True
     real_k_scattering: bool = False
     real_k_rhs: str = 'planewave'
@@ -303,8 +305,6 @@ class freq_domain_scattering:
     def directscat_term(self, cyl, m):
         return np.eye(2*cyl.sum_index + 1)
 
-    
-
     def make_root_vect_1cyl(self, i, sc):
         # i = incident circle label
         # sc = scatterer circle label
@@ -384,15 +384,7 @@ class freq_domain_scattering:
             except KeyError:
                 #if not already loaded, then load the tmatrix file
                 fstr = f'{self.get_hash(s)}.dat' 
-                #t matrices are defined by their scatterer type and radius
                 try:
-                    # if self.remake_Tmat:
-                    #     print('remaking T-matrix')
-                    #     print(key)
-                    #     T = self.make_tmatrix(s)
-                    #     np.savetxt(os.path.join(self.tmatrix_path, fstr), T)
-                    #     tmattmp = T
-                    
                     tmattmp = np.loadtxt(os.path.join(self.tmatrix_path, fstr), dtype=np.complex128)
                 except FileNotFoundError as e:
                     print(e)
@@ -617,7 +609,6 @@ class freq_domain_scattering:
                 self.hm[p] = self.hmode(self.scats[p], idxa_p)
         return self.hm
     
-    
     def circulant_mvp(self, r, x):
         #r = root matrix
         #x = input vector
@@ -781,7 +772,11 @@ class freq_domain_scattering:
             self.mvp_counter = 0
             dim = self.scat_matrix_dim
             if self.use_mat:
-                linearop = self.make_scattering_blocks()
+                if self.use_tmatrix:
+                    self.scat_mat = self.make_scattering_blocks_tmatrix()
+                else:
+                    self.scat_mat = self.make_scattering_blocks_cyl()
+                linearop = self.scat_mat
             else:
                 if self.use_tmatrix:
                     linearop = LinearOperator((dim, dim), matvec = self.mvp_tmatrix)
@@ -820,6 +815,9 @@ class freq_domain_scattering:
                         maxiter = self.gmres_maxiter
                         )
             print('k done:', self.k)
+            if self.gmres_save_iters:
+                with open(os.path.join(self.gmres_iters_path, 'gmres_iters.txt'), 'a') as tmpfile:
+                    tmpfile.write(f'{self.k}\t{self.iter}\n')
             return outp
     
     def scattering_coeffs_explicit(self):

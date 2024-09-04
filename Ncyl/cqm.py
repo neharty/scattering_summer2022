@@ -11,6 +11,7 @@ import copy
 import gc
 import uuid
 from Ncyl.scython.wrapper import PyScat
+import os
 #from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
 
 class cyl:
@@ -66,7 +67,7 @@ class scattering(cyl):
             gmres_restart = None,
             gmres_maxiter = None,
             gmres_save_iters = False,
-            gmres_iters_path = '/home/nick/scattering/'
+            gmres_iters_path = '/home/nick/scattering/',
             fast_matrix_build = True,
             use_2cyl_modes = False,
             use_foldy_lax = False,
@@ -439,7 +440,7 @@ class scattering(cyl):
             for i in self.labels:
                 for j in self.labels:
                     if i == j:
-                        self.scat_mat[i][j] = self.directscat_term(self.cyls[i], 0)
+                        self.scat_mat[i][j] = 1#self.directscat_term(self.cyls[i], 0)
                     else:
                         b = b = self.cyls[i].pos - self.cyls[j].pos
                         self.scat_mat[i][j] = self.mulscat_term(self.cyls[j], 0, 0, b)
@@ -673,8 +674,8 @@ class scattering(cyl):
                         )
             
             if self.gmres_save_iters:
-                with open(os.path.join(self.gmres_iters_path, 'gmres_iters.txt'), 'a') as tmpfile:
-                    tmpfile.write(self.k, self.iters)
+                with open(os.path.join(self.gmres_iters_path, 'gmres_iters.dat'), 'a') as tmpfile:
+                    tmpfile.write(f'{self.k} {self.iter}\n')
             
             print('k done:', self.k)
             return outp
@@ -1101,7 +1102,6 @@ class time_domain_scattering(scattering):
             g = 1j*np.zeros((n, N))
         else:
             # for foldy-lax approximations
-            # only uses 1 mode -- incorrect for Neumann case
             g = 1j*np.zeros(N)
                 
         for i in range(N):
@@ -1181,7 +1181,7 @@ class time_domain_scattering(scattering):
                 fcs = self.fourier_coeffs_bdy(zbc)
                 
                 #set max cyl index
-                cyl.maxidx = fcs.shape[1]
+                cyl.maxidx = fcs.shape[0]
                 #print(fcs.shape[1])
                 return fcs 
             else:
@@ -1199,7 +1199,10 @@ class time_domain_scattering(scattering):
                 fcs = self.fourier_coeffs_bdy_ms(dbc)
                 
                 #compute the max idx for the cyl
-                maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
+                if self.fl:
+                    maxidxs = [fcs[i].shape[0] for i in range(len(self.timeint.c))]
+                else:
+                    maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
                 cyl.maxidx = max(maxidxs)
                 #print(max(maxidxs))
                 return fcs
@@ -1254,13 +1257,22 @@ class time_domain_scattering(scattering):
                 return fcs
     
     def zeropad_rhs(self, mat):
-        m, n = mat.shape
-        if n < self.rhs_maxidx:
-            newmat = 1j*np.zeros((m, self.rhs_maxidx))
-            newmat[:, :n] = mat[:, :]
-            return newmat
+        if self.fl:
+            n = mat.shape[0]
+            if n < self.rhs_maxidx:
+                newmat = 1j*np.zeros(self.rhs_maxidx)
+                newmat[:n] = mat[:, :]
+                return newmat
+            else:
+                return mat
         else:
-            return mat
+            m, n = mat.shape
+            if n < self.rhs_maxidx:
+                newmat = 1j*np.zeros((m, self.rhs_maxidx))
+                newmat[:, :n] = mat[:, :]
+                return newmat
+            else:
+                return mat
     
     def fzt_boundary_allcyls(self):
         #only works for BDF2
@@ -1391,7 +1403,10 @@ class time_domain_scattering(scattering):
             else:
                 rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
             for c in self.cyls:
-                c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
+                if self.fl:
+                    c.maxidx = [rhstmp[c.label][i].shape[0] for i in range(len(self.timeint.c))]
+                else:
+                    c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
             self.rhs_maxidx_matrix = [c.maxidx for c in self.cyls]
             self.rhs_maxidx = np.amax(self.rhs_maxidx_matrix)
             for j in range(len(self.timeint.c)):
@@ -1400,7 +1415,10 @@ class time_domain_scattering(scattering):
             self.rhsmat = [[None for n in range(self.rhs_maxidx)] for c in range(len(self.timeint.c))]
             for j in range(len(self.timeint.c)):
                 for i in range(self.rhs_maxidx):
-                    self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
+                    if self.fl:
+                        self.rhsmat[j][i] = np.hstack([rhstmp[c][j][i] for c in range(len(self.cyls))])
+                    else:
+                        self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
             if self.save_coeffs and self.coeff_mat is None:
                 self.coeff_mat = [1j*np.zeros(np.array(self.rhsmat[j]).shape) for j in range(len(self.timeint.c))]
     
@@ -1429,6 +1447,7 @@ class time_domain_scattering(scattering):
                         rhs, 
                         k=ks[i],
                         sum_index=self.modes,
+                        use_foldy_lax = self.fl,
                         balanced_system=self.balanced_system,
                         save_coeffs = self.save_coeffs,
                         use_cpp=self.use_cpp,
