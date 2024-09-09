@@ -73,6 +73,8 @@ class freq_domain_scattering:
         self.gmres_iter = 0
         self.gmres_res = np.array([])
         self.mvp_counter = 0
+        self.tdict = {}
+        self.rotmats = {}
         
         self.use_fft_mvp = True
         self.fft_mvp_tol = 1e-3
@@ -128,9 +130,6 @@ class freq_domain_scattering:
             self.scat_mat = self.make_scattering_blocks()
         else:
             self.scat_mat = None
-        
-        self.tdict = {}
-        self.rotmats = {}
         
         self.u_sc = None
 
@@ -883,6 +882,17 @@ class freq_domain_scattering:
             return (self.u_sc, cs)
         else:
             return self.u_sc
+    
+    def u_inc(self, x, y):
+        if self.real_k_rhs == 'planewave':
+            r, theta = self.cart_to_polar([x, y])
+            return np.exp(1j*self.k*r*np.cos(theta - self.real_k_inc_angle))
+        elif self.real_k_rhs == 'pointsource':
+            r, theta = self.cart_to_polar([x - self.real_k_r0[0], y - self.real_k_r0[1]])
+            return 1j*hankel1(0, self.k*r)/4
+    
+    def make_u(self, x, y):
+        return self.mask(x, y)*(2*self.make_u_sc(x, y) + self.u_inc(x, y))
     
     def mask(self, x, y):
         Oi = self.scats[0].pos
