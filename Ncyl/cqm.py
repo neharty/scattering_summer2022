@@ -10,7 +10,7 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import gc
 import uuid
-from Ncyl.scython.wrapper import PyScat
+#from Ncyl.scython.wrapper import PyScat
 import os
 #from tests.cpp_tests.reduced.wrapper import PyScat as PyScatC
 
@@ -443,7 +443,7 @@ class scattering(cyl):
                         self.scat_mat[i][j] = 1#self.directscat_term(self.cyls[i], 0)
                     else:
                         b = b = self.cyls[i].pos - self.cyls[j].pos
-                        self.scat_mat[i][j] = self.mulscat_term(self.cyls[j], 0, 0, b)
+                        self.scat_mat[i][j] = self.mulscat_term(self.cyls[j], 0, 0, b, self.cyls[i])
         else:
             self.scat_mat = np.block(self.make_scattering_blocks_blockform())
         
@@ -734,7 +734,10 @@ class scattering(cyl):
         for l in self.labels:
             R = np.array([x - self.cyls[l].pos[0], y - self.cyls[l].pos[1]])
             if self.fl:
-                u_sc += cs[self.lengths[l]]*self.phi(0, R)
+                if self.use_reduced_system:
+                    u_sc += cs[self.lengths[l]]*self.phi(0, R)/self.hmode(self.cyls[l], 0)
+                else:
+                    u_sc += cs[self.lengths[l]]*self.phi(0, R)
             else:
                 if self.balanced_system:
                     for j in range(2*self.cyls[l].sum_index + 1):
@@ -801,7 +804,10 @@ class time_domain_scattering(scattering):
         self.fft_tol = fft_tol
         self.fftidx = []
         self.sampnum = sampnum
-        self.modes = modes
+        if use_foldy_lax:
+            self.modes = 1
+        else:    
+            self.modes = modes
         self.mode_start = mode_start
         self.mode_tol = mode_tol
         self.use_par = use_par
@@ -1096,32 +1102,27 @@ class time_domain_scattering(scattering):
             N = len(self.times)//2 +1
         else:
             N = len(self.times)
-        
-        #for using foldy lax approx
-        if not self.fl:
-            g = 1j*np.zeros((n, N))
-        else:
-            # for foldy-lax approximations
-            g = 1j*np.zeros(N)
-                
+
+        g = 1j*np.zeros((n, N))
+
         for i in range(N):
-            if self.fl:
-                gtmp = fftshift(fft(v[:, i]))/n
-                g[i] = gtmp[n//2]
-                #sparsify the rhs
-                tmp = np.abs(g[i])
-                if np.max(tmp) < self.fft_tol:
-                    g[i] = 0
-                    return g
-            else:
-                g[:, i] = fftshift(fft(v[:, i]))/n
-                #sparsify the rhs
-                tmp = np.abs(g[:, i])
-                if np.max(tmp) < self.fft_tol:
-                    g[:, i] = np.zeros(n)
-                    if self.use_conj:
-                        g = g[:, :i+1]
-                        return g 
+            # if self.fl:
+            #     gtmp = fftshift(fft(v[:, i]))/n
+            #     g[i] = gtmp[n//2]
+            #     #sparsify the rhs
+            #     tmp = np.abs(g[i])
+            #     if np.max(tmp) < self.fft_tol:
+            #         g[i] = 0
+            #         return g
+            #else:
+            g[:, i] = fftshift(fft(v[:, i]))/n
+            #sparsify the rhs
+            tmp = np.abs(g[:, i])
+            if np.max(tmp) < self.fft_tol:
+                g[:, i] = np.zeros(n)
+                if self.use_conj:
+                    g = g[:, :i+1]
+                    return g 
         return g
     
     def diag_loop(self, v):
@@ -1181,7 +1182,7 @@ class time_domain_scattering(scattering):
                 fcs = self.fourier_coeffs_bdy(zbc)
                 
                 #set max cyl index
-                cyl.maxidx = fcs.shape[0]
+                cyl.maxidx = fcs.shape[1]
                 #print(fcs.shape[1])
                 return fcs 
             else:
@@ -1199,10 +1200,7 @@ class time_domain_scattering(scattering):
                 fcs = self.fourier_coeffs_bdy_ms(dbc)
                 
                 #compute the max idx for the cyl
-                if self.fl:
-                    maxidxs = [fcs[i].shape[0] for i in range(len(self.timeint.c))]
-                else:
-                    maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
+                maxidxs = [fcs[i].shape[1] for i in range(len(self.timeint.c))]
                 cyl.maxidx = max(maxidxs)
                 #print(max(maxidxs))
                 return fcs
@@ -1257,22 +1255,13 @@ class time_domain_scattering(scattering):
                 return fcs
     
     def zeropad_rhs(self, mat):
-        if self.fl:
-            n = mat.shape[0]
-            if n < self.rhs_maxidx:
-                newmat = 1j*np.zeros(self.rhs_maxidx)
-                newmat[:n] = mat[:, :]
-                return newmat
-            else:
-                return mat
+        m, n = mat.shape
+        if n < self.rhs_maxidx:
+            newmat = 1j*np.zeros((m, self.rhs_maxidx))
+            newmat[:, :n] = mat[:, :]
+            return newmat
         else:
-            m, n = mat.shape
-            if n < self.rhs_maxidx:
-                newmat = 1j*np.zeros((m, self.rhs_maxidx))
-                newmat[:, :n] = mat[:, :]
-                return newmat
-            else:
-                return mat
+            return mat
     
     def fzt_boundary_allcyls(self):
         #only works for BDF2
@@ -1304,10 +1293,7 @@ class time_domain_scattering(scattering):
             rhstmp = [self.zeropad_rhs(m) for m in rhstmp]
             self.rhsmat = [None for n in range(self.rhs_maxidx)]
             for i in range(self.rhs_maxidx):
-                if self.fl:
-                    self.rhsmat[i] = np.hstack([rhstmp[c][i] for c in range(len(self.cyls))])
-                else:
-                    self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
+                self.rhsmat[i] = np.hstack([rhstmp[c][:, i] for c in range(len(self.cyls))])
             self.rhsmat = np.array(self.rhsmat)
             if self.save_coeffs and self.coeff_mat is None:
                 self.coeff_mat = 1j*np.zeros(self.rhsmat.shape)
@@ -1331,7 +1317,11 @@ class time_domain_scattering(scattering):
                     rhs += [tmp[:, idx]]
                 rhs = np.hstack(rhs)
             else:
-                rhs = self.rhsmat[idx]
+                #rhs = self.rhsmat[idx]
+                if self.fl:
+                    rhs = self.rhsmat[idx][1:-1:3]
+                else:
+                    rhs = self.rhsmat[idx]
             
             if np.linalg.norm(rhs) < self.fft_tol:
                 return 1j*np.zeros(x.shape)
@@ -1403,10 +1393,7 @@ class time_domain_scattering(scattering):
             else:
                 rhstmp = [self.fzt_boundary_1cyl(c) for c in self.cyls]
             for c in self.cyls:
-                if self.fl:
-                    c.maxidx = [rhstmp[c.label][i].shape[0] for i in range(len(self.timeint.c))]
-                else:
-                    c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
+                c.maxidx = [rhstmp[c.label][i].shape[1] for i in range(len(self.timeint.c))]
             self.rhs_maxidx_matrix = [c.maxidx for c in self.cyls]
             self.rhs_maxidx = np.amax(self.rhs_maxidx_matrix)
             for j in range(len(self.timeint.c)):
@@ -1415,10 +1402,7 @@ class time_domain_scattering(scattering):
             self.rhsmat = [[None for n in range(self.rhs_maxidx)] for c in range(len(self.timeint.c))]
             for j in range(len(self.timeint.c)):
                 for i in range(self.rhs_maxidx):
-                    if self.fl:
-                        self.rhsmat[j][i] = np.hstack([rhstmp[c][j][i] for c in range(len(self.cyls))])
-                    else:
-                        self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
+                    self.rhsmat[j][i] = np.hstack([rhstmp[c][j][:, i] for c in range(len(self.cyls))])
             if self.save_coeffs and self.coeff_mat is None:
                 self.coeff_mat = [1j*np.zeros(np.array(self.rhsmat[j]).shape) for j in range(len(self.timeint.c))]
     
@@ -1434,10 +1418,16 @@ class time_domain_scattering(scattering):
                 for c in self.cyls:
                     instr = self.outpath+str(c.label)+'_'+str(i)+'_'+self.uid+'.rhs'
                     tmp = np.loadtxt(instr, dtype=np.complex128)
-                    rhs += [tmp[:, idx]]
+                    if self.fl:
+                        rhs += [tmp[1, idx]]
+                    else:
+                        rhs += [tmp[:, idx]]
                 rhs = np.hstack(rhs)
             else:
-                rhs = self.rhsmat[i][idx]
+                if self.fl:
+                    rhs = self.rhsmat[i][idx][1:-1:3]
+                else:
+                    rhs = self.rhsmat[i][idx]
 
             if np.linalg.norm(rhs) < self.fft_tol:
                 wmat[i] = 1j*np.zeros(x.shape)

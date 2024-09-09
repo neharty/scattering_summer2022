@@ -14,22 +14,23 @@ from utils.plot_cyls import plot_cyls
 #figure 5a
 wv = gaussian_norm_width(width = 0.5, lag = 1)
 
-T = 40*np.pi
+T = 40
 tint = None
 
-cyls = example_setups.uniform_grid_NxN(2, 'd', 1, 3)
+cyls = example_setups.uniform_grid_NxN(2, 'd', 0.1, 3)
 
 tds = time_domain_scattering(
                              cyls,
                              wv,
                              T,
                              sampnum=2**14,
-                             modes=8,
+                             modes=2,
                              timeint=tint,
                              use_cython=False,
                              use_par=False,
                              use_foldy_lax=True,
-                             scargs={'method':'explicit', 'use_mat':True}
+                             scargs={'method':'explicit', 
+                                     'use_mat':True}
                              )
 X, Y = np.meshgrid([6], [0])
 Ux = tds.make_U_sc(np.array([6, -6]), np.array([0, 0]))
