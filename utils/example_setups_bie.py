@@ -77,6 +77,11 @@ def set_scats(pos, sc_scale, bc, bcmode, scatterer_type, scrmode, rotation=0., r
         for i in range(l):
             tmp = [scat_select(scrsname[i], bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
             scrs += tmp
+    elif scrmode=='array':
+        scrs = []
+        for i in range(l):
+            tmp = [scat_select(scrsname[i], bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale)]
+            scrs += tmp
         
     return scrs
 
@@ -112,7 +117,7 @@ def uniform_pentagon(penta_radius, cyl_radius, ang_shift):
     radius = 0.3
     return [cyl(i, bcs[i], pos=origins[i], radius = cyl_radius) for i in range(5)]
 
-def uniform_grating(N, radius, spacing, center=np.array([0., 0.])):
+def uniform_grating(N, radius, spacing, center=np.array([0., 0.]), xory='x'):
     cyls = [None for i in range(N)]
     space = spacing+2*radius
     
@@ -120,9 +125,12 @@ def uniform_grating(N, radius, spacing, center=np.array([0., 0.])):
         coeffs = np.arange(-(N-1)/2, (N-1)/2 + 1)
     else:
         coeffs = np.arange(-N/2, N/2 + 1) + 0.5
-
-    origins = np.array([[center[0]+coeffs[j], center[1]] for j in range(N)])*spacing
-
+    
+    if xory == 'x':
+        origins = np.array([[center[0]+coeffs[j], center[1]] for j in range(N)])*spacing
+    elif xory == 'y':
+        origins = np.array([[center[0], center[1]+coeffs[j]] for j in range(N)])*spacing
+    
     return origins
 
 def rectangular_lattice(Nx, Ny, radius, xspace, yspace, center=np.array([0., 0.])): 

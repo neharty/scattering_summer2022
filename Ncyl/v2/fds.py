@@ -39,7 +39,7 @@ class freq_domain_scattering:
     wavespeed: float = 1
     pargs: dict = field(default_factory=dict)
     make_scat_matrix: bool = False
-    use_mat: bool = False #changed to true
+    use_mat: bool = False 
     method: str = 'gmres'
     force_method: bool = False
     gmres_restart: object = None
@@ -97,6 +97,9 @@ class freq_domain_scattering:
         if self.sum_index is not None:
             for s in self.scats:
                 s.sum_index = self.sum_index
+        
+            if self.sum_index > self.Nmode_tmat:
+                self.Nmode_tmat = self.sum_index
         
         if self.real_k_scattering:
             self.k = self.k.real
@@ -892,7 +895,7 @@ class freq_domain_scattering:
             return 1j*hankel1(0, self.k*r)/4
     
     def make_u(self, x, y):
-        return self.mask(x, y)*(2*self.make_u_sc(x, y) + self.u_inc(x, y))
+        return self.mask(x, y)*(self.make_u_sc(x, y) + self.u_inc(x, y))
     
     def mask(self, x, y):
         Oi = self.scats[0].pos
