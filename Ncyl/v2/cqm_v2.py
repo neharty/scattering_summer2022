@@ -40,6 +40,8 @@ class time_domain_scattering:
   
     def __post_init__(self):
         self.fl = self.use_foldy_lax
+        if self.fl:
+            self.modes = 1
         self.wvp = self.waveform.profile
         self.fftidx = []
         if self.cpus < 0:
@@ -335,24 +337,18 @@ class time_domain_scattering:
         else:
             N = len(self.times)
         
-        #for using foldy lax approx
-        if not self.fl:
-            g = 1j*np.zeros((n, N))
-        else:
-            # for foldy-lax approximations
-            # only uses 1 mode -- incorrect for Neumann case
-            g = 1j*np.zeros(N)
+        g = 1j*np.zeros((n, N))
                 
         for i in range(N):
-            if self.fl:
-                gtmp = fftshift(fft(v[:, i]))/n
-                g[i] = gtmp[n//2]
-                #sparsify the rhs
-                tmp = np.abs(g[i])
-                if np.max(tmp) < self.fft_tol:
-                    g[i] = 0
-                    return g
-            else:
+            # if self.fl:
+            #     gtmp = fftshift(fft(v[:, i]))/n
+            #     g[i] = gtmp[n//2]
+            #     #sparsify the rhs
+            #     tmp = np.abs(g[i])
+            #     if np.max(tmp) < self.fft_tol:
+            #         g[i] = 0
+            #         return g
+            # else:
                 g[:, i] = fftshift(fft(v[:, i]))/n
                 #sparsify the rhs
                 tmp = np.abs(g[:, i])
@@ -566,7 +562,10 @@ class time_domain_scattering:
             #         rhs += [tmp[:, idx]]
             #     rhs = np.hstack(rhs)
             # else:
-            rhs = self.rhsmat[idx]
+            if self.fl:
+                rhs = self.rhsmat[idx][1:-1:3]
+            else:
+                rhs = self.rhsmat[idx]
             
             if np.linalg.norm(rhs) < self.fft_tol:
                 return 1j*np.zeros(x.shape)
@@ -575,6 +574,7 @@ class time_domain_scattering:
                 copy.deepcopy(self.cyls), 
                 rhs, 
                 self.ks[idx],
+                use_foldy_lax = self.fl,
                 use_tmatrix=self.use_tmatrix,
                 sum_index=self.modes,
                 save_coeffs = self.save_coeffs,
@@ -665,7 +665,10 @@ class time_domain_scattering:
             #         rhs += [tmp[:, idx]]
             #     rhs = np.hstack(rhs)
             # else:
-            rhs = self.rhsmat[i][idx]
+            if self.fl:
+                rhs = self.rhsmat[i][idx][1:-1:3]
+            else:
+                rhs = self.rhsmat[i][idx]
 
             if np.linalg.norm(rhs) < self.fft_tol:
                 wmat += [1j*np.zeros(x.shape)]
@@ -674,6 +677,7 @@ class time_domain_scattering:
                         copy.deepcopy(self.cyls), 
                         rhs, 
                         ks[i],
+                        use_foldy_lax=self.fl,
                         use_tmatrix=self.use_tmatrix,
                         sum_index=self.modes,
                         save_coeffs = self.save_coeffs,

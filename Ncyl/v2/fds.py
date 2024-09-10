@@ -871,7 +871,7 @@ class freq_domain_scattering:
         for l in self.labels:
             R = np.array([x - self.scats[l].pos[0], y - self.scats[l].pos[1]])
             if self.fl:
-                u_sc += cs[self.lengths[l]]*self.psi(0, R)
+                u_sc += cs[self.lengths[l]]*self.psi(0, R)/self.hmode(self.cyls[l], 0)
             else:
                 for j in range(2*self.scats[l].sum_index + 1):
                     idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index+1)
