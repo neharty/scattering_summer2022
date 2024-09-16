@@ -1,0 +1,7 @@
+################### Running the code ####################
+To run the code simply run the .sh named "run.sh". 
+This will automatically send all of the other .sh files in this
+directory to different nodes and the save the subsequent results here. 
+
+For Convergence study, run either conver.sh or conver2.sh.
+I suggest running conver2.sh. 

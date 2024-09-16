@@ -15,7 +15,7 @@ N = 2
 #unweigthed
 from utils import example_setups_bie
 scrspos = example_setups_bie.uniform_grid_NxN(N, 1, 3)
-scrs = example_setups_bie.set_scats([[0,0]], 2, bc, 'uniform', 'strip', 'uniform', rotation=[-np.pi/2], rotmode='uniform')
+scrs = example_setups_bie.set_scats([[0,0]], 1, bc, 'uniform', 'strip', 'uniform', rotation=[-np.pi/2], rotmode='uniform')
 fig, ax = plot_scatterers(scrs)
 plt.show()
 

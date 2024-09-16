@@ -369,6 +369,49 @@ class russian(waveform):
         pass
 
 
+class cf_nonsmooth(waveform):
+    def __init__(self,
+                 inc_angle = 0,
+                 time_shift=0, 
+                 lag = 0):
+        super().__init__(inc_angle, time_shift, lag=lag)
+    
+    def masks(self, x):
+        mask1 = (0 <= x) & (x < 0.15)
+        mask2 = (0.15 <= x) & (x < 0.3)
+        mask3 = (0.3 <= x) & (x < 0.45)
+        return mask1, mask2, mask3
+    
+    def window(self, x):
+        m1, m2, m3 = self.masks(x)
+        return m1+m2+m3
+
+    def profile(self, z):
+        #waveform profile, centered at the origin
+        m1, m2, m3 = self.masks(z)
+        osc = 2*np.pi/0.3
+        tmp1 = m1*-np.sin(osc*z)
+        tmp2 = 2*-np.sin(osc*z)*m2
+        tmp3 = m3*-np.sin(osc*z)
+        return self.window(z)*(tmp1 + tmp2 + tmp3)  
+    
+    def td_deriv(self, x, y, t, n):
+        z = self.inparg(x, y, t)
+        m1, m2, m3 = self.masks(z)
+        osc = 2*np.pi/0.3
+        tmp1 = m1*np.cos(osc*z)
+        tmp2 = 2*np.cos(osc*z)*m2
+        tmp3 = m3*np.cos(osc*z)
+        dwave = osc*self.window(z)*(tmp1 + tmp2 + tmp3)  
+    
+        dg = np.zeros(len(x))
+        for i in range(len(x)):
+            dg[i] = self.d_inparg(x, y, t).dot(n[i])
+        dg *= dwave
+        return dg
+    
+    
+
 '''
 class bump():
     pass

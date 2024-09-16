@@ -906,28 +906,6 @@ class freq_domain_scattering:
             radius = self.scats[i].radius
             mask = mask & (np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2) > radius) | (radius == np.sqrt((x - Oi[0])**2 + (y - Oi[1])**2))
         return mask
-    
-    # def get_scattering_coeffs(self):
-    #     if self.scattering_coeff_vect == None:
-    #         print(self.method, self.freq)
-    #         if self.method == 'gmres':
-    #             cs, ecode = self.scattering_coeffs()
-    #             if ecode != 0:
-    #                 print('GMRES failed, switching to explicit')
-    #                 self.method = 'explicit'
-    #                 cs = self.scattering_coeffs()
-    #         elif self.method == 'explicit':
-    #             cs = self.scattering_coeffs()
-                
-    #         for l in self.labels:
-    #             for j in range(2*self.scats[l].sum_index + 1):
-    #                 idxa = np.arange(-self.scats[l].sum_index, self.scats[l].sum_index + 1)
-    #                 cs /= self.hmode(self.scats[l], idxa[j])
-            
-    #         self.scattering_coeff_vect = cs
-    #         return cs
-    #     else:
-    #         return self.scattering_coeff_vect
 
     def set_u(self, x, y, recompute=False):
         if self.u == None:
