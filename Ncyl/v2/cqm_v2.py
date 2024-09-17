@@ -349,14 +349,14 @@ class time_domain_scattering:
             #         g[i] = 0
             #         return g
             # else:
-                g[:, i] = fftshift(fft(v[:, i]))/n
-                #sparsify the rhs
-                tmp = np.abs(g[:, i])
-                if np.max(tmp) < self.fft_tol:
-                    g[:, i] = np.zeros(n)
-                    if self.use_conj:
-                        g = g[:, :i+1]
-                        return g 
+            g[:, i] = fftshift(fft(v[:, i]))/n
+            #sparsify the rhs
+            tmp = np.abs(g[:, i])
+            if np.max(tmp) < self.fft_tol:
+                g[:, i] = np.zeros(n)
+                if self.use_conj:
+                    g = g[:, :i+1]
+                    return g 
         return g
     
     def diag_loop(self, v):

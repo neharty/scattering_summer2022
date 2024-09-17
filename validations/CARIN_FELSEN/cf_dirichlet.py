@@ -9,8 +9,8 @@ from Ncyl.v2.cqm_v2 import time_domain_scattering
 from utils import example_setups_bie
 
 #initialize problem
-#wv = cf_nonsmooth(inc_angle=20*np.pi/180, time_shift=10) #incident angle converted from deg to radians
-wv = gaussian_norm_width(lag = 1, inc_angle=70*np.pi/180, width = 0.25)
+wv = cf_nonsmooth(inc_angle=70*np.pi/180, time_shift=11) #incident angle converted from deg to radians
+#wv = gaussian_norm_width(lag = 5, inc_angle=70*np.pi/180, width = 0.25)
 ts = np.linspace(0, 1, 500)
 plt.plot(ts, wv.profile(ts))
 plt.show()
@@ -34,7 +34,7 @@ tds_bie = time_domain_scattering(
                              timeint=tint,
                              modes = 10,
                              use_par_solve = False,
-                             fft_tol=1e-6,
+                             fft_tol=1e-4,
                              scargs={'method':'gmres',
                                      'use_mat': True,
                                      'Npoints': 64}
