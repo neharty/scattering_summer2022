@@ -16,7 +16,7 @@ plt.plot(ts, wv.profile(ts))
 plt.show()
 T = 40
 tint = IRK5()
-Nt = 15
+Nt = 16
 bc = 'd'
 
 #%%
