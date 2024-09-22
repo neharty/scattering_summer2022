@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from waveforms.waveforms import gaussian_norm_width, switched_sinewave, gauss_mod_sine, cf_nonsmooth
 from integrators.integrators import IRK5
 import os
-from scipy.fft import rfft, irfft, rfftfreq
+from scipy.fft import rfft, irfft, rfftfreq, fftshift
 from utils.plot_scatterers import plot_scatterers
 from Ncyl.v2.cqm_v2 import time_domain_scattering
 from utils import example_setups_bie
@@ -17,13 +17,21 @@ plt.show()
 T = 40
 tint = IRK5()
 Nt = 15
-bc = 'd'
+bc = 'n'
 
 #%%
 scrspos = example_setups_bie.uniform_grating(15, 0.5, 1+1/3)
 scrs = example_setups_bie.set_scats(scrspos, 0.5, bc, 'uniform', 'strip', 'uniform')
 fig, ax = plot_scatterers(scrs)
 plt.show()
+
+#%%
+# fft input signal
+ts = np.linspace(0, T, 2**Nt, False)
+pfl = wv.profile(ts)
+fftwv = np.abs(rfft(pfl))
+fftwv /= np.max(fftwv)
+plt.semilogy(fftwv)
 
 #%%
 tds_bie = time_domain_scattering(
