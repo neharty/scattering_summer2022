@@ -11,16 +11,18 @@ from utils import example_setups_bie
 #initialize problem
 wv = cf_nonsmooth(inc_angle=70*np.pi/180, time_shift=11) #incident angle converted from deg to radians
 #wv = gaussian_norm_width(lag = 5, inc_angle=70*np.pi/180, width = 0.25)
-ts = np.linspace(0, 1, 500)
-plt.plot(ts, wv.profile(ts))
-plt.show()
+
 T = 40
 tint = IRK5()
 Nt = 15
-bc = 'n'
+bc = 'd'
+
+ts = np.linspace(0, T, 2**Nt)
+plt.plot(ts, wv.profile(ts-11))
+plt.show()
 
 #%%
-scrspos = example_setups_bie.uniform_grating(15, 0.5, 1+1/3)
+scrspos = example_setups_bie.uniform_grating(15, 0.5, 1+2/3)
 scrs = example_setups_bie.set_scats(scrspos, 0.5, bc, 'uniform', 'strip', 'uniform')
 fig, ax = plot_scatterers(scrs)
 plt.show()
@@ -32,6 +34,7 @@ pfl = wv.profile(ts)
 fftwv = np.abs(rfft(pfl))
 fftwv /= np.max(fftwv)
 plt.semilogy(fftwv)
+plt.show()
 
 #%%
 tds_bie = time_domain_scattering(
@@ -40,16 +43,18 @@ tds_bie = time_domain_scattering(
                              T,
                              sampnum=2**Nt,
                              timeint=tint,
-                             modes = 10,
+                             modes = 64,
                              use_par_solve = False,
                              fft_tol=1e-4,
                              scargs={'method':'gmres',
                                      'use_mat': True,
-                                     'Npoints': 64}
+                                     'Npoints': 128}
                              )
 
 U = tds_bie.make_U_sc(np.array([0]), np.array([50.0/3]))
 
 #%%
-plt.plot(tds_bie.times[len(tds_bie.times)//2:], U[0, len(tds_bie.times)//2:])
 
+plt.plot(tds_bie.times, -U[0, :])
+arr = [[tds_bie.times[i], -U[0, i]] for i in range(len(tds_bie.times))]
+np.savetxt('/home/nick/scattering/validations/CARIN_FELSEN/cf_dirichlet.dat', arr)
