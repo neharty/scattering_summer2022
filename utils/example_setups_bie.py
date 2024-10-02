@@ -68,6 +68,9 @@ def set_scats(pos, sc_scale, bc, bcmode, scatterer_type, scrmode, rotation=0., r
         rots = np.zeros(l)
     
     #set scatterers
+    if type(scatterer_type) is not str:
+        scrsname = scatterer_type
+    
     if scrmode == 'uniform':
         scrs = [scat_select(scatterer_type, bcs[i], pos[i], sc_scale, rots[i], sum_num, impedance, rad_scale) for i in range(l)]
     elif scrmode=='random':
