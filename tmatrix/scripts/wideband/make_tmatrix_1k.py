@@ -43,5 +43,5 @@ for i in range(3):
                                  tmatrix_path=args.dout
                                  )
     tmx = fds.make_tmatrix(scrs[0])
-    fstr = f'{fds.get_hash(scrs[0])}.dat' 
+    fstr = f'{fds.get_hash(scrs[0])}.dat'
     np.savetxt(os.path.join(args.dout, fstr), tmx)
