@@ -11,7 +11,7 @@ do
 for bc in d n
 do
 	export bc Np
-	sbatch --job_name=make_ks_${bc}_${Np} /home/nh287/scattering/tmatrix/scripts/wideband/make_ks.slurm
+	sbatch --job-name=make_ks_${bc}_${Np} /home/nh287/scattering/tmatrix/scripts/wideband/make_ks.slurm
 done
 done
 
