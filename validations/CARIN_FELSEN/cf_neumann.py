@@ -45,7 +45,7 @@ tds_bie = time_domain_scattering(
                              timeint=tint,
                              modes = 64,
                              use_par_solve = False,
-                             fft_tol=1e-4,
+                             fft_tol=5e-5,
                              scargs={'method':'gmres',
                                      'use_mat': True,
                                      'Npoints': 128}
@@ -57,4 +57,4 @@ U = tds_bie.make_U_sc(np.array([0]), np.array([50.0/3]))
 
 plt.plot(tds_bie.times, -U[0, :])
 arr = [[tds_bie.times[i], -U[0, i]] for i in range(len(tds_bie.times))]
-np.savetxt('/home/nick/scattering/validations/CARIN_FELSEN/cf_neumann.dat', arr)
+np.savetxt('/home/nick/scattering/validations/CARIN_FELSEN/cf_neumann_fine.dat', arr)

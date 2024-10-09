@@ -58,6 +58,7 @@ class time_domain_scattering:
         self.labels = [c.label for c in self.cyls]
         
         self.u_sc = None # initialize to prevent repeat computations
+        self.U_sc = None
         
         self.init_vars()
         
@@ -294,7 +295,8 @@ class time_domain_scattering:
     
     def ztrans(self, x):
         #z-transform of a time sequence
-        return fft(self.lammat*x)
+        tmp = fft(self.lammat*x)
+        return tmp
         
     def ztrans_bdy_pw(self, cyl, c=0):
         # z transform the boundary data for a planewave
@@ -737,27 +739,31 @@ class time_domain_scattering:
     
     def make_U_sc(self, x, y):
         #set waveform variables
-        self.set_timeshift()
-        
-        #select Nmodes
-        if self.modes is None:
-            self.modes=self.mode_select(x, y)
-        
-        if self.timeint is None:
-            # BDF2
-            if self.u_sc is None:
-                self.make_time_harmonic_soln(x, y)
+        if self.U_sc is not None:
+            return self.U_sc
         else:
-            # IRK timestepping
-            if self.u_sc is None:
-                self.make_time_harmonic_soln_highorder(x, y)
+            self.set_timeshift()
             
-        if self.save_coeffs:
-            self.use_coeffs = True
-        
-        self.U_sc = (1/self.lammat)*ifft(self.u_sc, axis=-1)
-        self.U_sc = self.U_sc.real 
-        return self.U_sc
+            #select Nmodes
+            if self.modes is None:
+                self.modes=self.mode_select(x, y)
+            
+            if self.timeint is None:
+                # BDF2
+                if self.u_sc is None:
+                    self.make_time_harmonic_soln(x, y)
+            else:
+                # IRK timestepping
+                if self.u_sc is None:
+                    self.make_time_harmonic_soln_highorder(x, y)
+                
+            if self.save_coeffs:
+                self.use_coeffs = True
+            
+            self.U_sc = (1/self.lammat)*ifft(self.u_sc, axis=-1)
+            tmp = self.U_sc
+            self.U_sc = self.U_sc.real 
+            return self.U_sc
 
     def make_U_inc(self, x, y):
         if self.waveform.src_type == 'planewave':

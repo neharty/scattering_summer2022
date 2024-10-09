@@ -20,20 +20,7 @@ parser.add_argument('fft_tol', type=float)
 parser.add_argument('ks_out')
 
 args = parser.parse_args()
-
-#for testing
-# class aparse():
-#     def __init__(self):
-#         self.alpertorder = 4
-#         self.bc = 'd'
-#         self.radius = 1
-#         self.Npoints = 128
-#         self.Nmodes_tmat = 30
-#         self.T = 80
-#         self.Nt = 15
-#         self.sctype = 'strip'
-#         self.ks_out = '/home/nick/scattering/tmatrix/kfiles'
-# args = aparse()
+print(args)
 
 os.makedirs(args.ks_out, exist_ok=True) # location to save tmatrix data
 
@@ -61,4 +48,4 @@ tds_bie = time_domain_scattering(
                              )
 tds_bie.fzt_boundary_allcyls_highorder()
 ks = 1j*tds_bie.evals[:tds_bie.rhs_maxidx, :]/tds_bie.dt
-np.savetxt(os.path.join(args.ks_out, 'kfile_nonsmooth.dat'), ks)
+np.savetxt(os.path.join(args.ks_out, f'kfile_nonsmooth_Npoints{args.Npoints}_Nmodes_tmat{args.Nmodes_tmat}_T{args.T}_Nt{args.Nt}.dat'), ks)

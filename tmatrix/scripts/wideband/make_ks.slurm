@@ -8,14 +8,13 @@
 #SBATCH --sockets-per-node=1
 #SBATCH --cores-per-socket=4
 #SBATCH --threads-per-core=1
-#SBATCH --array=0-10%5
 #SBATCH --hint=nomultithread
 #SBATCH --nodes=1
-#SBATCH --time=1-00:00:00
+#SBATCH --time=3:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=nh287@njit.edu
 #SBATCH -o /project/peterp/nh287/logs/%x_%A_%a.out
 #SBATCH -e /project/peterp/nh287/logs/%x_%A_%a.out
 #SBATCH --open-mode=append
 
-bash  /home/nh287/scattering/tmatrix/scripts/wideband/make_tmatrix_1k.sh ${SLURM_ARRAY_TASK_ID}
+python3 /home/nh287/scattering/tmatrix/scripts/wideband/make_ks.py ${alp} ${bc} ${rad} ${Np} ${Nm} ${T} ${Nt} ${fft_tol} /home/nh287/scattering/tmatrix/kfiles/

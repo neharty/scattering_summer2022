@@ -410,7 +410,43 @@ class cf_nonsmooth(waveform):
         dg *= dwave
         return dg
     
+class rayleigh(waveform):
+    def __init__(
+                 self, 
+                 inc_angle = 0, 
+                 time_shift=0, 
+                 r0 = [0,0],
+                 src_type = 'planewave',
+                 lam=1/3, #11/32, 
+                 amp=1, 
+                 lag = 0, 
+                 order = 4
+                ):
+        super().__init__(time_shift=time_shift, 
+                         inc_angle=inc_angle, 
+                         r0=r0,
+                         src_type=src_type, 
+                         lag = lag)
+        #self.cutoff = cutoff #used to truncate signal
+        self.lam = lam
+        self.omega = 2*np.pi/lam
+        self.amp = amp
+        self.window_length = 2*self.omega
+        self.order = order
+        
+    def window(self, x):
+        mask1 = (x <= self.window_length)
+        mask2 = (x >= -self.window_length)
+        return mask1*mask2
+
+    def profile(self, z):
+        #waveform profile, centered at the origin
+        tmp = self.amp*np.real(1j/(1j + self.omega*z/4)**(self.order+1))
+        return self.window(z)*tmp  
     
+    def td_deriv(self, x, y, t, n):
+        #NOT IMPLEMENTED CORRECTLY
+        pass
 
 '''
 class bump():

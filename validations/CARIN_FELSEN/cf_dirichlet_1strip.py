@@ -16,12 +16,12 @@ plt.plot(ts, wv.profile(ts))
 plt.show()
 T = 40
 tint = IRK5()
-Nt = 16
+Nt = 15
 bc = 'd'
 
 #%%
-#scrspos = example_setups_bie.uniform_grating(15, 0.5, 1+1/3)
-scrs = example_setups_bie.set_scats([[0,0]], 0.5, bc, 'uniform', 'strip', 'uniform')
+scrspos = example_setups_bie.uniform_grating(3, 0.5, 1+2/3)
+scrs = example_setups_bie.set_scats(scrspos, 0.5, bc, 'uniform', 'strip', 'uniform')
 fig, ax = plot_scatterers(scrs)
 plt.show()
 
@@ -32,16 +32,18 @@ tds_bie = time_domain_scattering(
                              T,
                              sampnum=2**Nt,
                              timeint=tint,
-                             modes = 10,
+                             modes = 64,
                              use_par_solve = False,
                              fft_tol=1e-4,
                              scargs={'method':'gmres',
                                      'use_mat': True,
-                                     'Npoints': 64}
+                                     'Npoints': 128}
                              )
 
 U = tds_bie.make_U_sc(np.array([0]), np.array([50.0/3]))
 
 #%%
 plt.plot(tds_bie.times[len(tds_bie.times)//2:], U[0, len(tds_bie.times)//2:])
+arr = [[tds_bie.times[i], -U[0, i]] for i in range(len(tds_bie.times))]
+np.savetxt('/home/nick/scattering/validations/CARIN_FELSEN/cf_d_3strips.dat', arr)
 
