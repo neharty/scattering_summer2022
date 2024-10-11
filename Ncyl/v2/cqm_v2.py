@@ -10,7 +10,7 @@ from multiprocess import Process, Pool, cpu_count
 import copy
 import os
 import uuid
-from Ncyl.scython.wrapper import PyScat
+#from Ncyl.scython.wrapper import PyScat
 from dataclasses import dataclass, field
 from Ncyl.v2.fds import cyl, freq_domain_scattering
 from dataclasses import dataclass, field

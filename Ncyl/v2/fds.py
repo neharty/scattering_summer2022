@@ -8,7 +8,7 @@ from numpy.fft import fft, ifft
 from scipy.fft import fftfreq, rfft, irfft, rfftfreq, fftn, fftshift, ifftshift
 import copy
 import uuid
-from Ncyl.scython.wrapper import PyScat
+#from Ncyl.scython.wrapper import PyScat
 from dataclasses import dataclass, field
 import os
 import hashlib

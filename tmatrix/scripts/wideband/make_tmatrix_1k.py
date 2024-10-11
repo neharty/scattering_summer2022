@@ -15,7 +15,7 @@ parser.add_argument('radius', type=float)
 parser.add_argument('Npoints', type=int)
 parser.add_argument('Nmodes_tmat', type = int)
 parser.add_argument('kfile')
-parser.add_argument('kidx')
+parser.add_argument('kidx', type=int)
 parser.add_argument('sctype')
 parser.add_argument('dout')
 

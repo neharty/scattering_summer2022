@@ -29,7 +29,7 @@ tint = IRK5()
 
 #scrnames = ['cyl', 'starfish', 'fat_starfish', 'triad', 'smooth_hexagon', 'teardrop', 'strip', 'boomerang', 'bean']
 scrspos = example_setups_bie.uniform_grating(2, args.radius, args.radius*3)
-scrs = example_setups_bie.set_scats(scrspos, args.radius, args.bc, 'uniform', args.sctype, 'uniform')
+scrs = example_setups_bie.set_scats(scrspos, args.radius, args.bc, 'uniform', 'strip', 'uniform')
 
 tds_bie = time_domain_scattering(
                              scrs,
