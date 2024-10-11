@@ -15,7 +15,7 @@ parser.add_argument('radius', type=float)
 parser.add_argument('Npoints', type=int)
 parser.add_argument('Nmodes_tmat', type = int)
 parser.add_argument('kfile')
-parser.add_argument('kidx')
+parser.add_argument('kidx', type=int)
 parser.add_argument('sctype')
 parser.add_argument('dout')
 
@@ -43,5 +43,10 @@ for i in range(3):
                                  tmatrix_path=args.dout
                                  )
     tmx = fds.make_tmatrix(scrs[0])
+<<<<<<< HEAD
     fstr = f'{fds.get_hash(scrs[0])}.dat'
     np.savetxt(os.path.join(args.dout, fstr), tmx)
+=======
+    fstr = f'{fds.get_hash(scrs[0])}.dat' 
+    np.savetxt(os.path.join(args.dout, fstr), tmx)
+>>>>>>> 7ffda8d3 (update)
