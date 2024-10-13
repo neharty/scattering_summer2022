@@ -43,10 +43,6 @@ for i in range(3):
                                  tmatrix_path=args.dout
                                  )
     tmx = fds.make_tmatrix(scrs[0])
-<<<<<<< HEAD
-    fstr = f'{fds.get_hash(scrs[0])}.dat'
-    np.savetxt(os.path.join(args.dout, fstr), tmx)
-=======
-    fstr = f'{fds.get_hash(scrs[0])}.dat' 
-    np.savetxt(os.path.join(args.dout, fstr), tmx)
->>>>>>> 7ffda8d3 (update)
+
+fstr = f'{fds.get_hash(scrs[0])}.dat'
+np.savetxt(os.path.join(args.dout, fstr), tmx)
