@@ -1,4 +1,4 @@
-alp=6
+alp=4
 Nm=128
 Nt=14
 rad=0.5

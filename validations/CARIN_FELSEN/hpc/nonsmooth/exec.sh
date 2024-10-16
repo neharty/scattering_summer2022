@@ -4,7 +4,7 @@ do
 for bc in d n
 do
 	export bc Np Nm
-	sbatch --job-name=cf_${bc}_${Np} /home/nh287/validations/CARIN_FELSEN/hpc/nonsmooth/nonsmooth.slurm
+	sbatch --job-name=cf_${bc}_${Np} /home/nh287/scattering/validations/CARIN_FELSEN/hpc/nonsmooth/nonsmooth.slurm
 done
 done
 

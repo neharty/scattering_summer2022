@@ -33,6 +33,7 @@ kfl = np.loadtxt(args.kfile, dtype=np.complex128)
 for i in range(3):
     #make all 3
     k = kfl[args.kidx, i]
+    print(k)
     fds = freq_domain_scattering(scrs, 
                                  np.zeros(2), 
                                  k,
@@ -43,6 +44,5 @@ for i in range(3):
                                  tmatrix_path=args.dout
                                  )
     tmx = fds.make_tmatrix(scrs[0])
-
-fstr = f'{fds.get_hash(scrs[0])}.dat'
-np.savetxt(os.path.join(args.dout, fstr), tmx)
+    fstr = f'{fds.get_hash(scrs[0])}.dat'
+    np.savetxt(os.path.join(args.dout, fstr), tmx)

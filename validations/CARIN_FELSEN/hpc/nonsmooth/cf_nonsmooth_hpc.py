@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from waveforms.waveforms import gaussian_norm_width, switched_sinewave, gauss_mod_sine, cf_nonsmooth
 from integrators.integrators import IRK5
 import os
@@ -20,7 +20,7 @@ print(args)
 os.makedirs(args.dpath, exist_ok=True)
 
 #initialize problem
-wv = cf_nonsmooth(inc_angle=70*np.pi/180, time_shift=5) #incident angle converted from deg to radians
+wv = cf_nonsmooth(inc_angle=70*np.pi/180, time_shift=11) #incident angle converted from deg to radians
 T = 40
 tint = IRK5()
 Nt = 14
@@ -41,7 +41,7 @@ tds_bie = time_domain_scattering(
                              use_par_solve = False,
                              scargs={'method':'gmres',
                                      'use_mat': True,
-                                     'Nmodes_tmat':128,
+                                     'Nmode_tmat':128,
                                      'Npoints': args.Npoints,
                                      'tmatrix_path':'/project/peterp/nh287/tmatrix/data/'}
                              )
@@ -50,3 +50,4 @@ U = tds_bie.make_U_sc(np.array([0]), np.array([50.0/3]))
 #%%
 arr = [[tds_bie.times[i], -U[0, i]] for i in range(len(tds_bie.times))]
 np.savetxt(os.path.join(args.dpath, f'cf_bc-{args.bc}_Nmodes{args.Nmodes}_Npoints{args.Npoints}.dat'), arr)
+print('done')
