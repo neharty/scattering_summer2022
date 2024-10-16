@@ -301,6 +301,26 @@ class Tmatrix:
                 d[i-1, j-1] = tmp[i, j] - tmp[i, -j]
                 
         return d
+    
+    #---- impedance for open arcs ----
+    #notation from kress and lee
+    def make_U(self):
+        pass
+    
+    def make_A11(self):
+        pass
+    
+    def make_A12(self):
+        pass
+    
+    def make_A21(self):
+        pass
+    
+    def make_A22(self):
+        pass
+    
+    def make_B(self):
+        pass
         
     def coeff_matrix(self):
         if self.bc == 'd':
@@ -320,12 +340,14 @@ class Tmatrix:
                 C = self.make_c_neumann()
                 return -np.eye(*B.shape)/2 + B + C
         if self.bc == 'i':
-            # open arc can't be implemented
-            Bd = self.make_b_dirichlet()
-            Cd = self.make_c_dirichlet()
-            Bn = self.make_b_neumann()
-            Cn = self.make_c_neumann()
-            return -np.eye(*Bn.shape)/2 + Bn + Cn - 1j*self.k*self.impedance(self.k)*(Bd + Cd)
+            if self.scgeom.open_arc:
+                pass
+            else:
+                Bd = self.make_b_dirichlet()
+                Cd = self.make_c_dirichlet()
+                Bn = self.make_b_neumann()
+                Cn = self.make_c_neumann()
+                return -np.eye(*Bn.shape)/2 + Bn + Cn - 1j*self.k*self.impedance(self.k)*(Bd + Cd)
   
     def Tnm(self, n, mu):
         #trapezoidal rule

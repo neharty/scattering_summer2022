@@ -49,7 +49,7 @@ tds_bie = time_domain_scattering(
                              use_par_solve = False,
                              scargs={'method':'gmres',
                                      'use_mat': True,
-                                     'Nmodes_tmat':64,
+                                     'Nmode_tmat':64,
                                      'Npoints': 128}
                              )
 
