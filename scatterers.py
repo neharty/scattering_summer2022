@@ -38,6 +38,7 @@ class scatterer(ABC):
         self.weighted_density = False #used for computing tmatrices
         self.Rmat = np.array([[np.cos(self.rotation), -np.sin(self.rotation)], 
                               [np.sin(self.rotation), np.cos(self.rotation)]])
+        
         self.open_arc = False
         
         if self.bc == 'i' and impedance == None:
