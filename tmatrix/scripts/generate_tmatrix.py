@@ -303,10 +303,25 @@ class Tmatrix:
         return d
     
     #---- impedance for open arcs ----
+    #notation from kress and lee
+    def make_U(self):
+        pass
     
     def make_A11(self):
-        
+        pass
     
+    def make_A12(self):
+        pass
+    
+    def make_A21(self):
+        pass
+    
+    def make_A22(self):
+        pass
+    
+    def make_B(self):
+        pass
+        
     def coeff_matrix(self):
         if self.bc == 'd':
             B = self.make_b_dirichlet()
