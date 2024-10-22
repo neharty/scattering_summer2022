@@ -305,10 +305,66 @@ class Tmatrix:
     #---- impedance for open arcs ----
     #notation from kress and lee
     def make_U(self):
-        pass
+        return self.make_d_neumann_open_arc()
     
     def make_A11(self):
-        pass
+        lam = 1j*self.k*self.scgeom.impedance(self.k)
+        
+        x = np.array([self.scgeom.bdy(ti) for ti in self.t])
+        dx = np.array([self.scgeom.dbdy(ti) for ti  in self.t], dtype=np.complex128)
+        B = np.array([[self.G(np.cos(xp), np.cos(yp))*np.sin(yp) for yp in x] for xp in x])
+    
+        # construct B matrix
+        for i in range(self.Npoints):
+            for j in range(self.Npoints):
+                if np.abs(self.ll(i, j)) < self.bie.dist:
+                    B[i, j] = 0
+        
+        if not self.use_weighted:
+            B = B @ np.diag(np.linalg.norm(dx, axis=1))
+        
+        B *= self.h
+        
+        #alpert step      
+        C = np.zeros((self.Npoints, self.Npoints), dtype=np.complex128)
+        m = len(self.bie.nodemat)
+        talp = np.array([[ti + self.bie.nodemat[p]*self.h for ti in self.t] for p in range(m)])
+        kern = lambda s1, s2: self.H1(s1, s2)
+        
+        for p in range(m):
+            Op = np.floor(self.bie.nodemat[p] - self.bie.M/2 + 1) + np.arange(0, self.bie.M-1)
+            Lmat = self.L_np(Op, self.bie.nodemat[p])
+            for i in range(self.Npoints-1):
+                for dist in Op:
+                    idx = i + dist
+                    if idx >= self.Npoints-1:
+                        idx = idx - (self.Npoints-1)
+                    idx = int(idx)
+                    kerval = kern(self.t[i+1], talp[p, i+1])
+                    lidx = np.where(Op == dist)[0][0]
+                    C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
+        
+        return C*self.h
+        
+        for p in range(m):
+            Op = np.floor(self.bie.nodemat[p] - self.bie.M/2 + 1) + np.arange(0, self.bie.M)
+            Lmat = self.L_np(Op, self.bie.nodemat[p])
+            for i in range(self.Npoints):
+                for dist in Op:
+                    idx = i + dist
+                    if idx >= self.Npoints:
+                        idx = idx - self.Npoints
+                    idx = int(idx)
+                    kervaltmp = self.G(x[i], xalp[p][i])
+                    if self.use_weighted:
+                        kerval = kervaltmp*self.h
+                    else:
+                        ds = np.linalg.norm(dxalp[p][i])
+                        kerval = kervaltmp*ds*self.h
+                    lidx = np.where(Op == dist)[0][0]
+                    C[i, idx] += self.bie.weightmat[p]*Lmat[lidx]*kerval
+        return lam*(B+C)
+        
     
     def make_A12(self):
         pass
@@ -320,7 +376,7 @@ class Tmatrix:
         pass
     
     def make_B(self):
-        pass
+        
         
     def coeff_matrix(self):
         if self.bc == 'd':
